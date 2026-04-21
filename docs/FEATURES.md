@@ -29,7 +29,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-003 — Local LLM one-click install
 
-**Status:** planned · **Phase:** 1
+**Status:** done · **Phase:** 1
 **Spec:** wizard offers three tiers (weak: 3B, mid: 14B, strong: 32B/70B). Installs via Ollama `pull` in the background, shows progress.
 **Acceptance:** selected model is pullable and callable from the dashboard after wizard completes.
 **Test:** `apps/cli/test/local-llm.spec.ts`
@@ -461,7 +461,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-106 — Browser-automation skill recorder
 
-**Status:** planned · **Phase:** 7
+**Status:** done · **Phase:** 7
 **Spec:** for tools without MCP (e.g. FeedBucket), user records clicks → agent replays via Playwright.
 **Acceptance:** recorded login flow replays successfully.
 **Test:** `services/browser-service/test/recorder.spec.ts`
@@ -701,7 +701,7 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 
 ### F-170 — Production readiness checklist
 
-**Status:** planned · **Phase:** 7
+**Status:** done · **Phase:** 7
 **Spec:** a single `pnpm readiness-check` command runs the full production-readiness checklist from `docs/SELF_REPAIR.md#7`: all features done/deferred, `pnpm test:features` 3 runs in a row green, demos pass, 0 STUCK.md, security suite green, cross-platform CI green, nightly green 7 days, perf thresholds met. Outputs a pass/fail report.
 **Acceptance:** on a fully-complete build, outputs `READY`. On a build missing any criterion, outputs `NOT READY` with the specific gap.
 **Test:** `scripts/test-readiness-check.spec.ts`

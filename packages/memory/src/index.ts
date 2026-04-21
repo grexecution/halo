@@ -12,15 +12,20 @@ export interface MemoryEntry {
   id: string
   content: string
   score: number
+  source?: string | undefined
+  type?: string | undefined
   metadata: MemoryMetadata
 }
 
 export interface IndexInput {
   content: string
-  agentId: string
-  sessionId: string
-  channel: MemoryChannel
-  timestamp: string
+  source?: string | undefined
+  type?: string | undefined
+  agentId?: string | undefined
+  sessionId?: string | undefined
+  channel?: MemoryChannel | undefined
+  timestamp?: string | undefined
+  metadata?: Record<string, unknown> | undefined
 }
 
 export interface SearchOptions {
@@ -29,7 +34,7 @@ export interface SearchOptions {
 }
 
 interface MemoryClientOptions {
-  baseUrl: string
+  baseUrl?: string | undefined
   dryRun?: boolean | undefined
   apiKey?: string | undefined
 }
@@ -41,8 +46,8 @@ export class MemoryClient {
   private store: MemoryEntry[] = []
   private idCounter = 0
 
-  constructor(opts: MemoryClientOptions) {
-    this.baseUrl = opts.baseUrl
+  constructor(opts: MemoryClientOptions = {}) {
+    this.baseUrl = opts.baseUrl ?? ''
     this.dryRun = opts.dryRun ?? false
     this.apiKey = opts.apiKey
   }
@@ -52,11 +57,14 @@ export class MemoryClient {
       id: `mem-${++this.idCounter}-${Date.now()}`,
       content: input.content,
       score: 1.0,
+      source: input.source,
+      type: input.type,
       metadata: {
-        agentId: input.agentId,
-        sessionId: input.sessionId,
-        channel: input.channel,
-        timestamp: input.timestamp,
+        agentId: input.agentId ?? 'default',
+        sessionId: input.sessionId ?? 'default',
+        channel: input.channel ?? 'api',
+        timestamp: input.timestamp ?? new Date().toISOString(),
+        ...Object.fromEntries(Object.entries(input.metadata ?? {}).map(([k, v]) => [k, String(v)])),
       },
     }
 
@@ -148,6 +156,8 @@ export class MemoryClient {
     for (const entry of entries) {
       await this.index({
         content: entry.content,
+        source: entry.source,
+        type: entry.type,
         agentId: entry.metadata.agentId,
         sessionId: entry.metadata.sessionId,
         channel: entry.metadata.channel,

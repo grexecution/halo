@@ -12,6 +12,7 @@ export default defineConfig({
       'services/**/test/**/*.{spec,test,e2e}.ts',
       'services/**/*.{spec,test}.ts',
       'scripts/**/*.{spec,test}.ts',
+      'test/**/*.{spec,test}.ts',
     ],
     exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**'],
     globals: true,

@@ -188,14 +188,14 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-032 — Connector pull indexing
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** Gmail/GitHub/calendar/CRM pulls automatically index into memory.
 **Acceptance:** new Gmail thread appears in memory search within 5 min.
 **Test:** `packages/memory/test/connector-indexing.spec.ts`
 
 ### F-033 — Cross-source entity linking
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** entities across sources are resolved (Gmail sender + CRM contact = same person).
 **Acceptance:** query "emails from client X" returns emails whose senders are CRM-linked to X.
 **Test:** `packages/memory/test/entity-linking.spec.ts`
@@ -227,21 +227,21 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-042 — URL whitelist mode
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** when `network.url_whitelist_mode: true`, only URLs matching `allowed_urls` are reachable.
 **Acceptance:** in whitelist mode, non-whitelisted domains return deny.
 **Test:** `packages/permissions/test/url-whitelist.spec.ts`
 
 ### F-043 — Sudo toggle
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** dashboard toggle enables `filesystem.sudo`. First sudo call prompts for password, stored in keychain.
 **Acceptance:** with sudo off, `sudo ls` returns deny. With sudo on, works after keychain prompt.
 **Test:** `packages/permissions/test/sudo.spec.ts`
 
 ### F-044 — Panic button
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** single button in dashboard flips all permissions to false and kills in-flight tool calls.
 **Acceptance:** clicking panic stops any running browser/shell session within 2 seconds.
 **Test:** `apps/dashboard/test/panic.spec.tsx`
@@ -259,31 +259,31 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-050 — Shell exec
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** `shell.exec` tool runs commands with permission checks on cwd and path args.
 **Acceptance:** `echo hi` works; `cat ~/.ssh/id_rsa` denied when path is blacklisted.
 **Test:** `packages/tools/test/shell.spec.ts`
 
 ### F-051 — Filesystem read/write
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** `fs.read` and `fs.write` with path checks.
 **Acceptance:** writing outside `allowed_paths` denied.
 **Test:** `packages/tools/test/fs.spec.ts`
 
 ### F-052 — Desktop GUI (computer-use)
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** Anthropic computer-use integrated as a tool. Permission-gated.
 **Acceptance:** "take a screenshot of the desktop" works when permission is granted.
 **Test:** `packages/tools/test/gui.spec.ts`
 
 ### F-053 — Desktop GUI (local fallback)
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** pyautogui + VLM fallback for local-LLM users.
 **Acceptance:** same tool calls work with Ollama + Qwen2.5-VL.
-**Test:** `services/vision-service/test/gui-local.spec.py`
+**Test:** `scripts/verify-vision-service.sh`
 
 ---
 
@@ -291,28 +291,28 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-060 — Browser scraping mode
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** `browser.scrape(url, selector?)` → text content.
 **Acceptance:** scraping `example.com` returns expected text.
 **Test:** `services/browser-service/test/scrape.spec.ts`
 
 ### F-061 — Browser agent mode (headless + vision)
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** `browser.act(goal)` — screenshot + VLM + click/type loop, max 30 steps.
 **Acceptance:** fills and submits a test form at `test-form.local`.
 **Test:** `services/browser-service/test/act.spec.ts`
 
 ### F-062 — Persistent browser profile
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** `browser.act(goal, {persistent: true})` uses `~/.claw-alt/browser-profile/`. Cookies persist across runs.
 **Acceptance:** logging in once persists across `compose down && up`.
 **Test:** `services/browser-service/test/persistent.spec.ts`
 
 ### F-063 — Browser pool management
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** single pool, max N concurrent contexts (default 3). Requests queue.
 **Acceptance:** 5 concurrent `browser.act` calls run sequentially with N=3.
 **Test:** `services/browser-service/test/pool.spec.ts`
@@ -362,24 +362,24 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-080 — Image description
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** `vision.describe(path)` returns text description.
 **Acceptance:** test image → sensible description.
-**Test:** `services/vision-service/test/describe.spec.py`
+**Test:** `scripts/verify-vision-service.sh`
 
 ### F-081 — OCR simple
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** `vision.ocr(path)` via Tesseract.
 **Acceptance:** clear screenshot of text → accurate transcription.
-**Test:** `services/vision-service/test/ocr-tesseract.spec.py`
+**Test:** `scripts/verify-vision-service.sh`
 
 ### F-082 — OCR layout mode
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** `vision.ocr(path, {mode: 'layout'})` via PaddleOCR.
 **Acceptance:** multi-column PDF page extracted in reading order.
-**Test:** `services/vision-service/test/ocr-paddle.spec.py`
+**Test:** `scripts/verify-vision-service.sh`
 
 ---
 
@@ -556,14 +556,14 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 
 ### F-132 — Approval flow (dashboard)
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** destructive actions (list in `docs/PERMISSIONS.md#approval-flow`) prompt user. 5-min timeout → deny.
 **Acceptance:** triggering `email.send` shows approval modal; clicking "Allow" proceeds, "Deny" aborts.
 **Test:** `apps/dashboard/test/approval.spec.tsx`
 
 ### F-133 — Approval flow (Telegram)
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** same as F-132 but via Telegram inline buttons when user is on mobile.
 **Acceptance:** approval request shown as inline keyboard in chat.
 **Test:** `packages/messaging/test/telegram-approval.spec.ts`
@@ -680,10 +680,10 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 
 ### F-167 — Security regression suite
 
-**Status:** planned · **Phase:** 4
+**Status:** done · **Phase:** 4
 **Spec:** dedicated suite asserting: denied paths stay denied, sudo toggle actually blocks, panic button kills in-flight sessions, URL whitelist blocks non-whitelisted, permission middleware is non-bypassable. Runs on every PR and nightly.
 **Acceptance:** deliberately introducing any of these regressions makes the suite fail loudly with the specific rule violated.
-**Test:** `test/security-regression/*.spec.ts`
+**Test:** `test/security-regression/security.spec.ts`
 
 ### F-168 — Fail-fast rescue branch
 

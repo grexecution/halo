@@ -74,7 +74,7 @@ export interface PermissionMiddleware {
 
 export function createMiddleware(config: PermissionConfig): PermissionMiddleware {
   return {
-    async check(toolId: string): Promise<CheckResult> {
+    async check(toolId: string, args: Record<string, unknown> = {}): Promise<CheckResult> {
       const tools = config.tools ?? {}
 
       // Check wildcard deny first
@@ -87,6 +87,14 @@ export function createMiddleware(config: PermissionConfig): PermissionMiddleware
       const policy = tools[toolId]
       if (policy?.allow === false) {
         return { decision: 'deny', reason: `Tool '${toolId}' is not permitted` }
+      }
+
+      // Check sudo: if the command contains 'sudo' and sudo is disabled, deny
+      if (toolId === 'shell_exec' && config.filesystem?.sudo === false) {
+        const cmd = String(args['cmd'] ?? '')
+        if (cmd.trimStart().startsWith('sudo ') || cmd.includes(' sudo ')) {
+          return { decision: 'deny', reason: `sudo is disabled in filesystem permissions` }
+        }
       }
 
       return { decision: 'allow' }

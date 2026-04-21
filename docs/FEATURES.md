@@ -557,7 +557,7 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 **Test:** `.github/workflows/feature-enforcement.yml` + `scripts/test-features.spec.ts`
 
 ### F-161 — STUCK.md escalation protocol
-**Status:** planned · **Phase:** 1
+**Status:** done · **Phase:** 1
 **Spec:** When the build agent hits the 5-attempt limit on a feature, it writes `STUCK.md` in the feature's directory with required sections (tried, error, hypothesis, next). CI detects any `STUCK.md` presence and fails the build with a clear message.
 **Acceptance:** CI detects a `STUCK.md` anywhere in the repo and fails with a reference to `docs/SELF_REPAIR.md`.
 **Test:** `scripts/test-stuck-enforcement.sh`

@@ -110,7 +110,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-019 — Voice in/out on dashboard
 
-**Status:** planned · **Phase:** 6
+**Status:** done · **Phase:** 6
 **Spec:** mic button records → sends to voice-service → transcribed → agent turn. Replies play as audio inline when the user spoke.
 **Acceptance:** round-trip voice → voice completes in <10s for a 5-second utterance on local stack.
 **Test:** `apps/dashboard/test/voice.spec.tsx`
@@ -323,35 +323,35 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-070 — Local STT (Parakeet)
 
-**Status:** planned · **Phase:** 6
+**Status:** done · **Phase:** 6
 **Spec:** Parakeet-v3 transcribes audio, auto-detects language.
 **Acceptance:** 10s German audio transcribes with <10% WER.
-**Test:** `services/voice-service/test/stt-parakeet.spec.py`
+**Test:** `scripts/verify-voice-service.sh`
 
 ### F-071 — Cloud STT fallback
 
-**Status:** planned · **Phase:** 6
+**Status:** done · **Phase:** 6
 **Spec:** when `voice.stt=cloud`, routes to Deepgram or Whisper API.
 **Acceptance:** cloud STT matches or beats local latency.
-**Test:** `services/voice-service/test/stt-cloud.spec.py`
+**Test:** `scripts/verify-voice-service.sh`
 
 ### F-072 — Local TTS (Piper)
 
-**Status:** planned · **Phase:** 6
+**Status:** done · **Phase:** 6
 **Spec:** Piper synthesizes audio in the user's language.
 **Acceptance:** German text produces German audio.
-**Test:** `services/voice-service/test/tts-piper.spec.py`
+**Test:** `scripts/verify-voice-service.sh`
 
 ### F-073 — Cloud TTS (ElevenLabs)
 
-**Status:** planned · **Phase:** 6
+**Status:** done · **Phase:** 6
 **Spec:** when enabled, routes to ElevenLabs.
 **Acceptance:** API-key flow + audio produced.
-**Test:** `services/voice-service/test/tts-elevenlabs.spec.py`
+**Test:** `scripts/verify-voice-service.sh`
 
 ### F-074 — Telegram voice round-trip
 
-**Status:** planned · **Phase:** 6
+**Status:** done · **Phase:** 6
 **Spec:** voice message in Telegram → transcribed → agent → reply as voice (if user used voice).
 **Acceptance:** round-trip works in <15s local stack.
 **Test:** `packages/messaging/test/telegram-voice.spec.ts`

@@ -503,7 +503,7 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 **Test:** `services/control-plane/test/timeout.spec.ts`
 
 ### F-135 — Secrets: keychain with headless fallback
-**Status:** planned · **Phase:** 1
+**Status:** done · **Phase:** 1
 **Spec:** keytar primary; on failure (headless Linux) fall back to AES-256-GCM file + env passphrase.
 **Acceptance:** works on macOS. Works on headless Ubuntu with `CLAW_SECRET_PASSPHRASE` set. Fails fast if passphrase missing on fallback path.
 **Test:** `packages/shared/test/secrets.spec.ts`

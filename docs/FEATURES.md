@@ -599,7 +599,7 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 **Test:** `test/security-regression/*.spec.ts`
 
 ### F-168 — Fail-fast rescue branch
-**Status:** planned · **Phase:** 1
+**Status:** done · **Phase:** 1
 **Spec:** When the agent hits a fail-fast condition (see `docs/SELF_REPAIR.md#8`), it commits the current state to `rescue/<yyyy-mm-dd>-<reason>` branch, writes a summary to `RESCUE.md`, and stops. Human must explicitly merge or discard.
 **Acceptance:** triggering a simulated fail-fast condition produces the rescue branch and halts further work.
 **Test:** `scripts/test-rescue-flow.sh`

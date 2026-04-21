@@ -38,8 +38,8 @@ git commit -q -m "initial"
 cp "$RESCUE_SCRIPT" "$FAKE_REPO/rescue.sh"
 chmod +x "$FAKE_REPO/rescue.sh"
 
-# Run rescue with test reason
-bash "$FAKE_REPO/rescue.sh" "test-reason" "Simulated fail-fast condition" 2>&1 | head -5
+# Run rescue with test reason (it exits 1 by design — capture and ignore)
+bash "$FAKE_REPO/rescue.sh" "test-reason" "Simulated fail-fast condition" 2>&1 | cat || true
 
 # Verify rescue branch was created
 if ! git branch | grep -q "rescue/"; then

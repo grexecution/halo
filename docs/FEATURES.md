@@ -605,7 +605,7 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 **Test:** `scripts/test-rescue-flow.sh`
 
 ### F-169 — Cost tracking per build session
-**Status:** planned · **Phase:** 1
+**Status:** done · **Phase:** 1
 **Spec:** CLI tracks LLM token usage during the build (requires integration with Claude Code's logging or a wrapper). Writes `artifacts/build-cost.jsonl`. Soft warning at $10, hard stop at $50 (configurable). Prevents runaway self-repair loops from burning money unnoticed.
 **Acceptance:** simulated token usage exceeding hard cap aborts the session with a summary.
 **Test:** `scripts/test-cost-tracking.spec.ts`

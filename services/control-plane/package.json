@@ -12,7 +12,11 @@
     "db:seed": "echo 'seed not yet implemented'"
   },
   "dependencies": {
+    "@claw-alt/agent-core": "workspace:*",
+    "@claw-alt/memory": "workspace:*",
+    "@claw-alt/permissions": "workspace:*",
     "@claw-alt/shared": "workspace:*",
+    "@claw-alt/telemetry": "workspace:*",
     "@trpc/server": "^11.0.0",
     "fastify": "^5.0.0",
     "pino": "^9.6.0",

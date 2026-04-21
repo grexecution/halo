@@ -9,8 +9,9 @@ import { resolve, extname } from 'node:path'
 import { spawnSync } from 'node:child_process'
 
 const REPO_ROOT = resolve(import.meta.dirname, '..')
-const FEATURES_MD = resolve(REPO_ROOT, 'docs/FEATURES.md')
-const HISTORY_FILE = resolve(REPO_ROOT, 'artifacts/feature-history.jsonl')
+const FEATURES_MD = process.env['CLAW_FEATURES_MD'] ?? resolve(REPO_ROOT, 'docs/FEATURES.md')
+const HISTORY_FILE =
+  process.env['CLAW_HISTORY_FILE'] ?? resolve(REPO_ROOT, 'artifacts/feature-history.jsonl')
 
 const DRY_RUN = process.env['DRY_RUN'] === '1' || process.argv.includes('--dry-run')
 
@@ -114,24 +115,20 @@ function appendHistory(results: RunResult[]): void {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
   const ts = new Date().toISOString()
   for (const r of results) {
-    appendFileSync(
-      HISTORY_FILE,
-      JSON.stringify({ ...r, ts }) + '\n',
-      'utf-8',
-    )
+    appendFileSync(HISTORY_FILE, JSON.stringify({ ...r, ts }) + '\n', 'utf-8')
   }
 }
 
 function main(): void {
   const md = readFileSync(FEATURES_MD, 'utf-8')
   const features = parseFeatures(md)
-  const done = features.filter(f => f.status === 'done')
+  const done = features.filter((f) => f.status === 'done')
 
   process.stdout.write(`Parsed features: ${features.length} total, ${done.length} done\n`)
 
   if (DRY_RUN) {
     process.stdout.write(`[dry-run] Would run ${done.length} tests\n`)
-    const list = done.map(f => `  ${f.id}: ${f.testPath}`).join('\n')
+    const list = done.map((f) => `  ${f.id}: ${f.testPath}`).join('\n')
     if (list) process.stdout.write(list + '\n')
     process.stdout.write(`0/${done.length} features (dry-run)\n`)
     return
@@ -160,7 +157,13 @@ function main(): void {
     const label = result === 'regression' ? 'REGRESSION' : result.toUpperCase()
     process.stdout.write(`${label}: ${f.id} — ${f.title}\n`)
     if (!ok) process.stdout.write(`  ${output.slice(0, 500)}\n`)
-    results.push({ id: f.id, title: f.title, testPath: f.testPath, result, error: ok ? undefined : output })
+    results.push({
+      id: f.id,
+      title: f.title,
+      testPath: f.testPath,
+      result,
+      error: ok ? undefined : output,
+    })
   }
 
   appendHistory(results)

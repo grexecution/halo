@@ -47,7 +47,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-010 — Chat page with streaming
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** main chat UI using assistant-ui, streams tokens from the control plane, displays tool calls inline.
 **Acceptance:** sending a message shows streaming response, tool calls rendered as collapsible blocks.
 **Test:** `apps/dashboard/test/chat.spec.tsx`
@@ -61,7 +61,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-012 — Agents CRUD page
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** create/edit/delete agents. Fields: name, handle, system prompt, model, tools, permissions scope.
 **Acceptance:** changes persist; form validation blocks invalid configs (e.g. empty handle).
 **Test:** `apps/dashboard/test/agents-crud.spec.tsx`
@@ -75,7 +75,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-014 — Memory browser
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** search memories by keyword or semantic. View entity graph. Delete individual or bulk.
 **Acceptance:** searching "client X" returns all memories involving X across sources.
 **Test:** `apps/dashboard/test/memory-browser.spec.tsx`
@@ -89,7 +89,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-016 — Logs viewer
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** structured logs, filter by agent/tool/trace/time. Links to OTel trace view.
 **Acceptance:** tool-call errors are visible and filterable within 2 seconds of occurrence.
 **Test:** `apps/dashboard/test/logs.spec.tsx`
@@ -103,7 +103,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-018 — Settings page (global permissions + telemetry)
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** global permission toggles, telemetry on/off with custom OTel endpoint, backup/restore.
 **Acceptance:** toggling sudo OFF blocks subsequent sudo-requiring tool calls.
 **Test:** `apps/dashboard/test/settings.spec.tsx`
@@ -121,7 +121,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-020 — Main agent loop
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** message → orchestrator → LLM call with tools → stream to client. Uses Vercel AI SDK.
 **Acceptance:** simple "what's 2+2" message returns a streamed answer.
 **Test:** `services/control-plane/test/main-loop.spec.ts`
@@ -163,7 +163,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-026 — Agent session resume
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** restarting the control plane mid-conversation lets the user continue where they left off; history loaded from Postgres.
 **Acceptance:** restart during a 5-turn conversation; turn 6 has full context.
 **Test:** `services/control-plane/test/resume.spec.ts`
@@ -174,14 +174,14 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-030 — Automatic chat indexing
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** every message (all channels) is indexed into Mem0 with metadata: agent_id, session_id, channel, timestamp.
 **Acceptance:** sending a message via Telegram is searchable in the memory browser within 30s.
 **Test:** `packages/memory/test/chat-indexing.spec.ts`
 
 ### F-031 — Pre-prompt memory injection
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** before each agent turn, top-N relevant memories injected into system context.
 **Acceptance:** referencing a fact from 10 sessions ago gets recalled correctly.
 **Test:** `packages/memory/test/pre-prompt-injection.spec.ts`
@@ -202,7 +202,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-034 — Memory export
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** export entire memory store to JSON. Re-importable.
 **Acceptance:** export + reimport round-trip preserves all memories and entities.
 **Test:** `packages/memory/test/export-import.spec.ts`
@@ -213,14 +213,14 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-040 — Permission YAML loading
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** `~/.claw-alt/permissions.yml` loaded at startup, hot-reloaded on change.
 **Acceptance:** editing the YAML changes behavior within 5s without restart.
 **Test:** `packages/permissions/test/yaml-loading.spec.ts`
 
 ### F-041 — Tool-call middleware
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** every tool call routes through `check(toolId, args, ctx)` → allow/deny/prompt.
 **Acceptance:** a tool call with denied path returns deny; one with allowed path returns allow.
 **Test:** `packages/permissions/test/middleware.spec.ts`
@@ -248,7 +248,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-045 — Non-bypassable middleware (lint rule)
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** ESLint custom rule forbids direct tool-handler calls that skip the middleware.
 **Acceptance:** a PR introducing a direct call fails CI.
 **Test:** `packages/permissions/test/lint-rule.spec.ts`
@@ -542,14 +542,14 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 
 ### F-130 — Per-session budget enforcement
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** each session has `max_tokens`, `max_cost_usd`, `max_tool_calls`, `max_wall_time_seconds`. Exceeding any aborts the session cleanly.
 **Acceptance:** budget set to 100 tokens; session aborts on 5th turn of a looping task.
 **Test:** `services/control-plane/test/budget-session.spec.ts`
 
 ### F-131 — Daily spend cap
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** global daily cost cap. Soft warning banner at 40%, hard stop at 100%. Reset at local midnight.
 **Acceptance:** reaching cap blocks new sessions; reset at midnight restores access.
 **Test:** `services/control-plane/test/budget-daily.spec.ts`
@@ -570,7 +570,7 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 
 ### F-134 — Tool timeouts
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** every tool call has a timeout. Timeout → clean failure, no hang.
 **Acceptance:** tool with `sleep 300` aborts at default 60s.
 **Test:** `services/control-plane/test/timeout.spec.ts`
@@ -584,7 +584,7 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 
 ### F-136 — Pino redaction
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** secret field names auto-redacted in logs and OTel spans.
 **Acceptance:** log line containing an API key appears as `***REDACTED***`.
 **Test:** `packages/telemetry/test/redaction.spec.ts`
@@ -620,7 +620,7 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 
 ### F-150 — Timezone in agent prompts
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** `~/.claw-alt/config.yml` stores IANA timezone. Every agent system prompt prefixed with "Current date and time: <now in TZ>."
 **Acceptance:** "what's today's date" returns correct local date across DST boundaries.
 **Test:** `packages/agent-core/test/timezone.spec.ts`
@@ -645,28 +645,28 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 
 ### F-162 — Regression detection
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** `pnpm test:features` tracks pass/fail history in `artifacts/feature-history.jsonl` (append-only). Previously-done features that now fail are reported as `REGRESSION` distinct from new-feature `FAIL`.
 **Acceptance:** marking a done feature broken produces output labeled `REGRESSION: F-NNN`, not just `FAIL`.
 **Test:** `scripts/test-regression-detector.spec.ts`
 
 ### F-163 — Nightly regression build
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** GitHub Action runs nightly: full teardown (`docker:down --volumes`), rebuild, migrate, seed, run `pnpm test && pnpm test:features && pnpm test:e2e`. Posts results to `artifacts/nightly/<date>.json`. Notifies via Telegram on regression.
 **Acceptance:** nightly run on a known-good commit stays green 3 consecutive nights. Injected regression triggers the notification.
-**Test:** `.github/workflows/nightly.yml` + `scripts/verify-nightly.sh`
+**Test:** `scripts/verify-nightly.sh`
 
 ### F-164 — Build-health dashboard page
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** `/build-health` page shows current pass rate, regressions in last 7 days, test-duration trends, active `STUCK.md` files with links.
 **Acceptance:** inducing a regression surfaces it on the page within one nightly run.
 **Test:** `apps/dashboard/test/build-health.spec.tsx`
 
 ### F-165 — Bounded auto-retry for flaky tests
 
-**Status:** planned · **Phase:** 2
+**Status:** done · **Phase:** 2
 **Spec:** Vitest configured with `retry: 1` for integration tests, `retry: 0` for unit tests. Flaky tests tracked in `artifacts/flakiness.jsonl`. A test flaking 3+ consecutive runs is auto-quarantined and an issue is created (Phase 5+ does this via the agent; before Phase 5 sends a Telegram).
 **Acceptance:** forcing a deterministic flake 3 times moves the test to the quarantine list.
 **Test:** `scripts/test-flake-detection.spec.ts`

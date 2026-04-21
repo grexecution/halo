@@ -1,0 +1,56 @@
+name: Nightly Regression Build
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # 2am UTC daily
+  workflow_dispatch: # allow manual trigger
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm -w run typecheck
+
+      - name: Lint
+        run: pnpm -w run lint
+
+      - name: Run unit + integration tests
+        run: pnpm -w run test
+
+      - name: Run feature tests
+        run: pnpm -w run test:features
+
+      - name: Save nightly result
+        if: always()
+        run: |
+          mkdir -p artifacts/nightly
+          echo "{\"date\":\"$(date -u +%Y-%m-%d)\",\"status\":\"${{ job.status }}\",\"run_id\":\"${{ github.run_id }}\"}" \
+            > artifacts/nightly/$(date -u +%Y-%m-%d).json
+
+      - name: Upload nightly artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-${{ github.run_id }}
+          path: artifacts/nightly/
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Nightly build failed — would send Telegram notification if token configured"
+          # Real impl: curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" ...

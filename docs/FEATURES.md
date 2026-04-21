@@ -54,7 +54,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-011 — Sub-agent tabs
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** chat page has tabs for main agent + each active sub-agent. Messages routed to the active tab.
 **Acceptance:** switching tabs preserves history per agent.
 **Test:** `apps/dashboard/test/subagent-tabs.spec.tsx`
@@ -68,7 +68,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-013 — Connectors page
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** list all available MCPs, "Add" button launches OAuth/API-key flow, enable/disable toggles.
 **Acceptance:** adding Gmail completes OAuth and stores token in keychain.
 **Test:** `apps/dashboard/test/connectors.spec.tsx`
@@ -96,7 +96,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-017 — Registry overview page
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** single page listing all enabled MCPs, LLM providers, npm packages, Python packages. Each with status and last-used.
 **Acceptance:** adding a new MCP makes it appear in the registry within one page refresh.
 **Test:** `apps/dashboard/test/registry.spec.tsx`
@@ -128,21 +128,21 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-021 — Sub-agent delegation
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** main agent can call `delegate(handle, task)` tool → spawns a sub-agent session, waits for result, integrates into response.
 **Acceptance:** asking "write me a function and review it" results in coder + critic sub-agent calls, both visible as tool blocks.
 **Test:** `services/control-plane/test/delegate.spec.ts`
 
 ### F-022 — Sub-agent mentions in chat
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** `@coder` in a message routes directly to that sub-agent, skipping the main agent.
 **Acceptance:** message with `@coder fix this bug` appears in the coder's tab, not main.
 **Test:** `services/control-plane/test/mentions.spec.ts`
 
 ### F-023 — Telegram group-chat routing
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** in a Telegram group, messages with `@handle` route to the sub-agent; others route to main if bot is addressed.
 **Acceptance:** 3-way conversation (user + two sub-agents) works without cross-talk.
 **Test:** `packages/messaging/test/telegram-group.spec.ts`
@@ -387,21 +387,21 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-090 — Telegram bot basic
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** grammy-based bot. Responds to DMs.
 **Acceptance:** user message → bot reply within 5s.
 **Test:** `packages/messaging/test/telegram-basic.spec.ts`
 
 ### F-091 — Discord bot
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** discord.js-based. Slash commands per sub-agent.
 **Acceptance:** `/coder fix bug` routes correctly.
 **Test:** `packages/messaging/test/discord.spec.ts`
 
 ### F-092 — Slack bot
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** @slack/bolt. Threads = sessions.
 **Acceptance:** thread reply maintains session context.
 **Test:** `packages/messaging/test/slack.spec.ts`
@@ -419,42 +419,42 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-100 — MCP client registry
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** register/unregister MCPs at runtime. List with status.
 **Acceptance:** adding an MCP makes its tools callable on next turn.
 **Test:** `packages/connectors/test/registry.spec.ts`
 
 ### F-101 — OAuth flow framework
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** generic OAuth redirect handler at `/oauth/callback/:connector-id`, tokens to keychain.
 **Acceptance:** Gmail OAuth completes without manual token copy.
 **Test:** `packages/connectors/test/oauth.spec.ts`
 
 ### F-102 — Gmail connector
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** Gmail MCP with read + send.
 **Acceptance:** agent can list unread and send a reply.
 **Test:** `packages/connectors/test/gmail.spec.ts`
 
 ### F-103 — GitHub connector
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** GitHub MCP with issues, PRs, repo read, PR create.
 **Acceptance:** agent creates a PR in a test repo.
 **Test:** `packages/connectors/test/github.spec.ts`
 
 ### F-104 — Google Calendar connector
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** read/write events.
 **Acceptance:** "what's my next meeting" returns it.
 **Test:** `packages/connectors/test/calendar.spec.ts`
 
 ### F-105 — Custom MCP add
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** paste URL + config → connector added.
 **Acceptance:** a dummy MCP server becomes callable.
 **Test:** `packages/connectors/test/custom.spec.ts`
@@ -591,7 +591,7 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 
 ### F-137 — Rate-limit backoff for external APIs
 
-**Status:** planned · **Phase:** 3
+**Status:** done · **Phase:** 3
 **Spec:** Gmail, GitHub, Slack, etc. — exponential backoff on 429. Track quota state per connector.
 **Acceptance:** forcing 5 consecutive 429s leads to graceful backoff, not infinite retry.
 **Test:** `packages/connectors/test/rate-limit.spec.ts`

@@ -1,0 +1,61 @@
+{
+  "name": "claw-alt",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:dashboard": "pnpm --filter @claw-alt/dashboard dev",
+    "dev:control-plane": "pnpm --filter @claw-alt/control-plane dev",
+    "build": "pnpm -r build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:features": "tsx scripts/test-features.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "pnpm -r typecheck",
+    "format": "prettier --write .",
+    "docker:up": "docker compose -f docker/compose.yml up -d",
+    "docker:down": "docker compose -f docker/compose.yml down",
+    "docker:down:volumes": "docker compose -f docker/compose.yml down --volumes",
+    "docker:logs": "docker compose -f docker/compose.yml logs -f",
+    "db:migrate": "pnpm --filter @claw-alt/control-plane db:migrate",
+    "db:seed": "pnpm --filter @claw-alt/control-plane db:seed",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/node": "^22.10.0",
+    "@typescript-eslint/eslint-plugin": "^8.19.0",
+    "@typescript-eslint/parser": "^8.19.0",
+    "@vitest/coverage-v8": "^2.1.0",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^17.5.0",
+    "husky": "^9.1.0",
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.4.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "keytar",
+      "sharp"
+    ]
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,mjs,cjs}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,yaml,yml,md}": [
+      "prettier --write"
+    ]
+  }
+}

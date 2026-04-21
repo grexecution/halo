@@ -36,11 +36,11 @@ describe('F-160: Feature-test CI enforcement', () => {
     ).toBe(true)
   })
 
-  it('feature-enforcement workflow calls test-features.ts', () => {
+  it('feature-enforcement workflow calls the test:features script', () => {
     const yml = readFileSync(
       resolve(REPO_ROOT, '.github/workflows/feature-enforcement.yml'),
       'utf-8',
     )
-    expect(yml).toContain('test-features')
+    expect(yml).toContain('test:features')
   })
 })

@@ -551,7 +551,7 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 ## Category: Self-repair & self-test infrastructure
 
 ### F-160 — Feature-test CI enforcement
-**Status:** planned · **Phase:** 1
+**Status:** done · **Phase:** 1
 **Spec:** GitHub Action parses `docs/FEATURES.md`, verifies every row with `Status: done` has its test file existing, outer describe matching `F-NNN: <title>`, and the test passing. Blocks PR on violation.
 **Acceptance:** PR that marks a feature done without a matching test fails CI loudly.
 **Test:** `.github/workflows/feature-enforcement.yml` + `scripts/test-features.spec.ts`

@@ -1,0 +1,26 @@
+node_modules/
+dist/
+.next/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.*.local
+
+# secrets / keychain fallback
+.claw-alt/secrets.enc
+secrets.enc
+
+# artifacts (checked-in stubs, but ignore generated content)
+artifacts/*.jsonl
+artifacts/nightly/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# pnpm
+.pnpm-store/

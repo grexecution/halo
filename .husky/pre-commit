@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+# Pre-commit hook: format staged files, typecheck, scan for secrets.
+
+# ─── lint-staged (format + eslint on staged files) ────────────────────────────
+pnpm lint-staged
+
+# ─── typecheck (fast, incremental) ────────────────────────────────────────────
+pnpm -w run typecheck
+
+# ─── gitleaks secrets scan ────────────────────────────────────────────────────
+# Run only if gitleaks is installed; skip gracefully if not (CI enforces it separately)
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --redact --no-banner
+else
+  echo "[pre-commit] gitleaks not installed locally — skipping secrets scan (CI enforces it)"
+fi

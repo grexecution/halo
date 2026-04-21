@@ -1,0 +1,14 @@
+[extend]
+# Extend default gitleaks rules
+useDefault = true
+
+[allowlist]
+description = "Allowlist for known-safe patterns"
+regexes = [
+  # Example / placeholder values in .env.example files
+  '''(YOUR|<|REPLACE|example|placeholder|xxx)''',
+]
+paths = [
+  # Allow .env.example files (they document vars, not real secrets)
+  '''.env.example''',
+]

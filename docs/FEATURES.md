@@ -13,13 +13,13 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 ## Category: Install & onboarding
 
 ### F-001 — npx bootstrap
-**Status:** planned · **Phase:** 1
+**Status:** done · **Phase:** 1
 **Spec:** `npx create-claw-alt init` clones the repo template, installs deps, starts docker services, runs the CLI wizard.
 **Acceptance:** on a clean Mac Mini, from a fresh terminal, the user has a running dashboard at `localhost:3000` within 10 minutes of running the command, with no manual Docker commands.
 **Test:** `apps/cli/test/bootstrap.e2e.ts`
 
 ### F-002 — CLI wizard
-**Status:** planned · **Phase:** 1
+**Status:** done · **Phase:** 1
 **Spec:** interactive TUI that walks through: LLM provider, local-LLM install (weak/mid/strong/none), messaging platform, optional MCPs, filesystem permissions, default agent persona.
 **Acceptance:** all choices are stored. Wizard is idempotent (re-run updates config without destroying data).
 **Test:** `apps/cli/test/wizard.spec.ts`

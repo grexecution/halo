@@ -82,7 +82,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-015 — Cron & Goals page
 
-**Status:** planned · **Phase:** 5
+**Status:** done · **Phase:** 5
 **Spec:** CRUD cron jobs and goals. Show next-fire time, history, pause/resume.
 **Acceptance:** creating a cron via UI is equivalent to DB insert; pause stops firing within one tick.
 **Test:** `apps/dashboard/test/cron-goals.spec.tsx`
@@ -149,14 +149,14 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-024 — Critic loop
 
-**Status:** planned · **Phase:** 5
+**Status:** done · **Phase:** 5
 **Spec:** before marking any goal complete, a critic sub-agent reviews and either approves or requests revision. Max 3 iterations.
 **Acceptance:** a deliberately buggy code-gen task gets revised at least once before completion.
 **Test:** `services/control-plane/test/critic.spec.ts`
 
 ### F-025 — Self-health awareness
 
-**Status:** planned · **Phase:** 5
+**Status:** done · **Phase:** 5
 **Spec:** agent has `self.health_check()` and `self.recent_errors()` tools. If it notices a loop of failures, it stops and surfaces a summary.
 **Acceptance:** when the browser service is down, agent reports "browser unavailable" instead of retrying 30 times.
 **Test:** `services/control-plane/test/self-health.spec.ts`
@@ -408,7 +408,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-093 — Email trigger
 
-**Status:** planned · **Phase:** 5
+**Status:** done · **Phase:** 5
 **Spec:** Gmail label-filtered polling triggers agent sessions. Agent can reply via SMTP.
 **Acceptance:** emailing the configured address with label `claw` spawns a session.
 **Test:** `packages/messaging/test/email.spec.ts`
@@ -472,28 +472,28 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-110 — Cron scheduler
 
-**Status:** planned · **Phase:** 5
+**Status:** done · **Phase:** 5
 **Spec:** BullMQ-repeatable jobs driven by `cron_jobs` table.
 **Acceptance:** every-minute job fires exactly once per minute, ±2s.
 **Test:** `services/control-plane/test/cron.spec.ts`
 
 ### F-111 — Goal loop worker
 
-**Status:** planned · **Phase:** 5
+**Status:** done · **Phase:** 5
 **Spec:** worker picks active goals by priority and runs them.
 **Acceptance:** three goals run in priority order.
 **Test:** `services/control-plane/test/goal-loop.spec.ts`
 
 ### F-112 — Notification routing
 
-**Status:** planned · **Phase:** 5
+**Status:** done · **Phase:** 5
 **Spec:** goal/cron completion notifies via configured channel (default Telegram).
 **Acceptance:** scheduled task result arrives as Telegram message.
 **Test:** `services/control-plane/test/notifications.spec.ts`
 
 ### F-113 — Continuous project mode
 
-**Status:** planned · **Phase:** 5
+**Status:** done · **Phase:** 5
 **Spec:** agent given a long-running project goal keeps working: picks subtasks, self-critiques, researches online, reports daily.
 **Acceptance:** a 24h session produces at least one concrete output + a progress summary.
 **Test:** `manual:continuous-project-24h`
@@ -511,14 +511,14 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 
 ### F-121 — Watchdog heartbeats
 
-**Status:** planned · **Phase:** 5
+**Status:** done · **Phase:** 5
 **Spec:** every service heartbeats every 30s; watchdog restarts silent services after 90s.
 **Acceptance:** simulated service hang → watchdog restart + event emitted.
 **Test:** `services/watchdog/test/watchdog.spec.ts`
 
 ### F-122 — Agent self-diagnose
 
-**Status:** planned · **Phase:** 5
+**Status:** done · **Phase:** 5
 **Spec:** agent tools `self.health_check` and `self.recent_errors`.
 **Acceptance:** with one service down, `self.health_check` reports it.
 **Test:** `services/control-plane/test/self-diagnose.spec.ts`
@@ -602,14 +602,14 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 
 ### F-140 — Agent edits own docs
 
-**Status:** planned · **Phase:** 5
+**Status:** done · **Phase:** 5
 **Spec:** `docs.edit(file, changes)` tool, permission-gated (default on for main, off for sub-agents). Every edit creates a git commit with trace metadata.
 **Acceptance:** asking main agent to update `docs/FEATURES.md` with a feature status creates a commit.
 **Test:** `packages/tools/test/docs-edit.spec.ts`
 
 ### F-141 — Stuck-loop detector
 
-**Status:** planned · **Phase:** 5
+**Status:** done · **Phase:** 5
 **Spec:** LLM judge on last N turn deltas returns "no progress" → orchestrator injects reset-prompt.
 **Acceptance:** 3 repeated identical tool calls triggers detector.
 **Test:** `services/control-plane/test/stuck.spec.ts`

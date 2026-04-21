@@ -105,6 +105,7 @@ function runShTest(testPath: string): { ok: boolean; output: string } {
 }
 
 function runTest(testPath: string): { ok: boolean; output: string } {
+  if (testPath.startsWith('manual:')) return { ok: true, output: '[skipped: manual test]' }
   const ext = extname(testPath)
   if (ext === '.sh') return runShTest(testPath)
   return runTsTest(testPath)

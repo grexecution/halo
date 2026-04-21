@@ -31,7 +31,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 **Test:** `apps/cli/test/local-llm.spec.ts`
 
 ### F-004 — Docker compose lifecycle
-**Status:** planned · **Phase:** 1
+**Status:** done · **Phase:** 1
 **Spec:** `pnpm docker:up` / `:down` manage the full stack. `pnpm docker:logs <service>` tails logs.
 **Acceptance:** all services are `healthy` per docker ps within 60s of up.
 **Test:** `scripts/test-docker-lifecycle.sh`
@@ -439,7 +439,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 ## Category: Crash resilience
 
 ### F-120 — Docker restart policies
-**Status:** planned · **Phase:** 1
+**Status:** done · **Phase:** 1
 **Spec:** every service `restart: unless-stopped`.
 **Acceptance:** killing a container → Docker restarts it within 10s.
 **Test:** `scripts/test-restart.sh`

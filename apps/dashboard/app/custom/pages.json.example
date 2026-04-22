@@ -1,0 +1,4 @@
+[
+  { "href": "/custom/mission-control", "label": "Mission Control", "icon": "🚀" },
+  { "href": "/custom/analytics", "label": "Analytics", "icon": "📊" }
+]

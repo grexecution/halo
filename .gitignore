@@ -18,6 +18,10 @@ secrets.enc
 artifacts/*.jsonl
 artifacts/nightly/
 
+# Fork-safe custom dashboard pages (user-defined, survive git pull)
+apps/dashboard/app/custom/pages.json
+apps/dashboard/app/custom/*/
+
 # OS
 .DS_Store
 Thumbs.db

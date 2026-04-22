@@ -1,11 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { Circle, Eye, EyeOff, Lock } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') ?? '/'
 
@@ -21,7 +20,6 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-
     try {
       const res = await fetch('/api/auth', {
         method: 'POST',
@@ -34,7 +32,6 @@ export default function LoginPage() {
         }),
       })
       const data = (await res.json()) as { ok?: boolean; error?: string; needsTotp?: boolean }
-
       if (data.needsTotp) {
         setNeedsTotp(true)
         setLoading(false)
@@ -45,8 +42,7 @@ export default function LoginPage() {
         setLoading(false)
         return
       }
-      router.push(next)
-      router.refresh()
+      window.location.href = next
     } catch {
       setError('Connection error')
       setLoading(false)
@@ -54,91 +50,123 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-            <Circle size={12} className="text-white fill-white" />
+    <div className="fixed inset-0 bg-[#0a0a0a] flex">
+      {/* Left panel — branding */}
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 bg-[#0f0f0f] border-r border-white/5">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center">
+            <div className="w-2.5 h-2.5 rounded-full bg-black" />
           </div>
-          <span className="text-lg font-semibold text-white tracking-tight">open-greg</span>
+          <span className="text-white font-semibold tracking-tight">open-greg</span>
         </div>
 
-        {/* Card */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <Lock size={15} className="text-gray-500" />
-            <h1 className="text-sm font-semibold text-white">Sign in</h1>
+        <div>
+          <blockquote className="text-2xl font-light text-white/80 leading-relaxed mb-4">
+            "The only agent platform that actually keeps running."
+          </blockquote>
+          <p className="text-sm text-white/30">Self-hosted · Private · Autonomous</p>
+        </div>
+
+        <div className="text-xs text-white/20">open-greg v0.1.0</div>
+      </div>
+
+      {/* Right panel — form */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6">
+        {/* Mobile logo */}
+        <div className="flex items-center gap-2 mb-10 lg:hidden">
+          <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center">
+            <div className="w-2.5 h-2.5 rounded-full bg-black" />
+          </div>
+          <span className="text-white font-semibold tracking-tight">open-greg</span>
+        </div>
+
+        <div className="w-full max-w-[360px]">
+          <div className="mb-8">
+            <h1 className="text-xl font-semibold text-white mb-1">
+              {needsTotp ? 'Two-factor auth' : 'Welcome back'}
+            </h1>
+            <p className="text-sm text-white/40">
+              {needsTotp
+                ? 'Enter the code from your authenticator app'
+                : 'Sign in to your instance'}
+            </p>
           </div>
 
-          <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+          <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3">
             {!needsTotp ? (
               <>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1.5 block">Username</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
+                    Username
+                  </label>
                   <input
                     autoFocus
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="admin"
                     autoComplete="username"
                     required
+                    className="w-full h-11 bg-white/5 border border-white/10 rounded-xl px-4 text-sm text-white placeholder-white/20 focus:outline-none focus:border-white/30 focus:bg-white/8 transition-all"
                   />
                 </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1.5 block">Password</label>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
+                    Password
+                  </label>
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 pr-9 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       autoComplete="current-password"
                       required
+                      className="w-full h-11 bg-white/5 border border-white/10 rounded-xl px-4 pr-11 text-sm text-white placeholder-white/20 focus:outline-none focus:border-white/30 focus:bg-white/8 transition-all"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400 transition-colors"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
                     >
-                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                     </button>
                   </div>
                 </div>
               </>
             ) : (
-              <div>
-                <p className="text-xs text-gray-500 mb-3">
-                  Enter the 6-digit code from your authenticator app.
-                </p>
-                <label className="text-xs text-gray-500 mb-1.5 block">Authenticator code</label>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-white/50 uppercase tracking-wider">
+                  Authenticator code
+                </label>
                 <input
                   autoFocus
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white font-mono tracking-[0.3em] text-center placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
                   value={totp}
                   onChange={(e) => setTotp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder="000000"
                   inputMode="numeric"
                   maxLength={6}
+                  className="w-full h-11 bg-white/5 border border-white/10 rounded-xl px-4 text-sm text-white font-mono tracking-[0.4em] text-center placeholder-white/20 focus:outline-none focus:border-white/30 transition-all"
                 />
               </div>
             )}
 
             {error && (
-              <p className="text-xs text-red-400 bg-red-900/20 border border-red-900/40 rounded-lg px-3 py-2">
-                {error}
-              </p>
+              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                <div className="w-1 h-1 rounded-full bg-red-400 flex-shrink-0" />
+                <p className="text-xs text-red-400">{error}</p>
+              </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg py-2.5 transition-colors"
-            >
-              {loading ? 'Signing in…' : needsTotp ? 'Verify' : 'Sign in'}
-            </button>
+            <div className="pt-1">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-11 bg-white text-black text-sm font-semibold rounded-xl hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              >
+                {loading ? 'Signing in…' : needsTotp ? 'Verify' : 'Sign in'}
+              </button>
+            </div>
 
             {needsTotp && (
               <button
@@ -147,15 +175,19 @@ export default function LoginPage() {
                   setNeedsTotp(false)
                   setTotp('')
                 }}
-                className="w-full text-xs text-gray-600 hover:text-gray-400 transition-colors py-1"
+                className="w-full text-xs text-white/30 hover:text-white/60 transition-colors py-1"
               >
-                Back
+                ← Back
               </button>
             )}
           </form>
-        </div>
 
-        <p className="text-center text-xs text-gray-700 mt-4">open-greg · local instance</p>
+          {!needsTotp && (
+            <p className="mt-8 text-center text-xs text-white/20">
+              Auth disabled? Any credentials will work.
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )

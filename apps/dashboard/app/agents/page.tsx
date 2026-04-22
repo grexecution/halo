@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Bot } from 'lucide-react'
+import { Plus, Pencil, Trash2, Bot, ChevronDown, ChevronUp } from 'lucide-react'
 import {
   cn,
   Button,
@@ -34,21 +34,18 @@ interface Agent {
   handle: string
   name: string
   model: string
+  fallbackModels: string[]
   systemPrompt: string
   tools: AgentTools
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+interface AvailableModel {
+  modelId: string
+  name: string
+  provider: string
+}
 
-const MODELS = [
-  'claude-opus-4-7',
-  'claude-sonnet-4-6',
-  'claude-haiku-4-5-20251001',
-  'ollama/llama3.2',
-  'ollama/qwen2.5:14b',
-  'gpt-4o',
-  'gpt-4o-mini',
-] as const
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const TOOL_NAMES: ToolName[] = ['shell', 'browser', 'filesystem', 'gui']
 
@@ -64,6 +61,7 @@ const INITIAL_AGENTS: Agent[] = [
     handle: 'main',
     name: 'Main Agent',
     model: 'claude-sonnet-4-6',
+    fallbackModels: [],
     systemPrompt: 'You are a helpful AI assistant.',
     tools: DEFAULT_TOOLS,
   },
@@ -79,12 +77,126 @@ function validateHandle(value: string): string | null {
   return null
 }
 
+// ─── Fallback model picker ────────────────────────────────────────────────────
+
+interface FallbackPickerProps {
+  primaryModel: string
+  selected: string[]
+  models: AvailableModel[]
+  onChange: (models: string[]) => void
+}
+
+function FallbackPicker({ primaryModel, selected, models, onChange }: FallbackPickerProps) {
+  const [open, setOpen] = useState(false)
+  const candidates = models.filter((m) => m.modelId !== primaryModel)
+
+  function toggle(modelId: string) {
+    if (selected.includes(modelId)) {
+      onChange(selected.filter((m) => m !== modelId))
+    } else {
+      onChange([...selected, modelId])
+    }
+  }
+
+  return (
+    <div>
+      <Label>Fallback Models</Label>
+      <p className="text-[11px] text-gray-500 mb-1">
+        Used in order if the primary model fails or is unavailable.
+      </p>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-300 hover:border-gray-500 transition-colors"
+      >
+        <span>
+          {selected.length === 0
+            ? 'No fallbacks'
+            : selected.length === 1
+              ? '1 fallback selected'
+              : selected.length + ' fallbacks selected'}
+        </span>
+        {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+      </button>
+
+      {open && (
+        <div className="mt-1 border border-gray-700 rounded-lg bg-gray-900 divide-y divide-gray-800 max-h-48 overflow-y-auto">
+          {candidates.length === 0 ? (
+            <p className="text-xs text-gray-500 px-3 py-2">
+              No other models configured. Add models in Settings → Models.
+            </p>
+          ) : (
+            candidates.map((m, idx) => {
+              const checked = selected.includes(m.modelId)
+              const rank = selected.indexOf(m.modelId) + 1
+              return (
+                <label
+                  key={m.modelId}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-800/60 transition-colors',
+                    idx === 0 && 'rounded-t-lg',
+                    idx === candidates.length - 1 && 'rounded-b-lg',
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    className="accent-blue-500"
+                    checked={checked}
+                    onChange={() => toggle(m.modelId)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white truncate">{m.name}</p>
+                    <p className="text-[11px] text-gray-500 font-mono truncate">{m.modelId}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="muted" className="text-[10px] capitalize">
+                      {m.provider}
+                    </Badge>
+                    {checked && (
+                      <span className="text-[10px] text-blue-400 font-mono">#{rank}</span>
+                    )}
+                  </div>
+                </label>
+              )
+            })
+          )}
+        </div>
+      )}
+
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {selected.map((id, i) => {
+            const m = models.find((x) => x.modelId === id)
+            return (
+              <span
+                key={id}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-800 border border-gray-700 text-[11px] text-gray-300"
+              >
+                <span className="text-blue-400 font-mono">#{i + 1}</span>
+                {m?.name ?? id}
+                <button
+                  type="button"
+                  onClick={() => toggle(id)}
+                  className="ml-0.5 text-gray-500 hover:text-red-400"
+                >
+                  x
+                </button>
+              </span>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Agent Form (inside Dialog) ───────────────────────────────────────────────
 
 interface AgentFormData {
   handle: string
   name: string
   model: string
+  fallbackModels: string[]
   systemPrompt: string
   tools: AgentTools
 }
@@ -94,6 +206,7 @@ interface AgentDialogProps {
   initial: AgentFormData | null
   isEditing: boolean
   existingHandles: string[]
+  availableModels: AvailableModel[]
   onClose: () => void
   onSave: (data: AgentFormData) => void | Promise<void>
 }
@@ -103,13 +216,15 @@ function AgentDialog({
   initial,
   isEditing,
   existingHandles,
+  availableModels,
   onClose,
   onSave,
 }: AgentDialogProps) {
   const [form, setForm] = useState<AgentFormData>({
     handle: '',
     name: '',
-    model: 'claude-sonnet-4-6',
+    model: availableModels[0]?.modelId ?? 'claude-sonnet-4-6',
+    fallbackModels: [],
     systemPrompt: '',
     tools: DEFAULT_TOOLS,
   })
@@ -121,14 +236,15 @@ function AgentDialog({
         initial ?? {
           handle: '',
           name: '',
-          model: 'claude-sonnet-4-6',
+          model: availableModels[0]?.modelId ?? 'claude-sonnet-4-6',
+          fallbackModels: [],
           systemPrompt: '',
           tools: { ...DEFAULT_TOOLS },
         },
       )
       setHandleError(null)
     }
-  }, [open, initial])
+  }, [open, initial, availableModels])
 
   function handleHandleChange(value: string) {
     setForm((p) => ({ ...p, handle: value }))
@@ -155,7 +271,8 @@ function AgentDialog({
       return
     }
     if (!form.name.trim()) return
-    onSave(form)
+    const cleanedFallbacks = form.fallbackModels.filter((m) => m !== form.model)
+    onSave({ ...form, fallbackModels: cleanedFallbacks })
   }
 
   const canSave = !handleError && form.handle.trim() !== '' && form.name.trim() !== ''
@@ -169,7 +286,6 @@ function AgentDialog({
       className="max-w-xl"
     >
       <div data-testid="agent-form" className="space-y-4">
-        {/* Handle */}
         <div>
           <Label htmlFor="agent-handle">Handle</Label>
           <Input
@@ -184,7 +300,6 @@ function AgentDialog({
           {handleError && <p className="text-[11px] text-red-400 mt-1">{handleError}</p>}
         </div>
 
-        {/* Name */}
         <div>
           <Label htmlFor="agent-name">Name</Label>
           <Input
@@ -196,23 +311,32 @@ function AgentDialog({
           />
         </div>
 
-        {/* Model */}
         <div>
-          <Label htmlFor="agent-model">Model</Label>
+          <Label htmlFor="agent-model">Primary Model</Label>
           <Select
             id="agent-model"
             value={form.model}
             onChange={(e) => setForm((p) => ({ ...p, model: e.target.value }))}
           >
-            {MODELS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
+            {availableModels.length === 0 ? (
+              <option value={form.model}>{form.model}</option>
+            ) : (
+              availableModels.map((m) => (
+                <option key={m.modelId} value={m.modelId}>
+                  {m.name} ({m.provider})
+                </option>
+              ))
+            )}
           </Select>
         </div>
 
-        {/* System Prompt */}
+        <FallbackPicker
+          primaryModel={form.model}
+          selected={form.fallbackModels}
+          models={availableModels}
+          onChange={(models) => setForm((p) => ({ ...p, fallbackModels: models }))}
+        />
+
         <div>
           <Label htmlFor="agent-system-prompt">System Prompt</Label>
           <Textarea
@@ -225,7 +349,6 @@ function AgentDialog({
           />
         </div>
 
-        {/* Tools */}
         <div>
           <Label>Tools Enabled</Label>
           <div className="grid grid-cols-2 gap-3 mt-1">
@@ -241,7 +364,6 @@ function AgentDialog({
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={onClose}>
             Cancel
@@ -260,15 +382,17 @@ function AgentDialog({
 interface AgentCardProps {
   agent: Agent
   isPrimary: boolean
+  availableModels: AvailableModel[]
   onEdit: (agent: Agent) => void
   onDelete: (handle: string) => void | Promise<void>
 }
 
-function AgentCard({ agent, isPrimary, onEdit, onDelete }: AgentCardProps) {
+function AgentCard({ agent, isPrimary, availableModels, onEdit, onDelete }: AgentCardProps) {
   const enabledTools = TOOL_NAMES.filter((t) => agent.tools[t])
+  const primaryLabel = availableModels.find((m) => m.modelId === agent.model)?.name ?? agent.model
 
   return (
-    <Card data-testid={`agent-item-${agent.handle}`} className="flex flex-col">
+    <Card data-testid={'agent-item-' + agent.handle} className="flex flex-col">
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -279,22 +403,40 @@ function AgentCard({ agent, isPrimary, onEdit, onDelete }: AgentCardProps) {
             <p className="text-sm text-white mt-0.5">{agent.name}</p>
           </div>
           <Badge variant="muted" className="shrink-0 text-[10px]">
-            {agent.model}
+            {primaryLabel}
           </Badge>
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 py-3">
-        {/* System prompt preview */}
+      <CardContent className="flex-1 py-3 space-y-2">
         {agent.systemPrompt ? (
           <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{agent.systemPrompt}</p>
         ) : (
           <p className="text-xs text-gray-700 italic">No system prompt</p>
         )}
 
-        {/* Tools */}
+        {agent.fallbackModels.length > 0 && (
+          <div>
+            <p className="text-[10px] text-gray-600 uppercase tracking-wide mb-1">Fallbacks</p>
+            <div className="flex flex-wrap gap-1">
+              {agent.fallbackModels.map((id, i) => {
+                const label = availableModels.find((m) => m.modelId === id)?.name ?? id
+                return (
+                  <span
+                    key={id}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-800 border border-gray-700 text-[10px] text-gray-400"
+                  >
+                    <span className="text-blue-500 font-mono">#{i + 1}</span>
+                    {label}
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {enabledTools.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-3">
+          <div className="flex flex-wrap gap-1">
             {enabledTools.map((t) => (
               <Badge key={t} variant="default" className="text-[10px]">
                 {t}
@@ -308,7 +450,7 @@ function AgentCard({ agent, isPrimary, onEdit, onDelete }: AgentCardProps) {
         <Button
           variant="ghost"
           size="sm"
-          data-testid={`edit-${agent.handle}`}
+          data-testid={'edit-' + agent.handle}
           onClick={() => onEdit(agent)}
         >
           <Pencil size={13} />
@@ -317,7 +459,7 @@ function AgentCard({ agent, isPrimary, onEdit, onDelete }: AgentCardProps) {
         <Button
           variant="ghost"
           size="sm"
-          data-testid={`delete-${agent.handle}`}
+          data-testid={'delete-' + agent.handle}
           onClick={() => onDelete(agent.handle)}
           className="text-red-500 hover:text-red-400 hover:bg-red-900/20"
         >
@@ -333,14 +475,36 @@ function AgentCard({ agent, isPrimary, onEdit, onDelete }: AgentCardProps) {
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([])
+  const [availableModels, setAvailableModels] = useState<AvailableModel[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null)
 
   useEffect(() => {
     fetch('/api/agents')
       .then((r) => r.json())
-      .then((data: { agents: Agent[] }) => setAgents(data.agents))
+      .then((data) => setAgents((data as { agents: Agent[] }).agents))
       .catch(() => setAgents(INITIAL_AGENTS))
+
+    fetch('/api/settings')
+      .then((r) => r.json())
+      .then((data) => {
+        const d = data as {
+          llm?: { models?: Array<{ modelId: string; name: string; provider: string }> }
+        }
+        const models = (d.llm?.models ?? []).map((m) => ({
+          modelId: m.modelId,
+          name: m.name,
+          provider: m.provider,
+        }))
+        setAvailableModels(models)
+      })
+      .catch(() => {
+        setAvailableModels([
+          { modelId: 'claude-sonnet-4-6', name: 'Claude Sonnet', provider: 'anthropic' },
+          { modelId: 'claude-haiku-4-5-20251001', name: 'Claude Haiku', provider: 'anthropic' },
+          { modelId: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
+        ])
+      })
   }, [])
 
   function openNew() {
@@ -355,7 +519,7 @@ export default function AgentsPage() {
 
   async function handleSave(data: AgentFormData) {
     if (editingAgent) {
-      await fetch(`/api/agents/${editingAgent.handle}`, {
+      await fetch('/api/agents/' + editingAgent.handle, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -376,8 +540,8 @@ export default function AgentsPage() {
   }
 
   async function handleDelete(handle: string) {
-    if (!window.confirm(`Delete agent @${handle}?`)) return
-    await fetch(`/api/agents/${handle}`, { method: 'DELETE' })
+    if (!window.confirm('Delete agent @' + handle + '?')) return
+    await fetch('/api/agents/' + handle, { method: 'DELETE' })
     setAgents((prev) => prev.filter((a) => a.handle !== handle))
   }
 
@@ -387,6 +551,7 @@ export default function AgentsPage() {
         handle: editingAgent.handle,
         name: editingAgent.name,
         model: editingAgent.model,
+        fallbackModels: editingAgent.fallbackModels ?? [],
         systemPrompt: editingAgent.systemPrompt,
         tools: editingAgent.tools,
       }
@@ -394,7 +559,6 @@ export default function AgentsPage() {
 
   return (
     <main className="p-6 max-w-5xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">Agents</h1>
         <Button data-testid="new-agent-button" onClick={openNew}>
@@ -403,7 +567,6 @@ export default function AgentsPage() {
         </Button>
       </div>
 
-      {/* Agent grid */}
       {agents.length === 0 ? (
         <EmptyState
           icon={<Bot size={36} />}
@@ -423,6 +586,7 @@ export default function AgentsPage() {
               key={agent.handle}
               agent={agent}
               isPrimary={idx === 0}
+              availableModels={availableModels}
               onEdit={openEdit}
               onDelete={handleDelete}
             />
@@ -435,6 +599,7 @@ export default function AgentsPage() {
         initial={editFormData}
         isEditing={editingAgent !== null}
         existingHandles={existingHandles}
+        availableModels={availableModels}
         onClose={() => setDialogOpen(false)}
         onSave={handleSave}
       />

@@ -15,7 +15,8 @@ interface PendingAction {
 }
 
 // Strip <action>...</action> blocks from displayed message text
-function cleanMessageText(text: string): string {
+function cleanMessageText(text: string | undefined | null): string {
+  if (typeof text !== 'string') return ''
   return text.replace(/<action>[\s\S]*?<\/action>/g, '').trim()
 }
 
@@ -268,7 +269,14 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: sentInput, model: selectedModel || undefined }),
       })
-      const data = (await res.json()) as { message: Message; pendingActions?: PendingAction[] }
+      const data = (await res.json()) as {
+        message?: Message
+        pendingActions?: PendingAction[]
+        error?: string
+      }
+      if (!res.ok || !data.message) {
+        throw new Error(data.error ?? `Server error (${res.status})`)
+      }
       const msg: Message = {
         ...data.message,
         pendingActions: data.pendingActions?.length ? data.pendingActions : undefined,

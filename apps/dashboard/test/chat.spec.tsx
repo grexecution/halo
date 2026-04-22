@@ -82,4 +82,44 @@ describe('F-010: Chat page', () => {
     expect(screen.queryAllByTestId('message-user').length).toBe(0)
     expect(screen.queryAllByTestId('message-assistant').length).toBe(0)
   })
+
+  it('displays error message when API returns non-ok response (no crash)', async () => {
+    // Simulate the API failing with an error JSON (no `message` field)
+    global.fetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+      if (url === '/api/chats' && opts?.method === 'POST')
+        return Promise.resolve({ ok: true, json: async () => SESSION } as Response)
+      if (url === '/api/chats')
+        return Promise.resolve({ ok: true, json: async () => ({ sessions: [] }) } as Response)
+      if (String(url).match(/\/api\/chats\/s1$/))
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ ...SESSION, messages: [] }),
+        } as Response)
+      if (url === '/api/models')
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ models: [] }),
+        } as Response)
+      if (String(url).match(/\/api\/chats\/s1\/messages/) && opts?.method === 'POST')
+        return Promise.resolve({
+          ok: false,
+          status: 502,
+          json: async () => ({ error: 'LLM call failed: connection refused' }),
+        } as Response)
+      return Promise.resolve({ ok: true, json: async () => ({}) } as Response)
+    })
+
+    render(<ChatPage />)
+    clickNewChat()
+    await waitFor(() => screen.getByTestId('chat-input'), { timeout: 3000 })
+
+    const input = screen.getByTestId('chat-input')
+    fireEvent.change(input, { target: { value: 'Hello' } })
+    fireEvent.click(screen.getByTestId('send-button'))
+
+    // Should show the user message and then an error message — no TypeError crash
+    await waitFor(() => screen.getByTestId('message-user'), { timeout: 3000 })
+    await waitFor(() => screen.getByTestId('message-assistant'), { timeout: 3000 })
+    expect(screen.getByTestId('message-assistant').textContent).toContain('Error')
+  })
 })

@@ -19,9 +19,20 @@ export function getDb(): Database.Database {
   _db.pragma('journal_mode = WAL')
   _db.pragma('foreign_keys = ON')
   initSchema(_db)
+  migrateSchema(_db)
   migrateJson(_db)
   migrateJsonV2(_db)
   return _db
+}
+
+// Additive column migrations — safe to run on existing DBs
+function migrateSchema(db: Database.Database) {
+  const cols = (db.prepare('PRAGMA table_info(agents)').all() as { name: string }[]).map(
+    (c) => c.name,
+  )
+  if (!cols.includes('fallback_models')) {
+    db.exec("ALTER TABLE agents ADD COLUMN fallback_models TEXT NOT NULL DEFAULT '[]'")
+  }
 }
 
 function initSchema(db: Database.Database) {
@@ -34,11 +45,13 @@ function initSchema(db: Database.Database) {
       handle TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       model TEXT NOT NULL,
+      fallback_models TEXT NOT NULL DEFAULT '[]',
       system_prompt TEXT NOT NULL DEFAULT '',
       tools TEXT NOT NULL DEFAULT '{}',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
     CREATE TABLE IF NOT EXISTS workspaces (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,

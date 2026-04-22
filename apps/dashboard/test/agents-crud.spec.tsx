@@ -12,6 +12,7 @@ const DEFAULT_AGENTS = [
     handle: 'main',
     name: 'Main Agent',
     model: 'claude-sonnet-4-6',
+    fallbackModels: [],
     systemPrompt: 'You are a helpful AI assistant.',
     tools: { shell: false, browser: false, filesystem: false, gui: false },
   },
@@ -19,6 +20,8 @@ const DEFAULT_AGENTS = [
 
 function setupFetch(agents = DEFAULT_AGENTS) {
   global.fetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+    if (url === '/api/models')
+      return Promise.resolve({ ok: true, json: async () => ({ models: [] }) } as Response)
     if (url === '/api/agents' && !opts?.method)
       return Promise.resolve({ ok: true, json: async () => ({ agents }) } as Response)
     if (url === '/api/agents' && opts?.method === 'POST')

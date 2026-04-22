@@ -72,9 +72,9 @@ describe('F-112: Notification routing', () => {
 
     await adapter.send({ chatId: 'chat-123', text: 'Goal completed: weekly summary done.' })
     expect((adapter as { _sent: Array<{ chatId: string; text: string }> })._sent).toHaveLength(1)
-    expect((adapter as { _sent: Array<{ chatId: string; text: string }> })._sent[0]?.text).toContain(
-      'Goal completed',
-    )
+    expect(
+      (adapter as { _sent: Array<{ chatId: string; text: string }> })._sent[0]?.text,
+    ).toContain('Goal completed')
   })
 
   it('mock adapter triggers registered message handler', async () => {

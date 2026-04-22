@@ -1,7 +1,23 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { Bot, Cpu, Plus, Target } from 'lucide-react'
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  Dialog,
+  Input,
+  Label,
+  StatusDot,
+  cn,
+} from '../components/ui/index'
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface Instance {
   id: string
@@ -15,11 +31,250 @@ interface Instance {
   llmModel?: string
 }
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function isLocal(url: string): boolean {
+  return url.includes('localhost') || url.includes('127.0.0.1')
+}
+
+function relativeTime(iso: string): string {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  if (diff < 60) return 'just now'
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+  return `${Math.floor(diff / 86400)}d ago`
+}
+
+// ---------------------------------------------------------------------------
+// Skeleton card
+// ---------------------------------------------------------------------------
+
+function SkeletonCard() {
+  return (
+    <Card>
+      <CardContent className="space-y-4 py-5">
+        <div className="flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-gray-800 animate-pulse" />
+          <div className="h-4 w-32 rounded bg-gray-800 animate-pulse" />
+          <div className="h-4 w-12 rounded bg-gray-800 animate-pulse" />
+        </div>
+        <div className="h-3 w-48 rounded bg-gray-800 animate-pulse" />
+        <div className="grid grid-cols-3 gap-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-12 rounded-lg bg-gray-800 animate-pulse" />
+          ))}
+        </div>
+        <div className="h-8 rounded-lg bg-gray-800 animate-pulse" />
+      </CardContent>
+    </Card>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Instance card
+// ---------------------------------------------------------------------------
+
+function StatBlock({
+  icon,
+  value,
+  label,
+}: {
+  icon: React.ReactNode
+  value: string | number
+  label: string
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center bg-gray-800/60 rounded-lg py-2 px-1 gap-1">
+      <div className="flex items-center gap-1 text-gray-400">{icon}</div>
+      <span className="text-xs font-semibold text-white truncate max-w-full px-1">{value}</span>
+      <span className="text-[10px] text-gray-600">{label}</span>
+    </div>
+  )
+}
+
+function InstanceCard({ instance }: { instance: Instance }) {
+  const local = isLocal(instance.url)
+
+  const statusForDot =
+    instance.status === 'online'
+      ? ('online' as const)
+      : instance.status === 'offline'
+        ? ('offline' as const)
+        : ('pending' as const)
+
+  return (
+    <Card
+      data-testid={`instance-card-${instance.id}`}
+      className="flex flex-col hover:border-gray-700 transition-colors"
+    >
+      <CardContent className="flex flex-col gap-4 py-5 flex-1">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <StatusDot
+                status={statusForDot}
+                pulse={instance.status === 'online'}
+                data-testid={`instance-status-${instance.id}`}
+              />
+              <span className="font-semibold text-white text-sm">{instance.name}</span>
+              <Badge variant={local ? 'info' : 'default'}>{local ? 'local' : 'remote'}</Badge>
+            </div>
+            <p className="font-mono text-xs text-gray-500 mt-1 truncate">{instance.url}</p>
+          </div>
+          {instance.version && (
+            <Badge variant="muted" className="flex-shrink-0">
+              v{instance.version}
+            </Badge>
+          )}
+        </div>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2">
+          <StatBlock icon={<Bot size={12} />} value={instance.agentCount ?? '—'} label="agents" />
+          <StatBlock
+            icon={<Target size={12} />}
+            value={instance.activeGoals ?? '—'}
+            label="goals"
+          />
+          <StatBlock icon={<Cpu size={12} />} value={instance.llmModel ?? '—'} label="model" />
+        </div>
+
+        {/* Last seen */}
+        {instance.lastSeen && (
+          <p className="text-xs text-gray-600">Last seen {relativeTime(instance.lastSeen)}</p>
+        )}
+
+        {/* Action */}
+        <div className="mt-auto">
+          {instance.status === 'offline' ? (
+            <Badge variant="muted" className="w-full justify-center py-1.5 text-xs">
+              Offline
+            </Badge>
+          ) : local ? (
+            <Link href="/chat" className="block">
+              <Button className="w-full" size="sm">
+                Open Chat
+              </Button>
+            </Link>
+          ) : (
+            <a href={instance.url} target="_blank" rel="noopener noreferrer" className="block">
+              <Button variant="outline" className="w-full" size="sm">
+                View
+              </Button>
+            </a>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Add Instance card + dialog
+// ---------------------------------------------------------------------------
+
+function AddInstanceCard({ onAdded }: { onAdded: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [url, setUrl] = useState('')
+  const [name, setName] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function handleRegister() {
+    if (!url.trim()) return
+    setLoading(true)
+    try {
+      await fetch('/api/hub/instances', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url.trim(), name: name.trim() || undefined }),
+      })
+      onAdded()
+    } catch {
+      // silently ignore — will refresh anyway
+    } finally {
+      setLoading(false)
+      setOpen(false)
+      setUrl('')
+      setName('')
+    }
+  }
+
+  return (
+    <>
+      <button
+        data-testid="add-instance-button"
+        onClick={() => setOpen(true)}
+        className={cn(
+          'border-2 border-dashed border-gray-800 hover:border-gray-600',
+          'rounded-xl flex flex-col items-center justify-center gap-2',
+          'min-h-[180px] text-gray-600 hover:text-gray-400 transition-colors cursor-pointer w-full',
+        )}
+      >
+        <Plus size={20} />
+        <span className="text-sm">Add instance</span>
+      </button>
+
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Add Remote Instance"
+        description="Connect to another open-greg instance by URL."
+      >
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="instance-url">URL</Label>
+            <Input
+              id="instance-url"
+              data-testid="instance-url-input"
+              type="url"
+              placeholder="https://your-server.com"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleRegister()}
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="instance-name">Name (optional)</Label>
+            <Input
+              id="instance-name"
+              placeholder="Production"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button
+              data-testid="register-instance-button"
+              onClick={handleRegister}
+              disabled={loading || !url.trim()}
+              className="flex-1"
+            >
+              {loading ? 'Registering...' : 'Register'}
+            </Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
 export default function HubPage() {
   const [instances, setInstances] = useState<Instance[]>([])
   const [loading, setLoading] = useState(true)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  useEffect(() => {
+  function fetchInstances() {
     fetch('/api/hub/instances')
       .then((r) => r.json())
       .then((data: { instances: Instance[] }) => {
@@ -27,177 +282,39 @@ export default function HubPage() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    fetchInstances()
+    intervalRef.current = setInterval(fetchInstances, 30000)
+    return () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current)
+      }
+    }
   }, [])
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Instance Hub</h1>
-          <p className="mt-1 text-sm text-gray-400">
-            Control all your open-greg instances from one place.
-          </p>
-        </div>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-sm rounded-lg transition-colors"
-        >
-          Refresh
-        </button>
+    <main className="p-6 max-w-6xl mx-auto space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-white">Hub</h1>
+        <p className="text-sm text-gray-500 mt-1">Manage your open-greg instances</p>
       </div>
 
-      {loading ? (
-        <div className="text-gray-500 text-sm">Discovering instances…</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {instances.map((inst) => (
-            <InstanceCard key={inst.id} instance={inst} />
-          ))}
-
-          <AddInstanceCard />
-        </div>
-      )}
-    </div>
-  )
-}
-
-function InstanceCard({ instance }: { instance: Instance }) {
-  const statusColor =
-    instance.status === 'online'
-      ? 'bg-green-500'
-      : instance.status === 'offline'
-        ? 'bg-red-500'
-        : 'bg-yellow-500'
-
-  const isLocal = instance.url.includes('localhost') || instance.url.includes('127.0.0.1')
-
-  return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl p-5 hover:border-gray-500 transition-colors">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${statusColor}`} />
-            <h2 className="font-semibold text-white">{instance.name}</h2>
-            {isLocal && (
-              <span className="text-xs bg-blue-900/50 text-blue-300 px-1.5 py-0.5 rounded">
-                local
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-gray-500 mt-0.5 font-mono">{instance.url}</p>
-        </div>
-        {instance.version && (
-          <span className="text-xs text-gray-600 font-mono">v{instance.version}</span>
-        )}
-      </div>
-
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <Stat label="Agents" value={instance.agentCount ?? '—'} />
-        <Stat label="Goals" value={instance.activeGoals ?? '—'} />
-        <Stat label="Model" value={instance.llmModel ?? '—'} small />
-      </div>
-
-      {instance.lastSeen && (
-        <p className="text-xs text-gray-600 mb-4">Last seen: {instance.lastSeen}</p>
-      )}
-
-      <div className="flex gap-2">
-        {isLocal ? (
-          <Link
-            href="/chat"
-            className="flex-1 text-center text-sm bg-indigo-700 hover:bg-indigo-600 text-white py-1.5 rounded-lg transition-colors"
-          >
-            Open Dashboard
-          </Link>
+      {/* Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {loading ? (
+          <>
+            <SkeletonCard />
+            <SkeletonCard />
+          </>
         ) : (
-          <a
-            href={`${instance.url}/hub`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 text-center text-sm bg-gray-700 hover:bg-gray-600 text-white py-1.5 rounded-lg transition-colors"
-          >
-            Open Remote →
-          </a>
+          instances.map((inst) => <InstanceCard key={inst.id} instance={inst} />)
         )}
-        {instance.status === 'online' && (
-          <button className="px-3 py-1.5 text-sm bg-red-900/40 hover:bg-red-900/60 text-red-300 rounded-lg transition-colors">
-            Pause
-          </button>
-        )}
+
+        <AddInstanceCard onAdded={fetchInstances} />
       </div>
-    </div>
-  )
-}
-
-function Stat({ label, value, small }: { label: string; value: string | number; small?: boolean }) {
-  return (
-    <div className="bg-gray-900/60 rounded-lg p-2 text-center">
-      <div className={`font-semibold text-white ${small ? 'text-xs truncate' : 'text-lg'}`}>
-        {value}
-      </div>
-      <div className="text-xs text-gray-500">{label}</div>
-    </div>
-  )
-}
-
-function AddInstanceCard() {
-  const [url, setUrl] = useState('')
-  const [adding, setAdding] = useState(false)
-  const [open, setOpen] = useState(false)
-
-  async function handleAdd() {
-    if (!url.trim()) return
-    setAdding(true)
-    await fetch('/api/hub/instances', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
-    }).catch(() => {})
-    setAdding(false)
-    setOpen(false)
-    setUrl('')
-    window.location.reload()
-  }
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="border-2 border-dashed border-gray-700 hover:border-gray-500 rounded-xl p-5 text-gray-500 hover:text-gray-300 transition-colors flex flex-col items-center justify-center gap-2 min-h-[180px]"
-      >
-        <span className="text-3xl">+</span>
-        <span className="text-sm">Add instance</span>
-      </button>
-    )
-  }
-
-  return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl p-5">
-      <h3 className="font-semibold text-white mb-3">Connect instance</h3>
-      <input
-        type="url"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        placeholder="https://your-server.com"
-        className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 mb-3 focus:outline-none focus:border-indigo-500"
-        onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-        autoFocus
-      />
-      <div className="flex gap-2">
-        <button
-          onClick={handleAdd}
-          disabled={adding}
-          className="flex-1 bg-indigo-700 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm py-1.5 rounded-lg"
-        >
-          {adding ? 'Connecting…' : 'Connect'}
-        </button>
-        <button
-          onClick={() => setOpen(false)}
-          className="px-3 py-1.5 text-sm text-gray-400 hover:text-white"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
+    </main>
   )
 }

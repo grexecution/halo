@@ -3,24 +3,38 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import {
+  LayoutGrid,
+  MessageSquare,
+  Bot,
+  Target,
+  Brain,
+  Plug,
+  Package,
+  ScrollText,
+  Activity,
+  Settings,
+  FileText,
+  Circle,
+} from 'lucide-react'
+import { cn } from './ui/cn'
 
 const CORE_NAV = [
-  { href: '/hub', label: 'Hub', icon: '⬡' },
-  { href: '/chat', label: 'Chat', icon: '💬' },
-  { href: '/agents', label: 'Agents', icon: '🤖' },
-  { href: '/cron-goals', label: 'Goals & Cron', icon: '🎯' },
-  { href: '/memory', label: 'Memory', icon: '🧠' },
-  { href: '/connectors', label: 'Connectors', icon: '🔌' },
-  { href: '/registry', label: 'Registry', icon: '📦' },
-  { href: '/logs', label: 'Logs', icon: '📋' },
-  { href: '/build-health', label: 'Build Health', icon: '🏗️' },
-  { href: '/settings', label: 'Settings', icon: '⚙️' },
+  { href: '/hub', label: 'Hub', icon: LayoutGrid },
+  { href: '/chat', label: 'Chat', icon: MessageSquare },
+  { href: '/agents', label: 'Agents', icon: Bot },
+  { href: '/cron-goals', label: 'Goals & Cron', icon: Target },
+  { href: '/memory', label: 'Memory', icon: Brain },
+  { href: '/connectors', label: 'Connectors', icon: Plug },
+  { href: '/registry', label: 'Registry', icon: Package },
+  { href: '/logs', label: 'Logs', icon: ScrollText },
+  { href: '/build-health', label: 'Build Health', icon: Activity },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
 interface CustomPage {
   href: string
   label: string
-  icon?: string
 }
 
 export function Sidebar() {
@@ -31,35 +45,37 @@ export function Sidebar() {
     fetch('/api/custom-pages')
       .then((r) => r.json())
       .then((data: { pages: CustomPage[] }) => setCustomPages(data.pages ?? []))
-      .catch(() => {
-        /* custom pages are optional */
-      })
+      .catch(() => undefined)
   }, [])
 
   return (
-    <nav className="flex flex-col w-56 min-h-screen bg-gray-950 text-gray-100 border-r border-gray-800">
-      <div className="px-4 py-5 border-b border-gray-800">
-        <Link href="/" className="flex items-center gap-2">
-          <span className="text-xl font-bold text-white">open-greg</span>
-          <span className="text-xs text-gray-500 font-mono">v0.1</span>
+    <nav className="flex flex-col w-52 min-h-screen bg-gray-950 border-r border-gray-800/60 flex-shrink-0">
+      <div className="px-4 py-4 border-b border-gray-800/60">
+        <Link href="/" className="flex items-center gap-2.5">
+          <div className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center flex-shrink-0">
+            <Circle size={10} className="text-white fill-white" />
+          </div>
+          <span className="text-sm font-semibold text-white tracking-tight">open-greg</span>
         </Link>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-3">
+      <div className="flex-1 overflow-y-auto py-2">
         <ul className="space-y-0.5 px-2">
           {CORE_NAV.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + '/')
+            const Icon = item.icon
             return (
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  className={cn(
+                    'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
                     active
-                      ? 'bg-gray-800 text-white font-medium'
-                      : 'text-gray-400 hover:text-white hover:bg-gray-800/60'
-                  }`}
+                      ? 'bg-gray-800 text-white'
+                      : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800/50',
+                  )}
                 >
-                  <span className="text-base leading-none">{item.icon}</span>
+                  <Icon size={15} className="flex-shrink-0" />
                   {item.label}
                 </Link>
               </li>
@@ -68,8 +84,8 @@ export function Sidebar() {
 
           {customPages.length > 0 && (
             <>
-              <li className="pt-3 pb-1">
-                <span className="px-3 text-xs text-gray-600 uppercase tracking-wider font-semibold">
+              <li className="pt-3 pb-1 px-3">
+                <span className="text-[10px] text-gray-700 uppercase tracking-widest font-semibold">
                   Custom
                 </span>
               </li>
@@ -79,13 +95,14 @@ export function Sidebar() {
                   <li key={page.href}>
                     <Link
                       href={page.href}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      className={cn(
+                        'flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors',
                         active
-                          ? 'bg-gray-800 text-white font-medium'
-                          : 'text-gray-400 hover:text-white hover:bg-gray-800/60'
-                      }`}
+                          ? 'bg-gray-800 text-white'
+                          : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800/50',
+                      )}
                     >
-                      <span className="text-base leading-none">{page.icon ?? '📄'}</span>
+                      <FileText size={15} className="flex-shrink-0" />
                       {page.label}
                     </Link>
                   </li>
@@ -96,10 +113,10 @@ export function Sidebar() {
         </ul>
       </div>
 
-      <div className="px-4 py-3 border-t border-gray-800">
+      <div className="px-4 py-3 border-t border-gray-800/60">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-xs text-gray-500">Local instance</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-xs text-gray-600">local instance</span>
         </div>
       </div>
     </nav>

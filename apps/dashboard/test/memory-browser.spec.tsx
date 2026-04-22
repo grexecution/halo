@@ -1,9 +1,16 @@
 /**
  * F-014: Memory browser
  */
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import MemoryPage from '../app/memory/page.js'
+
+beforeEach(() => {
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ results: [], total: 0, stats: { bySource: {} } }),
+  } as Response)
+})
 
 describe('F-014: Memory browser', () => {
   it('renders search input and button', () => {
@@ -18,16 +25,15 @@ describe('F-014: Memory browser', () => {
     expect(list.children.length).toBe(0)
   })
 
-  it('shows "no results" placeholder when query entered with no results', () => {
+  it('updates query state when typing', () => {
     render(<MemoryPage />)
     const input = screen.getByTestId('memory-search-input') as HTMLInputElement
-    fireEvent.change(input, { target: { value: 'nonexistent query' } })
-    // "No memories found" appears after a failed search — we test the query state
-    expect(input.value).toBe('nonexistent query')
+    fireEvent.change(input, { target: { value: 'test query' } })
+    expect(input.value).toBe('test query')
   })
 
   it('has page heading', () => {
     render(<MemoryPage />)
-    expect(screen.getByText('Memory Browser')).toBeDefined()
+    expect(screen.getByText('Memory')).toBeDefined()
   })
 })

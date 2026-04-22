@@ -1,36 +1,90 @@
 /**
  * F-015: Cron & Goals page
  */
-import { describe, it, expect } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import CronGoalsPage from '../app/cron-goals/page.js'
 
+const MOCK_JOBS = [
+  {
+    id: 'j1',
+    name: 'daily-summary',
+    schedule: '0 9 * * *',
+    active: true,
+    createdAt: new Date().toISOString(),
+    runCount: 0,
+  },
+  {
+    id: 'j2',
+    name: 'weekly-report',
+    schedule: '0 10 * * 1',
+    active: false,
+    createdAt: new Date().toISOString(),
+    runCount: 0,
+  },
+]
+const MOCK_GOALS = [
+  {
+    id: 'g1',
+    title: 'Analyze Q4 revenue',
+    priority: 8,
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'g2',
+    title: 'Draft investor email',
+    priority: 5,
+    status: 'running',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+]
+
+beforeEach(() => {
+  global.fetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+    if (url === '/api/crons' && (!opts?.method || opts.method === 'GET'))
+      return Promise.resolve({ ok: true, json: async () => ({ jobs: MOCK_JOBS }) } as Response)
+    if (url === '/api/goals' && (!opts?.method || opts.method === 'GET'))
+      return Promise.resolve({ ok: true, json: async () => ({ goals: MOCK_GOALS }) } as Response)
+    return Promise.resolve({ ok: true, json: async () => ({}) } as Response)
+  })
+})
+
 describe('F-015: Cron & Goals page', () => {
-  it('renders cron jobs section', () => {
+  it('renders goals section (default tab)', async () => {
     render(<CronGoalsPage />)
-    expect(screen.getByTestId('cron-section')).toBeTruthy()
+    await waitFor(() => expect(screen.getByTestId('goals-section')).toBeDefined(), {
+      timeout: 3000,
+    })
   })
 
-  it('renders goals section', () => {
+  it('renders cron jobs section after clicking tab', async () => {
     render(<CronGoalsPage />)
-    expect(screen.getByTestId('goals-section')).toBeTruthy()
+    fireEvent.click(screen.getByText('Cron Jobs'))
+    await waitFor(() => expect(screen.getByTestId('cron-section')).toBeDefined(), { timeout: 3000 })
   })
 
-  it('shows scheduled job names', () => {
+  it('shows scheduled job names', async () => {
     render(<CronGoalsPage />)
-    expect(screen.getByText('daily-summary')).toBeTruthy()
+    fireEvent.click(screen.getByText('Cron Jobs'))
+    await waitFor(() => expect(screen.getByText('daily-summary')).toBeDefined(), { timeout: 3000 })
   })
 
-  it('can toggle a job between active and paused', () => {
+  it('can toggle a job between active and paused', async () => {
     render(<CronGoalsPage />)
-    const toggleBtn = screen.getByTestId('toggle-j1')
-    expect(toggleBtn.textContent).toContain('Active')
-    fireEvent.click(toggleBtn)
-    expect(toggleBtn.textContent).toContain('Paused')
+    fireEvent.click(screen.getByText('Cron Jobs'))
+    await waitFor(() => screen.getByTestId('toggle-j1'), { timeout: 3000 })
+    const toggle = screen.getByTestId('toggle-j1')
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-checked')).toBe('false')
   })
 
-  it('shows goal status badges', () => {
+  it('shows goal status badges', async () => {
     render(<CronGoalsPage />)
-    expect(screen.getByTestId('goal-status-g2').textContent).toBe('running')
+    await waitFor(() => screen.getByTestId('goal-status-g2'), { timeout: 3000 })
+    expect(screen.getByTestId('goal-status-g2').textContent).toContain('running')
   })
 })

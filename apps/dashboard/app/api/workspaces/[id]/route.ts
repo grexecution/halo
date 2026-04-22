@@ -1,8 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { getWorkspace, updateWorkspace, deleteWorkspace } from '../store'
+import { getWorkspace, updateWorkspace, deleteWorkspace, indexWorkspaceToMemory } from '../store'
 import type { Workspace } from '../store'
-import { indexWorkspaceToMemory } from '../route'
 import { deleteMemory } from '../../memory/store'
 
 export function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

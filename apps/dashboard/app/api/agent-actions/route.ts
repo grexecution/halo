@@ -1,8 +1,12 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { createWorkspace, updateWorkspace, deleteWorkspace } from '../workspaces/store'
+import {
+  createWorkspace,
+  updateWorkspace,
+  deleteWorkspace,
+  indexWorkspaceToMemory,
+} from '../workspaces/store'
 import type { Workspace } from '../workspaces/store'
-import { indexWorkspaceToMemory } from '../workspaces/route'
 import { upsertMemory } from '../memory/store'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'

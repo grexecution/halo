@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
+import { upsertMemory } from '../memory/store'
 
 export type WorkspaceType = 'client' | 'personal' | 'project' | 'team' | 'custom'
 export type FieldType = 'text' | 'url' | 'code' | 'secret'
@@ -85,4 +86,23 @@ export function deleteWorkspace(id: string): boolean {
 
 export function getActiveWorkspaces(): Workspace[] {
   return read().workspaces.filter((w) => w.active)
+}
+
+export function indexWorkspaceToMemory(ws: Workspace) {
+  const lines = [`Workspace: ${ws.name} (${ws.type})`]
+  if (ws.description) lines.push(`Description: ${ws.description}`)
+  for (const f of ws.fields) {
+    if (f.value && f.type !== 'secret') lines.push(`${f.key}: ${f.value}`)
+  }
+  upsertMemory({
+    id: `ws-${ws.id}`,
+    content: lines.join('\n'),
+    source: 'workspace',
+    sourceId: ws.id,
+    type: 'workspace_context',
+    tags: [ws.name, ws.type],
+    metadata: { workspaceId: ws.id, workspaceName: ws.name },
+    createdAt: ws.createdAt,
+    updatedAt: ws.updatedAt,
+  })
 }

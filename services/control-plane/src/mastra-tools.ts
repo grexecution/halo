@@ -1,0 +1,298 @@
+/**
+ * Mastra tool definitions for open-greg.
+ *
+ * Each tool wraps an existing primitive (shell, fs, gui, browser, vision)
+ * and runs the permission middleware check before execution.
+ */
+import { createTool } from '@mastra/core/tools'
+import { z } from 'zod'
+import { spawnSync } from 'node:child_process'
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
+import { dirname } from 'node:path'
+import { loadPermissions, createMiddleware } from '@open-greg/permissions'
+import type { PermissionMiddleware } from '@open-greg/permissions'
+import { join } from 'node:path'
+import { homedir } from 'node:os'
+import { withTimeout } from './timeout.js'
+
+// ---------------------------------------------------------------------------
+// Permissions middleware — loaded lazily, cached
+// ---------------------------------------------------------------------------
+
+const PERMISSIONS_FILE = join(homedir(), '.open-greg', 'permissions.yml')
+let _middleware: PermissionMiddleware | null = null
+
+async function getMiddleware(): Promise<PermissionMiddleware> {
+  if (_middleware) return _middleware
+  const config = await loadPermissions(PERMISSIONS_FILE)
+  _middleware = createMiddleware(config)
+  return _middleware
+}
+
+/** Call this to force a reload after permissions.yml changes. */
+export function resetPermissionsCache() {
+  _middleware = null
+}
+
+// ---------------------------------------------------------------------------
+// Shared deny helper
+// ---------------------------------------------------------------------------
+
+function denied(reason?: string) {
+  return { ok: false, error: `Permission denied: ${reason ?? 'policy'}` }
+}
+
+// ---------------------------------------------------------------------------
+// get_time
+// ---------------------------------------------------------------------------
+
+export const getTimeTool = createTool({
+  id: 'get_time',
+  description: 'Returns the current date and time in the specified timezone (default UTC).',
+  inputSchema: z.object({
+    timezone: z.string().optional().describe('IANA timezone string, e.g. Europe/Vienna'),
+  }),
+  execute: async (inputData) => {
+    const tz = inputData.timezone ?? process.env['TZ'] ?? 'UTC'
+    return { iso: new Date().toISOString(), timezone: tz }
+  },
+})
+
+// ---------------------------------------------------------------------------
+// shell_exec
+// ---------------------------------------------------------------------------
+
+export const shellExecTool = createTool({
+  id: 'shell_exec',
+  description: 'Execute a shell command on the local machine. Subject to permissions policy.',
+  inputSchema: z.object({
+    cmd: z.string().describe('Shell command to run'),
+    cwd: z.string().optional().describe('Working directory (default: home)'),
+    timeout: z.number().optional().describe('Timeout in milliseconds (default 30000)'),
+  }),
+  execute: async (inputData) => {
+    const middleware = await getMiddleware()
+    const check = await middleware.check(
+      'shell_exec',
+      { cmd: inputData.cmd },
+      { sessionId: 'agent' },
+    )
+    if (check.decision === 'deny') return denied(check.reason)
+
+    const result = spawnSync(inputData.cmd, {
+      shell: true,
+      cwd: inputData.cwd ?? homedir(),
+      encoding: 'utf-8',
+      timeout: inputData.timeout ?? 30_000,
+    })
+
+    return {
+      ok: true,
+      exitCode: result.status ?? 1,
+      stdout: result.stdout ?? '',
+      stderr: result.stderr ?? '',
+    }
+  },
+})
+
+// ---------------------------------------------------------------------------
+// fs_read
+// ---------------------------------------------------------------------------
+
+export const fsReadTool = createTool({
+  id: 'fs_read',
+  description: 'Read the contents of a file from the local filesystem.',
+  inputSchema: z.object({
+    path: z.string().describe('Absolute or relative file path'),
+  }),
+  execute: async (inputData) => {
+    const middleware = await getMiddleware()
+    const check = await middleware.check(
+      'fs.read',
+      { path: inputData.path },
+      { sessionId: 'agent' },
+    )
+    if (check.decision === 'deny') return denied(check.reason)
+
+    const content = readFileSync(inputData.path, 'utf-8')
+    return { ok: true, content }
+  },
+})
+
+// ---------------------------------------------------------------------------
+// fs_write
+// ---------------------------------------------------------------------------
+
+export const fsWriteTool = createTool({
+  id: 'fs_write',
+  description: 'Write content to a file on the local filesystem.',
+  inputSchema: z.object({
+    path: z.string().describe('Absolute or relative file path'),
+    content: z.string().describe('Content to write'),
+  }),
+  execute: async (inputData) => {
+    const middleware = await getMiddleware()
+    const check = await middleware.check(
+      'fs.write',
+      { path: inputData.path },
+      { sessionId: 'agent' },
+    )
+    if (check.decision === 'deny') return denied(check.reason)
+
+    const dir = dirname(inputData.path)
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+    writeFileSync(inputData.path, inputData.content, 'utf-8')
+    return { ok: true }
+  },
+})
+
+// ---------------------------------------------------------------------------
+// browser_navigate — calls browser-service over HTTP
+// ---------------------------------------------------------------------------
+
+export const browserNavigateTool = createTool({
+  id: 'browser_navigate',
+  description: 'Navigate to a URL and optionally extract content from the page.',
+  inputSchema: z.object({
+    url: z.string().describe('URL to navigate to'),
+    selector: z.string().optional().describe('CSS selector to extract text from (optional)'),
+    screenshot: z.boolean().optional().describe('Capture a screenshot (default false)'),
+  }),
+  execute: async (inputData) => {
+    const middleware = await getMiddleware()
+    const check = await middleware.check(
+      'browser_navigate',
+      { url: inputData.url },
+      { sessionId: 'agent' },
+    )
+    if (check.decision === 'deny') return denied(check.reason)
+
+    const browserUrl = process.env['BROWSER_SERVICE_URL'] ?? 'http://localhost:3002'
+    try {
+      return await withTimeout(
+        async () => {
+          const resp = await fetch(`${browserUrl}/navigate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: inputData.url,
+              selector: inputData.selector,
+              screenshot: inputData.screenshot ?? false,
+            }),
+          })
+          if (!resp.ok) return { ok: false, error: `Browser service error: ${resp.status}` }
+          const data = (await resp.json()) as Record<string, unknown>
+          return { ok: true, ...data }
+        },
+        60_000,
+        'browser_navigate',
+      )
+    } catch (err) {
+      return { ok: false, error: String(err) }
+    }
+  },
+})
+
+// ---------------------------------------------------------------------------
+// vision_analyze — calls vision-service over HTTP
+// ---------------------------------------------------------------------------
+
+export const visionAnalyzeTool = createTool({
+  id: 'vision_analyze',
+  description: 'Analyze an image using OCR or visual understanding.',
+  inputSchema: z.object({
+    imageBase64: z.string().optional().describe('Base64-encoded image data'),
+    imagePath: z.string().optional().describe('Path to an image file on disk'),
+    prompt: z.string().optional().describe('Optional question or instruction for the vision model'),
+  }),
+  execute: async (inputData) => {
+    const middleware = await getMiddleware()
+    const check = await middleware.check('vision_analyze', {}, { sessionId: 'agent' })
+    if (check.decision === 'deny') return denied(check.reason)
+
+    const visionUrl = process.env['VISION_SERVICE_URL'] ?? 'http://localhost:3003'
+    try {
+      return await withTimeout(
+        async () => {
+          const resp = await fetch(`${visionUrl}/analyze`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              imageBase64: inputData.imageBase64,
+              imagePath: inputData.imagePath,
+              prompt: inputData.prompt,
+            }),
+          })
+          if (!resp.ok) return { ok: false, error: `Vision service error: ${resp.status}` }
+          const data = (await resp.json()) as Record<string, unknown>
+          return { ok: true, ...data }
+        },
+        60_000,
+        'vision_analyze',
+      )
+    } catch (err) {
+      return { ok: false, error: String(err) }
+    }
+  },
+})
+
+// ---------------------------------------------------------------------------
+// computer_use — desktop GUI control (Anthropic computer-use)
+// ---------------------------------------------------------------------------
+
+export const computerUseTool = createTool({
+  id: 'computer_use',
+  description: 'Control the desktop GUI: take screenshots, click, type, scroll.',
+  inputSchema: z.object({
+    action: z.enum(['screenshot', 'click', 'type', 'scroll']).describe('Action to perform'),
+    coordinate: z
+      .tuple([z.number(), z.number()])
+      .optional()
+      .describe('Screen coordinates [x, y] for click/scroll'),
+    text: z.string().optional().describe('Text to type'),
+  }),
+  execute: async (inputData) => {
+    const middleware = await getMiddleware()
+    const check = await middleware.check(
+      'computer_use',
+      { action: inputData.action },
+      { sessionId: 'agent' },
+    )
+    if (check.decision === 'deny') return denied(check.reason)
+
+    // Real implementation delegates to Anthropic computer-use API via vision-service.
+    const visionUrl = process.env['VISION_SERVICE_URL'] ?? 'http://localhost:3003'
+    try {
+      return await withTimeout(
+        async () => {
+          const resp = await fetch(`${visionUrl}/computer-use`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(inputData),
+          })
+          if (!resp.ok) return { ok: false, error: `Vision service error: ${resp.status}` }
+          const data = (await resp.json()) as Record<string, unknown>
+          return { ok: true, ...data }
+        },
+        60_000,
+        'computer_use',
+      )
+    } catch (err) {
+      return { ok: false, error: String(err) }
+    }
+  },
+})
+
+// ---------------------------------------------------------------------------
+// Export all tools keyed by ID (Mastra expects a record)
+// ---------------------------------------------------------------------------
+
+export const allMastraTools = {
+  get_time: getTimeTool,
+  shell_exec: shellExecTool,
+  fs_read: fsReadTool,
+  fs_write: fsWriteTool,
+  browser_navigate: browserNavigateTool,
+  vision_analyze: visionAnalyzeTool,
+  computer_use: computerUseTool,
+}

@@ -21,20 +21,3 @@ export interface Message {
   content: string
   timestamp: string
 }
-
-export interface RunTurnOptions {
-  agentId: string
-  message: string
-  history?: Message[] | undefined
-}
-
-export interface TurnResult {
-  content: string
-  toolCalls?: ToolCallResult[] | undefined
-}
-
-export interface ToolCallResult {
-  toolId: string
-  args: Record<string, unknown>
-  result: unknown
-}

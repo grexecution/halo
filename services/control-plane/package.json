@@ -12,13 +12,19 @@
     "db:seed": "echo 'seed not yet implemented'"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.71",
+    "@ai-sdk/openai": "^3.0.53",
+    "@dbos-inc/dbos-sdk": "^4.14.6",
+    "@mastra/core": "^1.26.0",
+    "@mastra/fastembed": "^1.0.1",
+    "@mastra/libsql": "^1.9.0",
+    "@mastra/memory": "^1.16.0",
     "@open-greg/agent-core": "workspace:*",
-    "@open-greg/memory": "workspace:*",
     "@open-greg/permissions": "workspace:*",
-    "@open-greg/shared": "workspace:*",
-    "@open-greg/telemetry": "workspace:*",
     "@trpc/server": "^11.0.0",
+    "ai": "^6.0.168",
     "fastify": "^5.0.0",
+    "mastra": "^1.6.1",
     "pino": "^9.6.0",
     "zod": "^3.23.0"
   },

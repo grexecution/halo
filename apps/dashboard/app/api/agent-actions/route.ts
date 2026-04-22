@@ -8,55 +8,9 @@ import {
 } from '../workspaces/store'
 import type { Workspace } from '../workspaces/store'
 import { upsertMemory } from '../memory/store'
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
-import { join } from 'node:path'
-import { homedir } from 'node:os'
-
-const DIR = join(homedir(), '.open-greg')
-
-// ── Goals helpers ──────────────────────────────────────────────────────────────
-
-interface Goal {
-  id: string
-  title: string
-  description: string | undefined
-  priority: number
-  status: string
-  createdAt: string
-  updatedAt: string
-}
-
-function readGoals(): Goal[] {
-  const file = join(DIR, 'goals.json')
-  if (!existsSync(file)) return []
-  try {
-    return JSON.parse(readFileSync(file, 'utf-8')) as Goal[]
-  } catch {
-    return []
-  }
-}
-
-function writeGoals(goals: Goal[]) {
-  if (!existsSync(DIR)) mkdirSync(DIR, { recursive: true })
-  writeFileSync(join(DIR, 'goals.json'), JSON.stringify(goals, null, 2), 'utf-8')
-}
-
-// ── Settings helpers ───────────────────────────────────────────────────────────
-
-function readSettings(): Record<string, unknown> {
-  const file = join(DIR, 'settings.json')
-  if (!existsSync(file)) return {}
-  try {
-    return JSON.parse(readFileSync(file, 'utf-8')) as Record<string, unknown>
-  } catch {
-    return {}
-  }
-}
-
-function writeSettings(settings: Record<string, unknown>) {
-  if (!existsSync(DIR)) mkdirSync(DIR, { recursive: true })
-  writeFileSync(join(DIR, 'settings.json'), JSON.stringify(settings, null, 2), 'utf-8')
-}
+import { getDb } from '../../lib/db'
+import { readSettings, writeSettings } from '../settings/store'
+import type { Settings } from '../settings/store'
 
 // ── Execute action ─────────────────────────────────────────────────────────────
 
@@ -99,39 +53,64 @@ async function executeAction(action: ActionPayload): Promise<{ ok: boolean; mess
     return { ok: true, message: `Deleted workspace "${String(action.name ?? action.id)}"` }
   }
 
-  // ── Goal actions ─────────────────────────────────────────────────────────────
+  // ── Goal actions (SQLite) ────────────────────────────────────────────────────
   if (type === 'goal.create') {
-    const goals = readGoals()
+    const db = getDb()
     const now = new Date().toISOString()
-    const goal: Goal = {
-      id: `g-${Date.now()}`,
-      title: String(action.title ?? 'New Goal'),
-      description: action.description ? String(action.description) : undefined,
-      priority: Number(action.priority ?? 5),
-      status: 'pending',
-      createdAt: now,
-      updatedAt: now,
-    }
-    goals.unshift(goal)
-    writeGoals(goals)
-    return { ok: true, message: `Created goal "${goal.title}"` }
+    const id = `g-${Date.now()}`
+    db.prepare(
+      'INSERT INTO goals (id, title, description, priority, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    ).run(
+      id,
+      String(action.title ?? 'New Goal'),
+      action.description ? String(action.description) : null,
+      Number(action.priority ?? 5),
+      'pending',
+      now,
+      now,
+    )
+    return { ok: true, message: `Created goal "${String(action.title ?? 'New Goal')}"` }
   }
 
   if (type === 'goal.update') {
-    const goals = readGoals()
-    const idx = goals.findIndex((g) => g.id === String(action.id))
-    if (idx < 0) return { ok: false, message: `Goal ${String(action.id)} not found` }
-    const patch = action.patch as Partial<Goal>
-    goals[idx] = { ...goals[idx]!, ...patch, updatedAt: new Date().toISOString() }
-    writeGoals(goals)
-    return { ok: true, message: `Updated goal "${goals[idx]!.title}"` }
+    const db = getDb()
+    const id = String(action.id)
+    const row = db.prepare('SELECT id FROM goals WHERE id = ?').get(id)
+    if (!row) return { ok: false, message: `Goal ${id} not found` }
+    const patch = action.patch as Record<string, unknown>
+    const now = new Date().toISOString()
+    if (patch.title !== undefined)
+      db.prepare('UPDATE goals SET title=?, updated_at=? WHERE id=?').run(
+        String(patch.title),
+        now,
+        id,
+      )
+    if (patch.description !== undefined)
+      db.prepare('UPDATE goals SET description=?, updated_at=? WHERE id=?').run(
+        patch.description ? String(patch.description) : null,
+        now,
+        id,
+      )
+    if (patch.priority !== undefined)
+      db.prepare('UPDATE goals SET priority=?, updated_at=? WHERE id=?').run(
+        Number(patch.priority),
+        now,
+        id,
+      )
+    if (patch.status !== undefined)
+      db.prepare('UPDATE goals SET status=?, updated_at=? WHERE id=?').run(
+        String(patch.status),
+        now,
+        id,
+      )
+    return { ok: true, message: `Updated goal ${id}` }
   }
 
   if (type === 'goal.delete') {
-    const goals = readGoals()
-    const title = String(action.title ?? action.id)
-    writeGoals(goals.filter((g) => g.id !== String(action.id)))
-    return { ok: true, message: `Deleted goal "${title}"` }
+    const db = getDb()
+    const id = String(action.id)
+    db.prepare('DELETE FROM goals WHERE id = ?').run(id)
+    return { ok: true, message: `Deleted goal "${String(action.title ?? id)}"` }
   }
 
   // ── Memory actions ───────────────────────────────────────────────────────────
@@ -151,19 +130,24 @@ async function executeAction(action: ActionPayload): Promise<{ ok: boolean; mess
     return { ok: true, message: 'Added to memory' }
   }
 
-  // ── Settings actions (non-security) ──────────────────────────────────────────
+  // ── Settings actions (non-security, via SQLite store) ────────────────────────
   if (type === 'settings.update') {
     const section = String(action.section)
     const BLOCKED = ['permissions', 'auth']
     if (BLOCKED.includes(section)) {
       return { ok: false, message: 'Security settings cannot be changed by agents' }
     }
-    const settings = readSettings()
-    settings[section] = {
-      ...((settings[section] as Record<string, unknown>) ?? {}),
-      ...(action.patch as Record<string, unknown>),
+    const current = readSettings()
+    const patch = action.patch as Record<string, unknown>
+    // Deep-merge the section
+    const updated: Settings = {
+      ...current,
+      [section]: {
+        ...((current[section as keyof Settings] as Record<string, unknown>) ?? {}),
+        ...patch,
+      },
     }
-    writeSettings(settings)
+    writeSettings(updated)
     return { ok: true, message: `Updated ${section} settings` }
   }
 

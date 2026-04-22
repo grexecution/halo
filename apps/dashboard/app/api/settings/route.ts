@@ -21,6 +21,14 @@ export async function POST(req: NextRequest) {
     writeSettings(body)
     // Invalidate the Memory singleton so it rebuilds with the new model config
     resetMemory()
+    // Also reset the control-plane agent (best-effort, fire-and-forget)
+    const cpUrl = process.env['CONTROL_PLANE_URL'] ?? 'http://localhost:3001'
+    void fetch(`${cpUrl}/api/reset`, {
+      method: 'POST',
+      signal: AbortSignal.timeout(5_000),
+    }).catch(() => {
+      /* ignore if control-plane not running */
+    })
     return NextResponse.json(body)
   } catch (e) {
     return NextResponse.json(

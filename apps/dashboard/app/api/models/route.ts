@@ -1,23 +1,5 @@
 import { NextResponse } from 'next/server'
-import { readFileSync, existsSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { homedir } from 'node:os'
-
-interface LLMModel {
-  id: string
-  provider: 'ollama' | 'anthropic' | 'openai' | 'custom'
-  name: string
-  modelId: string
-  apiKey?: string
-  baseUrl?: string
-}
-
-interface Settings {
-  llm: {
-    primary: string
-    models: LLMModel[]
-  }
-}
+import { readSettings } from '../settings/store'
 
 interface ModelEntry {
   id: string
@@ -28,20 +10,10 @@ interface ModelEntry {
 
 const OLLAMA_URL = process.env['OLLAMA_URL'] ?? 'http://localhost:11434'
 
-function readConfiguredModels(): LLMModel[] {
-  const path = resolve(homedir(), '.open-greg', 'settings.json')
-  if (!existsSync(path)) return []
-  try {
-    const raw = readFileSync(path, 'utf-8')
-    const settings = JSON.parse(raw) as Settings
-    return settings.llm?.models ?? []
-  } catch {
-    return []
-  }
-}
-
 export async function GET() {
-  const configuredModels = readConfiguredModels()
+  // Read configured models from SQLite settings store (single source of truth)
+  const settings = readSettings()
+  const configuredModels = settings.llm.models
 
   let ollamaModels: ModelEntry[] = []
   let ollamaReachable = false
@@ -67,8 +39,7 @@ export async function GET() {
     // Ollama unreachable — fall through
   }
 
-  // Build the merged list: start with Ollama-discovered models, then add configured
-  // models that aren't already represented, marking them unavailable if Ollama is down.
+  // Merge: start with Ollama-discovered, then add configured models not already listed
   const merged: ModelEntry[] = [...ollamaModels]
 
   for (const cfg of configuredModels) {
@@ -80,6 +51,7 @@ export async function GET() {
         id: cfg.id,
         name: cfg.name,
         provider: cfg.provider,
+        // Non-Ollama models (Anthropic, OpenAI) are always available if configured
         available: cfg.provider !== 'ollama' ? true : ollamaReachable,
       })
     }

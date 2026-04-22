@@ -1,10 +1,8 @@
 'use client'
 
-// NOTE: /api/logs does not exist yet. This page uses mock data until the
-// control-plane is running and the route is implemented.
-
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Badge, EmptyState, Input, Label, Select, Switch, cn } from '../components/ui/index'
+import { RefreshCw } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,90 +17,10 @@ interface LogEntry {
   message: string
   agentId?: string
   toolId?: string
+  durationMs?: number
+  tokenCount?: number
+  costUsd?: number
 }
-
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
-
-const MOCK_LOGS: LogEntry[] = [
-  {
-    id: '1',
-    timestamp: '2026-04-22T08:00:01.000Z',
-    level: 'info',
-    message: 'Agent started successfully',
-    agentId: 'claw',
-  },
-  {
-    id: '2',
-    timestamp: '2026-04-22T08:00:02.312Z',
-    level: 'debug',
-    message: 'Loading LLM model: claude-sonnet-4-6',
-    agentId: 'claw',
-  },
-  {
-    id: '3',
-    timestamp: '2026-04-22T08:00:03.774Z',
-    level: 'info',
-    message: 'Goal created: research open-source alternatives',
-    agentId: 'claw',
-    toolId: 'goal_manager',
-  },
-  {
-    id: '4',
-    timestamp: '2026-04-22T08:00:05.120Z',
-    level: 'info',
-    message: 'Shell tool invoked',
-    agentId: 'claw',
-    toolId: 'shell',
-  },
-  {
-    id: '5',
-    timestamp: '2026-04-22T08:00:05.988Z',
-    level: 'warn',
-    message: 'Shell command took longer than threshold (5s)',
-    agentId: 'claw',
-    toolId: 'shell',
-  },
-  {
-    id: '6',
-    timestamp: '2026-04-22T08:00:08.001Z',
-    level: 'error',
-    message: 'Tool call failed: timeout after 10000ms',
-    agentId: 'claw',
-    toolId: 'browser',
-  },
-  {
-    id: '7',
-    timestamp: '2026-04-22T08:00:09.450Z',
-    level: 'info',
-    message: 'Retrying browser tool with reduced timeout',
-    agentId: 'claw',
-    toolId: 'browser',
-  },
-  {
-    id: '8',
-    timestamp: '2026-04-22T08:00:11.002Z',
-    level: 'debug',
-    message: 'Memory write: stored 3 new facts',
-    agentId: 'planner',
-  },
-  {
-    id: '9',
-    timestamp: '2026-04-22T08:00:13.780Z',
-    level: 'error',
-    message: 'Filesystem read denied: path outside sandbox',
-    agentId: 'planner',
-    toolId: 'filesystem',
-  },
-  {
-    id: '10',
-    timestamp: '2026-04-22T08:00:15.991Z',
-    level: 'info',
-    message: 'Agent checkpoint saved',
-    agentId: 'planner',
-  },
-]
 
 // ---------------------------------------------------------------------------
 // Level badge
@@ -128,22 +46,47 @@ export default function LogsPage() {
   const [agentId, setAgentId] = useState<string>('')
   const [toolId, setToolId] = useState<string>('')
   const [autoRefresh, setAutoRefresh] = useState<boolean>(false)
-  const [logs, setLogs] = useState<LogEntry[]>(MOCK_LOGS)
+  const [logs, setLogs] = useState<LogEntry[]>([])
+  const [knownAgents, setKnownAgents] = useState<string[]>([])
+  const [knownTools, setKnownTools] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [lastFetch, setLastFetch] = useState<string | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Simulate a fetch — replace with real fetch('/api/logs?...') when available
-  function fetchLogs() {
-    // TODO: replace with real API call once control-plane is running:
-    // fetch(`/api/logs?level=${level}&agentId=${agentId}&toolId=${toolId}&limit=100`)
-    //   .then(r => r.json())
-    //   .then(data => setLogs(data.logs ?? []))
-    setLogs(MOCK_LOGS)
-  }
+  const fetchLogs = useCallback(async () => {
+    const params = new URLSearchParams()
+    if (level) params.set('level', level)
+    if (agentId.trim()) params.set('agentId', agentId.trim())
+    if (toolId.trim()) params.set('toolId', toolId.trim())
+    params.set('limit', '200')
 
-  // Auto-refresh: re-fetch every 5 seconds when enabled
+    try {
+      const res = await fetch(`/api/logs?${params.toString()}`)
+      const data = (await res.json()) as {
+        logs: LogEntry[]
+        agents: string[]
+        tools: string[]
+      }
+      setLogs(data.logs ?? [])
+      setKnownAgents(data.agents ?? [])
+      setKnownTools(data.tools ?? [])
+      setLastFetch(new Date().toLocaleTimeString())
+    } catch {
+      // control-plane not running
+    } finally {
+      setLoading(false)
+    }
+  }, [level, agentId, toolId])
+
+  // Initial fetch
+  useEffect(() => {
+    void fetchLogs()
+  }, [fetchLogs])
+
+  // Auto-refresh
   useEffect(() => {
     if (autoRefresh) {
-      intervalRef.current = setInterval(fetchLogs, 5000)
+      intervalRef.current = setInterval(() => void fetchLogs(), 3000)
     } else {
       if (intervalRef.current !== null) {
         clearInterval(intervalRef.current)
@@ -156,20 +99,19 @@ export default function LogsPage() {
         intervalRef.current = null
       }
     }
-  }, [autoRefresh])
-
-  const filtered = logs.filter((log) => {
-    if (level && log.level !== level) return false
-    if (agentId.trim() && log.agentId !== agentId.trim()) return false
-    if (toolId.trim() && log.toolId !== toolId.trim()) return false
-    return true
-  })
+  }, [autoRefresh, fetchLogs])
 
   return (
     <main className="p-6 max-w-6xl mx-auto space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h1 className="text-2xl font-bold text-white">Logs</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-white">Logs</h1>
+          {loading && <RefreshCw size={14} className="text-gray-600 animate-spin" />}
+          {lastFetch && !loading && (
+            <span className="text-xs text-gray-600">updated {lastFetch}</span>
+          )}
+        </div>
 
         {/* Filters */}
         <div data-testid="log-filters" className="flex items-center gap-3 flex-wrap">
@@ -186,21 +128,53 @@ export default function LogsPage() {
             <option value="debug">debug</option>
           </Select>
 
-          <Input
-            data-testid="agent-filter"
-            value={agentId}
-            onChange={(e) => setAgentId(e.target.value)}
-            placeholder="agent id"
-            className="w-36"
-          />
+          {knownAgents.length > 0 ? (
+            <Select
+              data-testid="agent-filter"
+              value={agentId}
+              onChange={(e) => setAgentId(e.target.value)}
+              className="w-36"
+            >
+              <option value="">All agents</option>
+              {knownAgents.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <Input
+              data-testid="agent-filter"
+              value={agentId}
+              onChange={(e) => setAgentId(e.target.value)}
+              placeholder="agent id"
+              className="w-36"
+            />
+          )}
 
-          <Input
-            data-testid="tool-filter"
-            value={toolId}
-            onChange={(e) => setToolId(e.target.value)}
-            placeholder="tool id"
-            className="w-36"
-          />
+          {knownTools.length > 0 ? (
+            <Select
+              data-testid="tool-filter"
+              value={toolId}
+              onChange={(e) => setToolId(e.target.value)}
+              className="w-36"
+            >
+              <option value="">All tools</option>
+              {knownTools.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <Input
+              data-testid="tool-filter"
+              value={toolId}
+              onChange={(e) => setToolId(e.target.value)}
+              placeholder="tool id"
+              className="w-36"
+            />
+          )}
 
           <div className="flex items-center gap-2">
             <Label
@@ -211,14 +185,22 @@ export default function LogsPage() {
             </Label>
             <Switch id="auto-refresh" checked={autoRefresh} onChange={setAutoRefresh} />
           </div>
+
+          <button
+            onClick={() => void fetchLogs()}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 rounded-lg transition-colors"
+          >
+            <RefreshCw size={12} />
+            Refresh
+          </button>
         </div>
       </div>
 
       {/* Log table */}
-      {filtered.length === 0 ? (
+      {!loading && logs.length === 0 ? (
         <EmptyState
-          title="No logs match the current filters"
-          description="Adjust the level, agent, or tool filters above."
+          title="No logs yet"
+          description="Logs appear here once the agent processes a message."
         />
       ) : (
         <div
@@ -228,7 +210,7 @@ export default function LogsPage() {
           <table className="w-full text-sm border-collapse">
             <thead className="sticky top-0 z-10">
               <tr className="bg-gray-900 border-b border-gray-800">
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 whitespace-nowrap w-48">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 whitespace-nowrap w-44">
                   Timestamp
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-20">
@@ -238,11 +220,17 @@ export default function LogsPage() {
                   Agent
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-28">Tool</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-24">
+                  Duration
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 w-20">
+                  Tokens
+                </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Message</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-800/60">
-              {filtered.map((log) => (
+              {logs.map((log) => (
                 <tr
                   key={log.id}
                   data-testid={`log-row-${log.id}`}
@@ -252,7 +240,18 @@ export default function LogsPage() {
                   )}
                 >
                   <td className="px-4 py-2.5 font-mono text-xs text-gray-500 whitespace-nowrap">
-                    {log.timestamp}
+                    {new Date(log.timestamp).toLocaleTimeString([], {
+                      hour12: false,
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                    })}
+                    <span className="text-gray-700 ml-1 text-[10px]">
+                      {new Date(log.timestamp).toLocaleDateString([], {
+                        month: '2-digit',
+                        day: '2-digit',
+                      })}
+                    </span>
                   </td>
                   <td className="px-4 py-2.5">
                     <LevelBadge level={log.level} />
@@ -270,6 +269,12 @@ export default function LogsPage() {
                     ) : (
                       <span className="text-xs text-gray-700">—</span>
                     )}
+                  </td>
+                  <td className="px-4 py-2.5 font-mono text-xs text-gray-500">
+                    {log.durationMs !== undefined ? `${log.durationMs}ms` : '—'}
+                  </td>
+                  <td className="px-4 py-2.5 font-mono text-xs text-gray-500">
+                    {log.tokenCount !== undefined ? log.tokenCount.toLocaleString() : '—'}
                   </td>
                   <td className="px-4 py-2.5 text-xs text-gray-300">{log.message}</td>
                 </tr>

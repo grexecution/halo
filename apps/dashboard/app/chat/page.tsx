@@ -1,7 +1,13 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Plus, Trash2, MessageSquare, Send, ChevronDown } from 'lucide-react'
+import { Plus, Trash2, MessageSquare, Send, ChevronDown, Zap } from 'lucide-react'
 import { Button, EmptyState, cn } from '../components/ui/index'
+
+interface ActiveWorkspace {
+  id: string
+  name: string
+  emoji: string
+}
 
 interface ChatSession {
   id: string
@@ -36,6 +42,7 @@ export default function ChatPage() {
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const [hoveredSessionId, setHoveredSessionId] = useState<string | null>(null)
+  const [activeWorkspaces, setActiveWorkspaces] = useState<ActiveWorkspace[]>([])
 
   const inputRef = useRef<HTMLInputElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -52,7 +59,20 @@ export default function ChatPage() {
   useEffect(() => {
     void fetchSessions()
     void fetchModels()
+    void fetchActiveWorkspaces()
   }, [])
+
+  async function fetchActiveWorkspaces() {
+    try {
+      const res = await fetch('/api/workspaces')
+      const data = (await res.json()) as {
+        workspaces: Array<{ id: string; name: string; emoji: string; active: boolean }>
+      }
+      setActiveWorkspaces((data.workspaces ?? []).filter((w) => w.active))
+    } catch {
+      setActiveWorkspaces([])
+    }
+  }
 
   useEffect(() => {
     if (editingTitle && titleInputRef.current) {
@@ -300,6 +320,28 @@ export default function ChatPage() {
                   </button>
                 )}
               </div>
+
+              {/* Active workspace chips */}
+              {activeWorkspaces.length > 0 && (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {activeWorkspaces.slice(0, 3).map((ws) => (
+                    <a
+                      key={ws.id}
+                      href="/workspaces"
+                      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-yellow-900/30 text-yellow-400 border border-yellow-800/50 hover:bg-yellow-900/50 transition-colors"
+                      title={`Workspace "${ws.name}" is injected into this chat`}
+                    >
+                      <Zap size={9} />
+                      {ws.emoji} {ws.name}
+                    </a>
+                  ))}
+                  {activeWorkspaces.length > 3 && (
+                    <span className="text-[10px] text-gray-600">
+                      +{activeWorkspaces.length - 3}
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Model selector */}
               <div className="flex items-center gap-2 flex-shrink-0">

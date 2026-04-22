@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { homedir } from 'node:os'
+import { getActiveWorkspaces } from '../../../workspaces/store'
+import { getRelevantMemories, upsertMemory } from '../../../memory/store'
 
 interface ChatMessage {
   id: string
@@ -154,7 +156,37 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
     chat.messages.push(userMessage)
 
-    const historyForLLM = chat.messages.slice(0, -1).map(({ role, content }) => ({ role, content }))
+    // Build system prompt from active workspaces + relevant memories
+    const systemParts: string[] = []
+
+    const activeWorkspaces = getActiveWorkspaces()
+    if (activeWorkspaces.length > 0) {
+      const wsBlock = activeWorkspaces
+        .map((ws) => {
+          const lines = [`## Workspace: ${ws.name} (${ws.type})`]
+          if (ws.description) lines.push(ws.description)
+          for (const f of ws.fields) {
+            if (f.value && f.type !== 'secret') lines.push(`${f.key}: ${f.value}`)
+          }
+          return lines.join('\n')
+        })
+        .join('\n\n')
+      systemParts.push(`### Active Workspace Context\n\n${wsBlock}`)
+    }
+
+    const relevantMemories = getRelevantMemories(body.message, 5)
+    if (relevantMemories.length > 0) {
+      const memBlock = relevantMemories.map((m) => `- ${m.content}`).join('\n')
+      systemParts.push(`### Relevant Context from Memory\n\n${memBlock}`)
+    }
+
+    const historyForLLM: Array<{ role: string; content: string }> = []
+    if (systemParts.length > 0) {
+      historyForLLM.push({ role: 'system', content: systemParts.join('\n\n---\n\n') })
+    }
+    historyForLLM.push(
+      ...chat.messages.slice(0, -1).map(({ role, content }) => ({ role, content })),
+    )
     historyForLLM.push({ role: 'user', content: body.message })
 
     let assistantContent: string
@@ -181,6 +213,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     chat.messages.push(assistantMessage)
 
     writeFileSync(getChatPath(id), JSON.stringify(chat, null, 2), 'utf-8')
+
+    // Index conversation turn to memory for future retrieval
+    upsertMemory({
+      id: `chat-${id}-${userMessage.id}`,
+      content: `User: ${userMessage.content}\nAssistant: ${assistantContent}`,
+      source: 'chat',
+      sourceId: id,
+      type: 'conversation',
+      tags: [],
+      metadata: { sessionId: id },
+      createdAt: now,
+      updatedAt: new Date().toISOString(),
+    })
 
     const index = readIndex()
     const entry = index.sessions.find((s) => s.id === id)

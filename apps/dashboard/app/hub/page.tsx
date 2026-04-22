@@ -35,7 +35,7 @@ export default function HubPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">Instance Hub</h1>
           <p className="mt-1 text-sm text-gray-400">
-            Control all your claw-alt instances from one place.
+            Control all your open-greg instances from one place.
           </p>
         </div>
         <button

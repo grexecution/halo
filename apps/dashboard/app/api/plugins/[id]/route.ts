@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { homedir } from 'node:os'
 
-const CREDS_FILE = resolve(homedir(), '.claw-alt', 'plugin-credentials.json')
+const CREDS_FILE = resolve(homedir(), '.open-greg', 'plugin-credentials.json')
 
 interface PluginCredentials {
   pluginId: string
@@ -22,7 +22,7 @@ function readAllCredentials(): Record<string, PluginCredentials> {
 }
 
 function writeAllCredentials(data: Record<string, PluginCredentials>): void {
-  const dir = resolve(homedir(), '.claw-alt')
+  const dir = resolve(homedir(), '.open-greg')
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
   writeFileSync(CREDS_FILE, JSON.stringify(data, null, 2))
 }

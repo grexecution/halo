@@ -16,7 +16,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 ### F-001 — npx bootstrap
 
 **Status:** done · **Phase:** 1
-**Spec:** `npx create-claw-alt init` clones the repo template, installs deps, starts docker services, runs the CLI wizard.
+**Spec:** `npx create-open-greg init` clones the repo template, installs deps, starts docker services, runs the CLI wizard.
 **Acceptance:** on a clean Mac Mini, from a fresh terminal, the user has a running dashboard at `localhost:3000` within 10 minutes of running the command, with no manual Docker commands.
 **Test:** `apps/cli/test/bootstrap.e2e.ts`
 
@@ -214,7 +214,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 ### F-040 — Permission YAML loading
 
 **Status:** done · **Phase:** 2
-**Spec:** `~/.claw-alt/permissions.yml` loaded at startup, hot-reloaded on change.
+**Spec:** `~/.open-greg/permissions.yml` loaded at startup, hot-reloaded on change.
 **Acceptance:** editing the YAML changes behavior within 5s without restart.
 **Test:** `packages/permissions/test/yaml-loading.spec.ts`
 
@@ -306,7 +306,7 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 ### F-062 — Persistent browser profile
 
 **Status:** done · **Phase:** 4
-**Spec:** `browser.act(goal, {persistent: true})` uses `~/.claw-alt/browser-profile/`. Cookies persist across runs.
+**Spec:** `browser.act(goal, {persistent: true})` uses `~/.open-greg/browser-profile/`. Cookies persist across runs.
 **Acceptance:** logging in once persists across `compose down && up`.
 **Test:** `services/browser-service/test/persistent.spec.ts`
 
@@ -621,7 +621,7 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 ### F-150 — Timezone in agent prompts
 
 **Status:** done · **Phase:** 2
-**Spec:** `~/.claw-alt/config.yml` stores IANA timezone. Every agent system prompt prefixed with "Current date and time: <now in TZ>."
+**Spec:** `~/.open-greg/config.yml` stores IANA timezone. Every agent system prompt prefixed with "Current date and time: <now in TZ>."
 **Acceptance:** "what's today's date" returns correct local date across DST boundaries.
 **Test:** `packages/agent-core/test/timezone.spec.ts`
 

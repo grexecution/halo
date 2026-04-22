@@ -4,8 +4,7 @@ import { homedir } from 'node:os'
 import { intro, outro, log } from '@clack/prompts'
 import { runWizard } from './wizard.js'
 
-const CLAW_CONFIG_DIR =
-  process.env['CLAW_CONFIG_DIR'] ?? resolve(homedir(), '.claw-alt')
+const CLAW_CONFIG_DIR = process.env['CLAW_CONFIG_DIR'] ?? resolve(homedir(), '.open-greg')
 const CONFIG_PATH = resolve(CLAW_CONFIG_DIR, 'config.yml')
 
 function generatePassphrase(): string {
@@ -14,11 +13,11 @@ function generatePassphrase(): string {
 
 function showHelp(): void {
   process.stdout.write(
-    `create-claw-alt — bootstrap a self-hosted AI agent platform
+    `create-open-greg — bootstrap a self-hosted AI agent platform
 
 USAGE
-  npx create-claw-alt init [options]   set up a new instance
-  npx create-claw-alt --help           show this help
+  npx create-open-greg init [options]   set up a new instance
+  npx create-open-greg --help           show this help
 
 OPTIONS (init)
   --non-interactive    skip prompts, use defaults / env vars
@@ -30,7 +29,7 @@ OPTIONS (init)
 ENVIRONMENT
   CLAW_NON_INTERACTIVE=1    same as --non-interactive
   CLAW_SECRET_PASSPHRASE    pre-set passphrase for headless Linux
-  CLAW_CONFIG_DIR           override ~/.claw-alt config directory
+  CLAW_CONFIG_DIR           override ~/.open-greg config directory
 `,
   )
 }
@@ -50,15 +49,13 @@ async function cmdInit(args: string[]): Promise<void> {
   const llmProvider = llmProviderIdx !== -1 ? args[llmProviderIdx + 1] : undefined
 
   const dashPortIdx = args.indexOf('--dashboard-port')
-  const dashboardPort =
-    dashPortIdx !== -1 ? Number(args[dashPortIdx + 1]) : undefined
+  const dashboardPort = dashPortIdx !== -1 ? Number(args[dashPortIdx + 1]) : undefined
 
   const cpPortIdx = args.indexOf('--cp-port')
-  const controlPlanePort =
-    cpPortIdx !== -1 ? Number(args[cpPortIdx + 1]) : undefined
+  const controlPlanePort = cpPortIdx !== -1 ? Number(args[cpPortIdx + 1]) : undefined
 
   if (!nonInteractive) {
-    intro('create-claw-alt')
+    intro('create-open-greg')
     log.info('Interactive wizard not yet implemented. Use --non-interactive for Phase 1.')
     outro('Done.')
     return

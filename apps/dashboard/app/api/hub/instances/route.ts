@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { homedir } from 'node:os'
 
-const INSTANCES_FILE = resolve(homedir(), '.claw-alt', 'instances.json')
+const INSTANCES_FILE = resolve(homedir(), '.open-greg', 'instances.json')
 
 interface StoredInstance {
   id: string
@@ -23,7 +23,7 @@ function readInstances(): StoredInstance[] {
 }
 
 function writeInstances(instances: StoredInstance[]): void {
-  const dir = resolve(homedir(), '.claw-alt')
+  const dir = resolve(homedir(), '.open-greg')
   try {
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true })

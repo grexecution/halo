@@ -1,5 +1,5 @@
 {
-  "name": "@claw-alt/dashboard",
+  "name": "@open-greg/dashboard",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,8 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@claw-alt/connectors": "workspace:*",
-    "@claw-alt/shared": "workspace:*",
+    "@open-greg/connectors": "workspace:*",
+    "@open-greg/shared": "workspace:*",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

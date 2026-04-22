@@ -7,7 +7,9 @@ _Postgres 16 + pgvector. All schemas via Drizzle. Every table below is owned by 
 ## Tables
 
 ### `agents`
+
 Owned by: control-plane
+
 ```
 id              uuid pk
 name            text not null
@@ -23,7 +25,9 @@ updated_at      timestamptz not null default now()
 ```
 
 ### `sessions`
+
 Owned by: control-plane
+
 ```
 id              uuid pk
 agent_id        uuid references agents(id)
@@ -36,7 +40,9 @@ updated_at      timestamptz default now()
 ```
 
 ### `messages`
+
 Owned by: control-plane
+
 ```
 id              uuid pk
 session_id      uuid references sessions(id)
@@ -48,7 +54,9 @@ INDEX (session_id, created_at)
 ```
 
 ### `tool_calls`
+
 Owned by: control-plane
+
 ```
 id              uuid pk
 message_id      uuid references messages(id)
@@ -64,7 +72,9 @@ trace_id        text
 ```
 
 ### `memories`
+
 Owned by: memory package (delegates to Mem0, but we mirror metadata here for the UI)
+
 ```
 id              uuid pk
 external_id     text unique      -- mem0's id
@@ -77,7 +87,9 @@ created_at      timestamptz default now()
 ```
 
 ### `permissions`
+
 Owned by: permissions package
+
 ```
 id              uuid pk
 scope           text not null    -- 'filesystem' | 'network' | 'mcps' | 'tools'
@@ -88,7 +100,9 @@ UNIQUE (scope, key)
 ```
 
 ### `connectors`
+
 Owned by: connectors package
+
 ```
 id              uuid pk
 type            text not null    -- 'gmail' | 'github' | 'calendar' | 'custom-mcp' | ...
@@ -98,10 +112,13 @@ status          text not null    -- 'connected' | 'disconnected' | 'error'
 last_used_at    timestamptz
 created_at      timestamptz default now()
 ```
+
 Tokens live in keychain, never in this table.
 
 ### `goals`
+
 Owned by: control-plane
+
 ```
 id              uuid pk
 title           text not null
@@ -117,7 +134,9 @@ created_at      timestamptz default now()
 ```
 
 ### `cron_jobs`
+
 Owned by: control-plane
+
 ```
 id              uuid pk
 name            text not null
@@ -131,7 +150,9 @@ next_fire_at    timestamptz
 ```
 
 ### `events`
+
 Owned by: all services (append-only audit log)
+
 ```
 id              bigserial pk
 type            text not null    -- 'permission.denied' | 'service.restarted' | 'goal.completed' | ...
@@ -143,7 +164,9 @@ INDEX (type, created_at)
 ```
 
 ### `registry_snapshot`
+
 Owned by: control-plane (refreshed periodically)
+
 ```
 id              uuid pk
 kind            text not null   -- 'mcp' | 'npm' | 'pip' | 'llm'
@@ -165,7 +188,7 @@ UNIQUE (kind, name)
 
 ## Backup
 
-- `pnpm db:backup` → `~/.claw-alt/backups/YYYY-MM-DD-HHMM.sql.gz`.
+- `pnpm db:backup` → `~/.open-greg/backups/YYYY-MM-DD-HHMM.sql.gz`.
 - Nightly cron-job backup included in default config (configurable).
 - Restore: `pnpm db:restore <file>`.
 

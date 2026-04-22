@@ -76,7 +76,7 @@ importers:
       '@clack/prompts':
         specifier: ^0.9.0
         version: 0.9.1
-      '@claw-alt/shared':
+      '@open-greg/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       zod:
@@ -98,10 +98,10 @@ importers:
 
   apps/dashboard:
     dependencies:
-      '@claw-alt/connectors':
+      '@open-greg/connectors':
         specifier: workspace:*
         version: link:../../packages/connectors
-      '@claw-alt/shared':
+      '@open-greg/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       next:
@@ -150,13 +150,13 @@ importers:
 
   packages/agent-core:
     dependencies:
-      '@claw-alt/memory':
+      '@open-greg/memory':
         specifier: workspace:*
         version: link:../memory
-      '@claw-alt/permissions':
+      '@open-greg/permissions':
         specifier: workspace:*
         version: link:../permissions
-      '@claw-alt/shared':
+      '@open-greg/shared':
         specifier: workspace:*
         version: link:../shared
       zod:
@@ -175,7 +175,7 @@ importers:
 
   packages/connectors:
     dependencies:
-      '@claw-alt/shared':
+      '@open-greg/shared':
         specifier: workspace:*
         version: link:../shared
       zod:
@@ -210,7 +210,7 @@ importers:
 
   packages/messaging:
     dependencies:
-      '@claw-alt/permissions':
+      '@open-greg/permissions':
         specifier: workspace:*
         version: link:../permissions
       zod:
@@ -286,7 +286,7 @@ importers:
 
   packages/tools:
     dependencies:
-      '@claw-alt/permissions':
+      '@open-greg/permissions':
         specifier: workspace:*
         version: link:../permissions
       zod:
@@ -321,19 +321,19 @@ importers:
 
   services/control-plane:
     dependencies:
-      '@claw-alt/agent-core':
+      '@open-greg/agent-core':
         specifier: workspace:*
         version: link:../../packages/agent-core
-      '@claw-alt/memory':
+      '@open-greg/memory':
         specifier: workspace:*
         version: link:../../packages/memory
-      '@claw-alt/permissions':
+      '@open-greg/permissions':
         specifier: workspace:*
         version: link:../../packages/permissions
-      '@claw-alt/shared':
+      '@open-greg/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@claw-alt/telemetry':
+      '@open-greg/telemetry':
         specifier: workspace:*
         version: link:../../packages/telemetry
       '@trpc/server':

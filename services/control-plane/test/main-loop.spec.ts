@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { AgentOrchestrator } from '../src/orchestrator.js'
-import type { AgentConfig } from '@claw-alt/agent-core'
+import type { AgentConfig } from '@open-greg/agent-core'
 
 const mockAgent: AgentConfig = {
   id: 'agent-1',

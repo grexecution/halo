@@ -19,21 +19,37 @@ export async function POST(req: NextRequest) {
   return callOllama(message, history)
 }
 
+async function resolveOllamaModel(): Promise<string> {
+  try {
+    const res = await fetch(`${OLLAMA_URL}/api/tags`)
+    if (!res.ok) return OLLAMA_MODEL
+    const data = (await res.json()) as { models?: Array<{ name: string }> }
+    const models = data.models ?? []
+    // Exact match first
+    if (models.some((m) => m.name === OLLAMA_MODEL)) return OLLAMA_MODEL
+    // Prefix match (e.g. "llama3.2" → "llama3.2:1b")
+    const prefixMatch = models.find((m) => m.name.startsWith(OLLAMA_MODEL + ':'))
+    if (prefixMatch) return prefixMatch.name
+    // Fall back to first available model
+    if (models.length > 0) return models[0]!.name
+  } catch {
+    /* ignore, will fail at chat time with a useful error */
+  }
+  return OLLAMA_MODEL
+}
+
 async function callOllama(
   message: string,
   history: Array<{ role: string; content: string }>,
 ): Promise<NextResponse> {
   try {
+    const model = await resolveOllamaModel()
     const messages = [...history, { role: 'user', content: message }]
 
     const res = await fetch(`${OLLAMA_URL}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: OLLAMA_MODEL,
-        messages,
-        stream: false,
-      }),
+      body: JSON.stringify({ model, messages, stream: false }),
     })
 
     if (!res.ok) {

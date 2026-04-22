@@ -8,11 +8,12 @@ _Seven phases. Each phase ships something usable on its own. The master build pr
 
 ## Phase 1 — Skeleton & install story
 
-**Goal:** a user can run `npx create-claw-alt init` and get a blank dashboard on localhost. Nothing intelligent yet. Just the scaffolding.
+**Goal:** a user can run `npx create-open-greg init` and get a blank dashboard on localhost. Nothing intelligent yet. Just the scaffolding.
 
 **Features:** F-001, F-002, F-004, F-120, F-135, F-160, F-161, F-166, F-168, F-169.
 
 **Tasks:**
+
 1. Initialize pnpm monorepo with workspaces: `apps/cli`, `apps/dashboard`, `services/control-plane`, `packages/shared`.
 2. Set up TypeScript configs, ESLint (+ the custom "no-bypass-permission" rule stub), Prettier.
 3. Write `apps/cli` — Ink-based TUI (or clack). Bootstrap: clone template, install deps, generate `CLAW_SECRET_PASSPHRASE` (if headless), `docker compose up -d`, wait for health, print URL.
@@ -25,7 +26,7 @@ _Seven phases. Each phase ships something usable on its own. The master build pr
 10. CI: GitHub Actions for lint + typecheck on PR.
 11. Write test: fresh clone + `pnpm install` + `pnpm docker:up` → dashboard returns 200. Secrets roundtrip works on all three platforms.
 
-**Demo:** `npx create-claw-alt init` on a clean machine → `http://localhost:3000` shows a placeholder dashboard. Tested on macOS, Linux x86_64, Linux arm64.
+**Demo:** `npx create-open-greg init` on a clean machine → `http://localhost:3000` shows a placeholder dashboard. Tested on macOS, Linux x86_64, Linux arm64.
 
 **Exit:** F-001, F-002, F-004, F-120, F-135 all green on all three platforms.
 
@@ -38,6 +39,7 @@ _Seven phases. Each phase ships something usable on its own. The master build pr
 **Features:** F-010, F-012, F-014, F-016, F-018, F-020, F-026, F-030, F-031, F-034, F-040, F-041, F-045, F-130, F-131, F-134, F-136, F-150, F-162, F-163, F-164, F-165.
 
 **Tasks:**
+
 1. `packages/shared` — zod schemas for Message, Agent, ToolCall, Permission. OTel wrapper.
 2. `packages/agent-core` — AgentOrchestrator class. `runTurn(agentId, message)` method using Vercel AI SDK v6 (`@ai-sdk/mcp` for MCP integration).
 3. `packages/permissions` — YAML loader (chokidar for hot-reload), `check()` function, ESLint rule.
@@ -63,6 +65,7 @@ _Seven phases. Each phase ships something usable on its own. The master build pr
 **Features:** F-011, F-013, F-017, F-021, F-022, F-023, F-090, F-091, F-092, F-100, F-101, F-102, F-103, F-104, F-105, F-137.
 
 **Tasks:**
+
 1. Extend AgentOrchestrator for sub-agents: handle mentions, `delegate` tool, nested sessions.
 2. Dashboard: sub-agent tabs on chat page.
 3. Dashboard: connectors page with OAuth flow UI.
@@ -87,6 +90,7 @@ _Seven phases. Each phase ships something usable on its own. The master build pr
 **Features:** F-032, F-033, F-042, F-043, F-044, F-050, F-051, F-052, F-053, F-060, F-061, F-062, F-063, F-080, F-081, F-082, F-132, F-133, F-167.
 
 **Tasks:**
+
 1. `packages/tools` — shell.exec, fs.read, fs.write. Permission-checked.
 2. Anthropic computer-use integration (cloud path).
 3. `services/vision-service` — Python FastAPI, Tesseract, PaddleOCR, Qwen2.5-VL via Ollama.
@@ -110,6 +114,7 @@ _Seven phases. Each phase ships something usable on its own. The master build pr
 **Features:** F-015, F-024, F-025, F-093, F-110, F-111, F-112, F-113, F-121, F-122, F-140, F-141.
 
 **Tasks:**
+
 1. BullMQ-based cron scheduler reading `cron_jobs`.
 2. Goal-loop worker reading `goals`.
 3. Notification router (goal done → configured channel).
@@ -133,6 +138,7 @@ _Seven phases. Each phase ships something usable on its own. The master build pr
 **Features:** F-019, F-070, F-071, F-072, F-073, F-074.
 
 **Tasks:**
+
 1. `services/voice-service` — Python FastAPI. NeMo (Parakeet v3), Piper, whisper.cpp fallback.
 2. Cloud routes: Deepgram, Whisper API, ElevenLabs.
 3. Dashboard chat: mic button, inline audio playback.
@@ -153,16 +159,17 @@ _Seven phases. Each phase ships something usable on its own. The master build pr
 **Features:** F-003, F-106, F-170, any deferred polish.
 
 **Tasks:**
+
 1. Local-LLM wizard (weak/mid/strong) fully working.
 2. Browser-automation skill recorder — user clicks through a flow, Playwright script saved.
 3. Backup/restore: full Postgres + keychain export/import.
 4. Docs pass: README, SETUP, TROUBLESHOOTING.
 5. Performance pass: cold-start time <60s, first-turn latency <3s for cloud LLM.
 6. Cross-platform testing: Mac Mini (arm64), Linux x86_64, Linux arm64.
-7. Publish `create-claw-alt` to npm. GitHub release with tag.
+7. Publish `create-open-greg` to npm. GitHub release with tag.
 8. Record a 2-minute demo video for the README.
 
-**Demo:** clean install on a Linux box. `npx create-claw-alt init`. Under 10 minutes to first working conversation. All prior demos still pass.
+**Demo:** clean install on a Linux box. `npx create-open-greg init`. Under 10 minutes to first working conversation. All prior demos still pass.
 
 **Exit:** npm package published. All features across all phases green. Release notes written.
 
@@ -170,15 +177,15 @@ _Seven phases. Each phase ships something usable on its own. The master build pr
 
 ## Phase timing estimates (solo, focused)
 
-| Phase | Estimated days |
-|---|---|
-| 1 | 2–3 |
-| 2 | 4–6 |
-| 3 | 4–6 |
-| 4 | 5–7 |
-| 5 | 4–5 |
-| 6 | 2–3 |
-| 7 | 2–3 |
+| Phase     | Estimated days |
+| --------- | -------------- |
+| 1         | 2–3            |
+| 2         | 4–6            |
+| 3         | 4–6            |
+| 4         | 5–7            |
+| 5         | 4–5            |
+| 6         | 2–3            |
+| 7         | 2–3            |
 | **Total** | **23–33 days** |
 
 With an AI coding agent running overnight, the clock time can be compressed significantly — the bottleneck becomes human review between phases, not code generation.
@@ -190,6 +197,7 @@ With an AI coding agent running overnight, the clock time can be compressed sign
 If the build exceeds schedule and a cut is required, the priority order for de-scoping is:
 
 **Can defer to v1.1 without hurting core value:**
+
 1. Voice (Phase 6 entirely) — Telegram text works without it.
 2. Discord and Slack (F-091, F-092) — Telegram covers messaging.
 3. Email trigger (F-093) — users can forward to Telegram.
@@ -197,6 +205,7 @@ If the build exceeds schedule and a cut is required, the priority order for de-s
 5. Multiple local LLM tiers (F-003 tiered install) — ship one tier (mid).
 
 **Do NOT cut** (these define the product):
+
 - Permission middleware + panic button + budgets — this is the differentiator vs OpenClaw.
 - Memory + cross-source indexing — this is the "actually useful" piece.
 - Cron + goal loop + critic — this is the "actually autonomous" piece.

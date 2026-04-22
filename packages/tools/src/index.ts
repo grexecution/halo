@@ -1,4 +1,4 @@
-import type { PermissionMiddleware } from '@claw-alt/permissions'
+import type { PermissionMiddleware } from '@open-greg/permissions'
 
 export interface Tool<TArgs = Record<string, unknown>, TResult = unknown> {
   id: string

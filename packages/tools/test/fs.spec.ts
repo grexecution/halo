@@ -4,12 +4,12 @@
  */
 import { describe, it, expect, afterEach } from 'vitest'
 import { fsReadTool, fsWriteTool } from '../src/fs.js'
-import { createMiddleware } from '@claw-alt/permissions'
+import { createMiddleware } from '@open-greg/permissions'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir as osTmpdir } from 'node:os'
 
-const tmpDir = mkdtempSync(join(osTmpdir(), 'claw-fs-'))
+const tmpDir = mkdtempSync(join(osTmpdir(), 'open-greg-fs-'))
 const allowConfig = {
   tools: { 'fs.read': { allow: true }, 'fs.write': { allow: true } },
   filesystem: { sudo: false, allowed_paths: [tmpDir] },
@@ -25,7 +25,7 @@ describe('F-051: Filesystem read/write', () => {
     } catch {
       /* ignore */
     }
-    mkdtempSync(join(osTmpdir(), 'claw-fs-'))
+    mkdtempSync(join(osTmpdir(), 'open-greg-fs-'))
   })
 
   it('writes a file within allowed path', async () => {

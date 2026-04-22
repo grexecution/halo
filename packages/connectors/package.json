@@ -1,5 +1,5 @@
 {
-  "name": "@claw-alt/connectors",
+  "name": "@open-greg/connectors",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@claw-alt/shared": "workspace:*",
+    "@open-greg/shared": "workspace:*",
     "zod": "^3.23.0"
   },
   "devDependencies": {

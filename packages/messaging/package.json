@@ -1,5 +1,5 @@
 {
-  "name": "@claw-alt/messaging",
+  "name": "@open-greg/messaging",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@claw-alt/permissions": "workspace:*",
+    "@open-greg/permissions": "workspace:*",
     "zod": "^3.23.0"
   },
   "devDependencies": {

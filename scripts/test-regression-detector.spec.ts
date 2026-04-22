@@ -23,7 +23,7 @@ describe('F-162: Regression detection', () => {
   let tmpDir: string
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'claw-regression-'))
+    tmpDir = mkdtempSync(join(tmpdir(), 'open-greg-regression-'))
     mkdirSync(join(tmpDir, 'artifacts'), { recursive: true })
     mkdirSync(join(tmpDir, 'scripts'), { recursive: true })
     mkdirSync(join(tmpDir, 'docs'), { recursive: true })

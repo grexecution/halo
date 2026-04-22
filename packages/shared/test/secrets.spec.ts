@@ -3,7 +3,7 @@ import { existsSync, unlinkSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 
-const SERVICE = 'claw-alt-test'
+const SERVICE = 'open-greg-test'
 const ACCOUNT = 'test-account'
 const TEST_PASSPHRASE = 'test-passphrase-32-chars-long-xx'
 const TEST_SECRET = 'super-secret-value-for-testing'
@@ -22,7 +22,7 @@ describe('F-135: Secrets — keychain with headless fallback', () => {
   })
 
   describe('AES-GCM fallback path (CLAW_SECRET_PASSPHRASE set)', () => {
-    const fallbackFile = resolve(tmpdir(), `claw-alt-secrets-test-${Date.now()}.enc`)
+    const fallbackFile = resolve(tmpdir(), `open-greg-secrets-test-${Date.now()}.enc`)
 
     beforeEach(() => {
       process.env['CLAW_SECRET_PASSPHRASE'] = TEST_PASSPHRASE

@@ -4,7 +4,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest'
 import { SessionStore } from '../src/session-store.js'
-import type { Message } from '@claw-alt/agent-core'
+import type { Message } from '@open-greg/agent-core'
 
 describe('F-026: Agent session resume', () => {
   let store: SessionStore

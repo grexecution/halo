@@ -4,7 +4,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { computerUseTool } from '../src/gui.js'
-import { createMiddleware } from '@claw-alt/permissions'
+import { createMiddleware } from '@open-greg/permissions'
 
 describe('F-052: Desktop GUI (computer-use)', () => {
   it('tool is registered with correct ID', () => {

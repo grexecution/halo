@@ -1,5 +1,5 @@
-import { buildSystemPrompt } from '@claw-alt/agent-core'
-import type { AgentConfig, Message, TurnResult } from '@claw-alt/agent-core'
+import { buildSystemPrompt } from '@open-greg/agent-core'
+import type { AgentConfig, Message, TurnResult } from '@open-greg/agent-core'
 
 export interface RunTurnOptions {
   agent: AgentConfig

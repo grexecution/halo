@@ -5,17 +5,19 @@ FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* .npmrc ./
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/connectors/package.json ./packages/connectors/
 COPY apps/dashboard/package.json ./apps/dashboard/
-RUN pnpm install --frozen-lockfile --filter @claw-alt/dashboard...
+RUN pnpm install --frozen-lockfile --filter @open-greg/dashboard...
 
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/dashboard/node_modules ./apps/dashboard/node_modules
 COPY packages/shared ./packages/shared
+COPY packages/connectors ./packages/connectors
 COPY apps/dashboard ./apps/dashboard
 COPY tsconfig.json ./
-RUN pnpm --filter @claw-alt/dashboard build
+RUN pnpm --filter @open-greg/dashboard build
 
 FROM base AS runner
 WORKDIR /app

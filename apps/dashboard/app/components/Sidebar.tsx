@@ -40,7 +40,7 @@ export function Sidebar() {
     <nav className="flex flex-col w-56 min-h-screen bg-gray-950 text-gray-100 border-r border-gray-800">
       <div className="px-4 py-5 border-b border-gray-800">
         <Link href="/" className="flex items-center gap-2">
-          <span className="text-xl font-bold text-white">claw-alt</span>
+          <span className="text-xl font-bold text-white">open-greg</span>
           <span className="text-xs text-gray-500 font-mono">v0.1</span>
         </Link>
       </div>

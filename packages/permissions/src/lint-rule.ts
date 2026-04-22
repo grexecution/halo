@@ -1,6 +1,6 @@
 import type { Rule } from 'eslint'
 
-const TOOLS_PACKAGE = '@claw-alt/tools'
+const TOOLS_PACKAGE = '@open-greg/tools'
 
 export const noBypassPermission: Rule.RuleModule = {
   meta: {
@@ -10,7 +10,7 @@ export const noBypassPermission: Rule.RuleModule = {
     },
     messages: {
       noBypass:
-        'Direct tool calls from @claw-alt/tools must go through middleware.check(). Import from @claw-alt/permissions and call middleware.check() first.',
+        'Direct tool calls from @open-greg/tools must go through middleware.check(). Import from @open-greg/permissions and call middleware.check() first.',
     },
   },
   create(context) {

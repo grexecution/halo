@@ -25,7 +25,7 @@ describe('F-002: CLI wizard', () => {
   })
 
   describe('wizard idempotency (F-002 acceptance)', () => {
-    const configDir = resolve(tmpdir(), `claw-wizard-test-${Date.now()}`)
+    const configDir = resolve(tmpdir(), `open-greg-wizard-test-${Date.now()}`)
     const configPath = resolve(configDir, 'config.yml')
 
     afterEach(() => {

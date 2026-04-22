@@ -3,7 +3,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import { docsEditTool } from '../src/docs-edit.js'
-import { createMiddleware } from '@claw-alt/permissions'
+import { createMiddleware } from '@open-greg/permissions'
 
 describe('F-140: Agent edits own docs', () => {
   it('allows docs edit when permission is granted', async () => {

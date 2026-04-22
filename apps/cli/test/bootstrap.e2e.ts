@@ -36,7 +36,7 @@ describe('F-001: npx bootstrap', () => {
           NO_COLOR: '1',
           CLAW_NON_INTERACTIVE: '1',
           CLAW_SECRET_PASSPHRASE: 'test-passphrase-32-chars-long-xx',
-          CLAW_CONFIG_DIR: resolve(tmpdir(), `claw-test-${Date.now()}`),
+          CLAW_CONFIG_DIR: resolve(tmpdir(), `open-greg-test-${Date.now()}`),
         },
       },
     )
@@ -56,7 +56,7 @@ describe('F-001: npx bootstrap', () => {
           FORCE_COLOR: '0',
           NO_COLOR: '1',
           CLAW_NON_INTERACTIVE: '1',
-          CLAW_CONFIG_DIR: resolve(tmpdir(), `claw-test-passgen-${Date.now()}`),
+          CLAW_CONFIG_DIR: resolve(tmpdir(), `open-greg-test-passgen-${Date.now()}`),
         },
       },
     )

@@ -12,8 +12,8 @@ describe('F-040: Permission YAML loading', () => {
   let tmpDir: string
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'claw-perms-'))
-    mkdirSync(join(tmpDir, '.claw-alt'), { recursive: true })
+    tmpDir = mkdtempSync(join(tmpdir(), 'open-greg-perms-'))
+    mkdirSync(join(tmpDir, '.open-greg'), { recursive: true })
   })
 
   afterEach(() => {
@@ -21,7 +21,7 @@ describe('F-040: Permission YAML loading', () => {
   })
 
   it('loads a valid permissions.yml file', async () => {
-    const yamlPath = join(tmpDir, '.claw-alt', 'permissions.yml')
+    const yamlPath = join(tmpDir, '.open-greg', 'permissions.yml')
     writeFileSync(
       yamlPath,
       `
@@ -54,7 +54,7 @@ filesystem:
   })
 
   it('hot-reloads on file change', async () => {
-    const yamlPath = join(tmpDir, '.claw-alt', 'permissions.yml')
+    const yamlPath = join(tmpDir, '.open-greg', 'permissions.yml')
     writeFileSync(yamlPath, 'tools:\n  get_time:\n    allow: true\n')
 
     let latestConfig: PermissionConfig | undefined
@@ -74,7 +74,7 @@ filesystem:
   })
 
   it('validates against schema and rejects invalid config', async () => {
-    const yamlPath = join(tmpDir, '.claw-alt', 'permissions.yml')
+    const yamlPath = join(tmpDir, '.open-greg', 'permissions.yml')
     writeFileSync(yamlPath, 'tools: "not-an-object"\n')
     await expect(loadPermissions(yamlPath)).rejects.toThrow()
   })

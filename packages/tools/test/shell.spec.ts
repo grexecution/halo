@@ -4,8 +4,8 @@
  */
 import { describe, it, expect } from 'vitest'
 import { shellExecTool } from '../src/shell.js'
-import { createMiddleware } from '@claw-alt/permissions'
-import type { PermissionConfig } from '@claw-alt/permissions'
+import { createMiddleware } from '@open-greg/permissions'
+import type { PermissionConfig } from '@open-greg/permissions'
 
 const allowConfig: PermissionConfig = {
   tools: { shell_exec: { allow: true } },

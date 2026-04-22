@@ -1,4 +1,4 @@
-import type { Message } from '@claw-alt/agent-core'
+import type { Message } from '@open-greg/agent-core'
 
 interface SessionStoreOptions {
   dryRun?: boolean | undefined

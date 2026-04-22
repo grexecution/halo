@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { homedir } from 'node:os'
 
-const CREDS_FILE = resolve(homedir(), '.claw-alt', 'plugin-credentials.json')
+const CREDS_FILE = resolve(homedir(), '.open-greg', 'plugin-credentials.json')
 
 interface PluginCredentials {
   pluginId: string

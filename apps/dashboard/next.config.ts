@@ -2,7 +2,7 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  transpilePackages: ['@claw-alt/connectors'],
+  transpilePackages: ['@open-greg/connectors'],
 }
 
 export default nextConfig

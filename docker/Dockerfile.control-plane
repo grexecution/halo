@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* .npmrc ./
 COPY packages/shared/package.json ./packages/shared/
 COPY services/control-plane/package.json ./services/control-plane/
-RUN pnpm install --frozen-lockfile --filter @claw-alt/control-plane...
+RUN pnpm install --frozen-lockfile --filter @open-greg/control-plane...
 
 FROM base AS runner
 WORKDIR /app

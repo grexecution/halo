@@ -14,7 +14,7 @@ _Rules that are specific to this repo. For generic best-practices, trust your to
 ## Imports & exports
 
 - **Named exports, never default.** Easier to refactor, better IDE navigation.
-- Import from package root, not deep paths: `import { X } from '@claw-alt/shared'` not `'@claw-alt/shared/src/types/x'`.
+- Import from package root, not deep paths: `import { X } from '@open-greg/shared'` not `'@open-greg/shared/src/types/x'`.
 
 ## Naming
 
@@ -43,6 +43,7 @@ _Rules that are specific to this repo. For generic best-practices, trust your to
 ## Tool handlers
 
 Every tool handler:
+
 ```ts
 export const myTool = defineTool({
   id: 'my.tool',
@@ -52,6 +53,7 @@ export const myTool = defineTool({
   handler: async (args, ctx) => { ... },
 });
 ```
+
 Never export raw handlers. Registration only via `defineTool`, which the middleware wraps automatically.
 
 ## Database
@@ -76,7 +78,7 @@ Never export raw handlers. Registration only via `defineTool`, which the middlew
 
 ## Comments
 
-- Code should be self-documenting. Comments explain *why*, never *what*.
+- Code should be self-documenting. Comments explain _why_, never _what_.
 - No commented-out code in commits.
 - `TODO` without an associated feature row or issue number fails lint.
 

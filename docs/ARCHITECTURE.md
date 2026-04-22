@@ -46,13 +46,13 @@ Every "service" in the diagram is a Docker container with `restart: unless-stopp
 ## 2. Repo layout (pnpm monorepo)
 
 ```
-claw-alt/
+open-greg/
 ├── AGENTS.md                 # entry point for AI agents (symlinked CLAUDE.md)
 ├── README.md                 # human entry point
 ├── BUILD_PROMPT.md           # the "vibe-code the whole thing" master prompt
 ├── docs/                     # all spec docs (this folder)
 ├── apps/
-│   ├── cli/                  # the npm package: `npx create-claw-alt init`
+│   ├── cli/                  # the npm package: `npx create-open-greg init`
 │   └── dashboard/            # Next.js 15 dashboard
 ├── services/
 │   ├── control-plane/        # Fastify + tRPC agent orchestrator
@@ -88,6 +88,7 @@ claw-alt/
 - **Auth:** none in v1 — single user on localhost. If exposed to LAN, `BASIC_AUTH_USER`/`_PASSWORD` env vars enable basic auth.
 
 **Pages:**
+
 - `/chat` — main chat + per-sub-agent tabs.
 - `/agents` — CRUD agents. Each has: name, system prompt, model, enabled tools, permission scope.
 - `/connectors` — MCP marketplace + custom MCP add + OAuth flows. Also LLM provider configuration.
@@ -106,6 +107,7 @@ claw-alt/
 Routes messages to the right agent. Handles the main agent + N sub-agents. Sub-agents are separate `Agent` instances with their own system prompt, model, and tool set.
 
 **Sub-agent model (fixing OpenClaw's "super weird" sub-agents):**
+
 - Every sub-agent has a **handle** (e.g. `@coder`, `@email`, `@researcher`).
 - Sub-agents can be called explicitly via `@handle` in chat/Telegram, or the main agent can delegate by emitting a `delegate(handle, task)` tool call.
 - Every sub-agent runs in its own async context with its own memory scope (can be private or shared — config per agent).
@@ -119,6 +121,7 @@ Before marking any goal done, the orchestrator spins up a **critic** sub-agent w
 ### Tool registry
 
 All tools — native and MCP — register here on startup. Each tool has:
+
 - `id` (stable string)
 - `name` (human-readable)
 - `description` (LLM-facing)
@@ -154,15 +157,17 @@ See `docs/PERMISSIONS.md` for the full spec. Architecturally: a single `check(to
 
 See `docs/CONNECTORS.md#memory` for the provider abstraction.
 
-**Default:** Mem0 OpenMemory in a Docker container. Its REST API is at `http://localhost:8765`, MCP-SSE endpoint at `http://localhost:8765/mcp/claw-alt/sse/default`. Postgres + Qdrant as its stores.
+**Default:** Mem0 OpenMemory in a Docker container. Its REST API is at `http://localhost:8765`, MCP-SSE endpoint at `http://localhost:8765/mcp/open-greg/sse/default`. Postgres + Qdrant as its stores.
 
 **LLM for memory extraction:** Mem0 itself calls an LLM to extract structured facts from raw text. The wizard writes `LLM_PROVIDER` + `LLM_MODEL` env vars into Mem0's compose config:
+
 - If user chose a cloud LLM for the main agent → Mem0 uses the same (cheaper model, e.g., `gpt-4o-mini` or `claude-haiku-4-5`).
 - If user chose local-only → Mem0 uses Ollama: `LLM_PROVIDER=ollama`, `LLM_MODEL=<mid-tier model>`, `OLLAMA_BASE_URL=http://ollama:11434`.
 
 We do **not** run Mem0's own UI (`make ui`) — our dashboard's memory browser talks to Mem0's REST API directly to keep UX unified.
 
 **Indexing triggers** (automatic):
+
 - Every chat message (dashboard + Telegram + Discord + Slack + voice).
 - Every tool call and result.
 - Every connector pull (Gmail threads, GitHub events, calendar updates, CRM rows).
@@ -179,10 +184,12 @@ We do **not** run Mem0's own UI (`make ui`) — our dashboard's memory browser t
 Three independent capabilities, each separately toggleable in permissions:
 
 ### 7.1 Shell / filesystem
+
 - `shell.exec(command, cwd?)` — runs via Node `child_process.spawn`. Permission middleware checks `allowed_paths`/`denied_paths` for `cwd` and any path arguments.
 - Sudo gate: if permission `filesystem.sudo=true`, the command can include `sudo`. The OS password is fetched from keychain on first use and cached for the session.
 
 ### 7.2 Desktop GUI
+
 - **Default (cloud):** Anthropic computer-use tool via the Claude API. Screenshots are captured by the tool itself.
 - **Local-LLM fallback:** a Python sidecar using `pyautogui` + `Pillow` + mss for screen capture, combined with a local VLM (Qwen2.5-VL via Ollama) for vision.
 - Both implementations expose the same tool interface: `gui.screenshot()`, `gui.click(x,y)`, `gui.type(text)`, `gui.key(key)`, `gui.scroll(dx,dy)`.
@@ -195,9 +202,10 @@ Three modes, sharing a single browser pool managed by `services/browser-service`
 
 **Mode B — Headless agent:** Playwright headless + periodic screenshot → vision model. For automated flows where the agent needs to see but no human is watching. Tool: `browser.act(goal)` — agent loops: screenshot → decide → click/type → repeat, until goal met or max steps (default 30).
 
-**Mode C — Persistent profile:** Playwright `launchPersistentContext(~/.claw-alt/browser-profile/)`. Cookies and logins persist. The Mac Mini stays logged into Gmail etc. Tool: `browser.act(goal, {persistent: true})`.
+**Mode C — Persistent profile:** Playwright `launchPersistentContext(~/.open-greg/browser-profile/)`. Cookies and logins persist. The Mac Mini stays logged into Gmail etc. Tool: `browser.act(goal, {persistent: true})`.
 
 Vision-loop policy:
+
 - Screenshot every action, not on a timer.
 - Max 30 steps per `browser.act` call (configurable).
 - If vision cost exceeds 10× scraping equivalent, downgrade to scraping mode and notify.
@@ -209,11 +217,13 @@ Vision-loop policy:
 Python FastAPI sidecar.
 
 **STT** — routed by priority:
+
 1. Cloud (if enabled): Deepgram (lowest latency) or Whisper API.
 2. Local (default fallback): **Parakeet-tdt-0.6b-v3** via NeMo. Auto-detects language among 25 European languages. Needs only 2GB RAM.
 3. Ultra-light fallback: whisper.cpp `base` model. CPU only, slower.
 
 **TTS** — routed by priority:
+
 1. Cloud: ElevenLabs.
 2. Local: Piper. One Piper voice per language, preloaded.
 3. Fallback: system TTS (`say` on macOS, `espeak-ng` on Linux).
@@ -221,6 +231,7 @@ Python FastAPI sidecar.
 Language detection is **on by default** — the user can set a preferred language or let it auto-detect.
 
 Audio I/O:
+
 - Dashboard sends base64-encoded webm → voice service transcribes → forwards text to control plane.
 - Replies route back: text → TTS → base64 mp3 → dashboard plays.
 - Telegram voice messages: telegram-webhook → download ogg → voice service → text → agent.
@@ -238,7 +249,7 @@ Python FastAPI sidecar.
 
 ---
 
-## 10. Messaging (packages/messaging/*)
+## 10. Messaging (packages/messaging/\*)
 
 - **Telegram:** `grammy`. **Long polling by default** (works on any headless machine, no public URL needed). Webhook mode is opt-in and requires a Cloudflare Tunnel or ngrok — wizard helps set this up. Supports group chats with sub-agent handles. Bot is added to group, responds to `@handle` mentions or direct replies. **Never run two processes with the same bot token** — Telegram returns 409. Dev vs prod requires separate bot tokens.
 - **Discord:** `discord.js`. Slash commands per agent, threaded.
@@ -252,6 +263,7 @@ All four channels flow into the same message bus in the control plane. The orche
 ## 11. Connectors / MCP registry
 
 See `docs/CONNECTORS.md` for the full list. Architecturally:
+
 - Each MCP has a `ConnectorDefinition` — id, display name, auth type (OAuth/API-key/token), config schema, default tool allow-list.
 - On dashboard "Add connector", the user picks from marketplace or pastes a URL. OAuth flows are handled by a small redirect server inside the control plane at `/oauth/callback/:connector-id`.
 - Tokens go to the OS keychain. The connector record in Postgres only stores `status`, `last_used_at`, and non-secret config.
@@ -259,6 +271,7 @@ See `docs/CONNECTORS.md` for the full list. Architecturally:
 ### Registry view (source of truth)
 
 `/registry` page is a single queryable list of:
+
 - All MCPs (enabled/disabled, last used, OAuth status).
 - All LLM providers and models (configured, default, fallback).
 - All npm packages the agent has `require`'d at runtime (tracked by a wrapper loader).

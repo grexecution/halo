@@ -18,7 +18,7 @@ describe('F-045: no-bypass-permission lint rule', () => {
         valid: [],
         invalid: [
           {
-            code: `import { shellExec } from '@claw-alt/tools';\nshellExec({ cmd: 'ls' });`,
+            code: `import { shellExec } from '@open-greg/tools';\nshellExec({ cmd: 'ls' });`,
             errors: [{ messageId: 'noBypass' }],
           },
         ],
@@ -31,7 +31,7 @@ describe('F-045: no-bypass-permission lint rule', () => {
       tester.run('no-bypass-permission', noBypassPermission, {
         valid: [
           {
-            code: `import { middleware } from '@claw-alt/permissions';\nawait middleware.check('shell_exec', { cmd: 'ls' }, ctx);`,
+            code: `import { middleware } from '@open-greg/permissions';\nawait middleware.check('shell_exec', { cmd: 'ls' }, ctx);`,
           },
           {
             // Non-tool code is fine

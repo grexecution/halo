@@ -1,10 +1,10 @@
 {
-  "name": "create-claw-alt",
+  "name": "create-open-greg",
   "version": "0.1.0",
   "private": false,
   "type": "module",
   "bin": {
-    "create-claw-alt": "./src/index.ts"
+    "create-open-greg": "./src/index.ts"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^0.9.0",
-    "@claw-alt/shared": "workspace:*",
+    "@open-greg/shared": "workspace:*",
     "zod": "^3.23.0"
   },
   "devDependencies": {

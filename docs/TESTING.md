@@ -15,6 +15,7 @@ Three tiers:
 ## The feature-test runner
 
 `pnpm test:features` does:
+
 1. Parses `docs/FEATURES.md` with a regex.
 2. For every row with `Status: done`, resolves the `Test:` path.
 3. Runs each test. Aggregates pass/fail.
@@ -28,6 +29,7 @@ This is the regression safety net. When a new feature lands, this runner proves 
 ## Writing a feature test
 
 Checklist:
+
 - One test file per feature ID.
 - Name the outer describe block `F-NNN: <title>`.
 - Assert the acceptance criteria from `docs/FEATURES.md` verbatim.
@@ -37,6 +39,7 @@ Checklist:
 ## Manual test policy
 
 Some features can't be automated reasonably:
+
 - 24-hour autonomy runs (F-113).
 - Voice latency on specific hardware.
 - OAuth flows that require a human to click "allow."
@@ -45,7 +48,7 @@ Each manual test has a numbered checklist in `docs/MANUAL_TESTS.md`. Before a re
 
 ## Mocks and fixtures
 
-- **LLM mock**: `@claw-alt/shared/testing/mock-llm`. Deterministic responses keyed by prompt hash. Used in 90% of integration tests.
+- **LLM mock**: `@open-greg/shared/testing/mock-llm`. Deterministic responses keyed by prompt hash. Used in 90% of integration tests.
 - **MCP mock**: `packages/connectors/testing/mock-mcp`. Implements the MCP transport; responses configurable per test.
 - **Browser mock**: Playwright already records+replays. Use traces for flaky-flow debugging.
 - **Clock mock**: `@sinonjs/fake-timers` for cron / goal-loop tests.
@@ -54,6 +57,7 @@ Each manual test has a numbered checklist in `docs/MANUAL_TESTS.md`. Before a re
 ## Handling LLM non-determinism
 
 Real-LLM tests (gated on `INTEGRATION=1`) are inherently non-deterministic. Rules:
+
 - **Never** assert on exact LLM output text. Assert on tool calls made, structured-output fields, or whether the output matches a regex/predicate.
 - Use `temperature: 0` and `seed` where the provider supports it.
 - Every real-LLM test wrapped in `retry(3)`. If it fails all three, fail the test — but flakiness is logged, not a retry-to-green-at-all-costs pattern.
@@ -63,6 +67,7 @@ Real-LLM tests (gated on `INTEGRATION=1`) are inherently non-deterministic. Rule
 ## CI
 
 `.github/workflows/ci.yml`:
+
 - Lint + typecheck on every PR.
 - Unit tests on every PR.
 - Integration tests on PR (without live LLM — uses mock-llm).
@@ -71,6 +76,7 @@ Real-LLM tests (gated on `INTEGRATION=1`) are inherently non-deterministic. Rule
 ## Performance regressions
 
 Key metrics captured on every feature-test run:
+
 - First-turn latency (local LLM and cloud LLM).
 - Cold-start time.
 - Memory-retrieval latency.

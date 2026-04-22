@@ -15,7 +15,7 @@ describe('F-165: Flaky test tracking', () => {
   let tmpDir: string
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'claw-flake-'))
+    tmpDir = mkdtempSync(join(tmpdir(), 'open-greg-flake-'))
     mkdirSync(join(tmpDir, 'artifacts'), { recursive: true })
   })
 

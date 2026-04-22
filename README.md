@@ -1,4 +1,4 @@
-# claw-alt (working name)
+# open-greg
 
 _An open-source, self-hosted, autonomous AI agent platform. The OpenClaw replacement that doesn't crash, has real memory, granular permissions, and actually does autonomous work._
 
@@ -35,7 +35,7 @@ OpenClaw has good ideas and serious flaws: weak memory, no granular permissions,
 ## Install (when built)
 
 ```bash
-npx create-claw-alt init
+npx create-open-greg init
 ```
 
 Wizard walks you through. Under 10 minutes to first conversation.

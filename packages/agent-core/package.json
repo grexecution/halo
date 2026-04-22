@@ -1,5 +1,5 @@
 {
-  "name": "@claw-alt/agent-core",
+  "name": "@open-greg/agent-core",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,9 +13,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@claw-alt/permissions": "workspace:*",
-    "@claw-alt/memory": "workspace:*",
-    "@claw-alt/shared": "workspace:*",
+    "@open-greg/permissions": "workspace:*",
+    "@open-greg/memory": "workspace:*",
+    "@open-greg/shared": "workspace:*",
     "zod": "^3.23.0"
   },
   "devDependencies": {

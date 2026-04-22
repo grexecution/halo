@@ -1,5 +1,5 @@
 {
-  "name": "claw-alt",
+  "name": "open-greg",
   "private": true,
   "type": "module",
   "engines": {
@@ -8,8 +8,8 @@
   },
   "scripts": {
     "dev": "pnpm -r --parallel dev",
-    "dev:dashboard": "pnpm --filter @claw-alt/dashboard dev",
-    "dev:control-plane": "pnpm --filter @claw-alt/control-plane dev",
+    "dev:dashboard": "pnpm --filter @open-greg/dashboard dev",
+    "dev:control-plane": "pnpm --filter @open-greg/control-plane dev",
     "build": "pnpm -r build",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -22,8 +22,8 @@
     "docker:down": "docker compose -f docker/compose.yml down",
     "docker:down:volumes": "docker compose -f docker/compose.yml down --volumes",
     "docker:logs": "docker compose -f docker/compose.yml logs -f",
-    "db:migrate": "pnpm --filter @claw-alt/control-plane db:migrate",
-    "db:seed": "pnpm --filter @claw-alt/control-plane db:seed",
+    "db:migrate": "pnpm --filter @open-greg/control-plane db:migrate",
+    "db:seed": "pnpm --filter @open-greg/control-plane db:seed",
     "prepare": "husky"
   },
   "devDependencies": {

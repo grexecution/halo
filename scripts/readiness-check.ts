@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Production readiness check for claw-alt.
+ * Production readiness check for open-greg.
  * Outputs READY or NOT READY with specific gaps.
  */
 import { readFileSync, existsSync } from 'node:fs'

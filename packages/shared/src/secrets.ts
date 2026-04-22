@@ -4,9 +4,9 @@ import { resolve, dirname } from 'node:path'
 import { homedir } from 'node:os'
 import type * as Keytar from 'keytar'
 
-const DEFAULT_SECRETS_FILE = resolve(homedir(), '.claw-alt/secrets.enc')
+const DEFAULT_SECRETS_FILE = resolve(homedir(), '.open-greg/secrets.enc')
 const ALGORITHM = 'aes-256-gcm'
-const SALT = 'claw-alt-secrets-v1'
+const SALT = 'open-greg-secrets-v1'
 
 type SecretsStore = Record<string, Record<string, string>>
 

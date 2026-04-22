@@ -7,7 +7,7 @@ import {
   getPluginsByCategory,
   type Plugin,
   type PluginCategory,
-} from '@claw-alt/connectors/plugins'
+} from '@open-greg/connectors/plugins'
 
 const CATEGORY_ICONS: Record<PluginCategory, string> = {
   workspace: '🏢',

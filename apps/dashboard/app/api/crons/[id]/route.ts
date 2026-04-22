@@ -1,8 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { homedir } from 'node:os'
+import { getDb } from '../../../lib/db'
 
 interface CronJob {
   id: string
@@ -18,49 +16,44 @@ interface CronJob {
   runCount: number
 }
 
-interface CronsFile {
-  jobs: CronJob[]
+interface DbRow {
+  id: string
+  name: string
+  schedule: string
+  goal: string | null
+  command: string | null
+  active: number
+  created_at: string
+  last_run_at: string | null
+  last_run_status: string | null
+  next_run_at: string | null
+  run_count: number
 }
 
-function getDataDir(): string {
-  return resolve(homedir(), '.open-greg')
-}
-
-function ensureDataDir(): void {
-  const dir = getDataDir()
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true })
+function toCron(r: DbRow): CronJob {
+  const job: CronJob = {
+    id: r.id,
+    name: r.name,
+    schedule: r.schedule,
+    active: r.active === 1,
+    createdAt: r.created_at,
+    runCount: r.run_count,
   }
-}
-
-function getCronsPath(): string {
-  return resolve(getDataDir(), 'crons.json')
-}
-
-function readCrons(): CronsFile {
-  const path = getCronsPath()
-  if (!existsSync(path)) return { jobs: [] }
-  try {
-    return JSON.parse(readFileSync(path, 'utf-8')) as CronsFile
-  } catch {
-    return { jobs: [] }
-  }
-}
-
-function writeCrons(data: CronsFile): void {
-  ensureDataDir()
-  writeFileSync(getCronsPath(), JSON.stringify(data, null, 2), 'utf-8')
+  if (r.goal) job.goal = r.goal
+  if (r.command) job.command = r.command
+  if (r.last_run_at) job.lastRunAt = r.last_run_at
+  if (r.last_run_status) job.lastRunStatus = r.last_run_status as 'success' | 'failed'
+  if (r.next_run_at) job.nextRunAt = r.next_run_at
+  return job
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const data = readCrons()
-    const job = data.jobs.find((j) => j.id === id)
-    if (!job) {
-      return NextResponse.json({ error: 'Cron job not found' }, { status: 404 })
-    }
-    return NextResponse.json(job)
+    const db = getDb()
+    const row = db.prepare('SELECT * FROM crons WHERE id = ?').get(id) as DbRow | undefined
+    if (!row) return NextResponse.json({ error: 'Cron job not found' }, { status: 404 })
+    return NextResponse.json(toCron(row))
   } catch (e) {
     return NextResponse.json(
       { error: `Failed to read cron job: ${e instanceof Error ? e.message : String(e)}` },
@@ -79,22 +72,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       goal?: string
       command?: string
     }
-
-    const data = readCrons()
-    const index = data.jobs.findIndex((j) => j.id === id)
-    if (index === -1) {
-      return NextResponse.json({ error: 'Cron job not found' }, { status: 404 })
-    }
-
-    const job = data.jobs[index]!
-    if (body.name !== undefined) job.name = body.name
-    if (body.schedule !== undefined) job.schedule = body.schedule
-    if (body.active !== undefined) job.active = body.active
-    if (body.goal !== undefined) job.goal = body.goal
-    if (body.command !== undefined) job.command = body.command
-
-    writeCrons(data)
-    return NextResponse.json(job)
+    const db = getDb()
+    const existing = db.prepare('SELECT * FROM crons WHERE id = ?').get(id) as DbRow | undefined
+    if (!existing) return NextResponse.json({ error: 'Cron job not found' }, { status: 404 })
+    db.prepare('UPDATE crons SET name=?, schedule=?, active=?, goal=?, command=? WHERE id=?').run(
+      body.name ?? existing.name,
+      body.schedule ?? existing.schedule,
+      body.active !== undefined ? (body.active ? 1 : 0) : existing.active,
+      body.goal !== undefined ? body.goal : existing.goal,
+      body.command !== undefined ? body.command : existing.command,
+      id,
+    )
+    const updated = db.prepare('SELECT * FROM crons WHERE id = ?').get(id) as DbRow
+    return NextResponse.json(toCron(updated))
   } catch (e) {
     return NextResponse.json(
       { error: `Failed to update cron job: ${e instanceof Error ? e.message : String(e)}` },
@@ -106,13 +96,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const data = readCrons()
-    const before = data.jobs.length
-    data.jobs = data.jobs.filter((j) => j.id !== id)
-    if (data.jobs.length === before) {
+    const db = getDb()
+    const result = db.prepare('DELETE FROM crons WHERE id = ?').run(id)
+    if (result.changes === 0)
       return NextResponse.json({ error: 'Cron job not found' }, { status: 404 })
-    }
-    writeCrons(data)
     return NextResponse.json({ ok: true })
   } catch (e) {
     return NextResponse.json(

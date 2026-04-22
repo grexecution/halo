@@ -75,12 +75,13 @@ async function executeAction(action: ActionPayload): Promise<{ ok: boolean; mess
       description: String(action.description ?? ''),
       emoji: String(action.emoji ?? '📝'),
       fields: (action.fields as Workspace['fields']) ?? [],
+      documents: [],
       active: Boolean(action.active ?? false),
       createdAt: now,
       updatedAt: now,
     }
     createWorkspace(ws)
-    await indexWorkspaceToMemory(ws)
+    void indexWorkspaceToMemory(ws)
     return { ok: true, message: `Created workspace "${ws.name}"` }
   }
 
@@ -89,7 +90,7 @@ async function executeAction(action: ActionPayload): Promise<{ ok: boolean; mess
     const patch = action.patch as Partial<Workspace>
     const updated = updateWorkspace(id, patch)
     if (!updated) return { ok: false, message: `Workspace ${id} not found` }
-    await indexWorkspaceToMemory(updated)
+    void indexWorkspaceToMemory(updated)
     return { ok: true, message: `Updated workspace "${updated.name}"` }
   }
 

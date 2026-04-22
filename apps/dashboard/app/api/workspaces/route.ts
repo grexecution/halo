@@ -18,11 +18,12 @@ export async function POST(req: NextRequest) {
     description: body.description ?? '',
     emoji: body.emoji ?? '📁',
     fields: body.fields ?? [],
+    documents: body.documents ?? [],
     active: body.active ?? false,
     createdAt: now,
     updatedAt: now,
   }
   createWorkspace(ws)
-  await indexWorkspaceToMemory(ws)
+  void indexWorkspaceToMemory(ws)
   return NextResponse.json({ workspace: ws }, { status: 201 })
 }

@@ -1,8 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { homedir } from 'node:os'
+import { getDb } from '../../lib/db'
 
 interface Goal {
   id: string
@@ -15,44 +13,37 @@ interface Goal {
   lastRunAt?: string
 }
 
-interface GoalsFile {
-  goals: Goal[]
+interface DbRow {
+  id: string
+  title: string
+  description: string | null
+  priority: number
+  status: string
+  created_at: string
+  updated_at: string
+  last_run_at: string | null
 }
 
-function getDataDir(): string {
-  return resolve(homedir(), '.open-greg')
-}
-
-function ensureDataDir(): void {
-  const dir = getDataDir()
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true })
+function toGoal(r: DbRow): Goal {
+  return {
+    id: r.id,
+    title: r.title,
+    ...(r.description ? { description: r.description } : {}),
+    priority: r.priority,
+    status: r.status as Goal['status'],
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    ...(r.last_run_at ? { lastRunAt: r.last_run_at } : {}),
   }
-}
-
-function getGoalsPath(): string {
-  return resolve(getDataDir(), 'goals.json')
-}
-
-function readGoals(): GoalsFile {
-  const path = getGoalsPath()
-  if (!existsSync(path)) return { goals: [] }
-  try {
-    return JSON.parse(readFileSync(path, 'utf-8')) as GoalsFile
-  } catch {
-    return { goals: [] }
-  }
-}
-
-function writeGoals(data: GoalsFile): void {
-  ensureDataDir()
-  writeFileSync(getGoalsPath(), JSON.stringify(data, null, 2), 'utf-8')
 }
 
 export async function GET() {
   try {
-    const data = readGoals()
-    return NextResponse.json(data)
+    const db = getDb()
+    const rows = db
+      .prepare('SELECT * FROM goals ORDER BY priority DESC, created_at DESC')
+      .all() as DbRow[]
+    return NextResponse.json({ goals: rows.map(toGoal) })
   } catch (e) {
     return NextResponse.json(
       { error: `Failed to read goals: ${e instanceof Error ? e.message : String(e)}` },
@@ -63,11 +54,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as {
-      title: string
-      description?: string
-      priority?: number
-    }
+    const body = (await req.json()) as { title: string; description?: string; priority?: number }
     const now = new Date().toISOString()
     const goal: Goal = {
       id: `goal-${Date.now()}`,
@@ -78,11 +65,18 @@ export async function POST(req: NextRequest) {
       createdAt: now,
       updatedAt: now,
     }
-
-    const data = readGoals()
-    data.goals.push(goal)
-    writeGoals(data)
-
+    const db = getDb()
+    db.prepare(
+      'INSERT INTO goals (id, title, description, priority, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    ).run(
+      goal.id,
+      goal.title,
+      goal.description ?? null,
+      goal.priority,
+      goal.status,
+      goal.createdAt,
+      goal.updatedAt,
+    )
     return NextResponse.json(goal, { status: 201 })
   } catch (e) {
     return NextResponse.json(

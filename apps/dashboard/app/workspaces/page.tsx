@@ -20,6 +20,8 @@ import {
   Puzzle,
   ChevronRight,
   Zap,
+  FileText,
+  ChevronDown,
 } from 'lucide-react'
 import { Button, Switch, EmptyState, cn } from '../components/ui/index'
 
@@ -35,6 +37,14 @@ interface WorkspaceField {
   type: FieldType
 }
 
+interface WorkspaceDocument {
+  id: string
+  title: string
+  content: string
+  createdAt: string
+  updatedAt: string
+}
+
 interface Workspace {
   id: string
   name: string
@@ -42,6 +52,7 @@ interface Workspace {
   description: string
   emoji: string
   fields: WorkspaceField[]
+  documents: WorkspaceDocument[]
   active: boolean
   createdAt: string
   updatedAt: string
@@ -163,9 +174,70 @@ function newField(overrides: Partial<WorkspaceField> = {}): WorkspaceField {
   }
 }
 
+// ─── Document Row ─────────────────────────────────────────────────────────────
+
+interface DocRowProps {
+  doc: WorkspaceDocument
+  onChange: (d: WorkspaceDocument) => void
+  onDelete: () => void
+}
+
+function DocumentRow({ doc, onChange, onDelete }: DocRowProps) {
+  const [open, setOpen] = useState(doc.content === '')
+  const now = new Date().toISOString()
+  return (
+    <div className="border border-gray-800/60 rounded-xl overflow-hidden mb-2">
+      <div className="flex items-center gap-2 px-3 py-2 bg-gray-900/60">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-2 flex-1 min-w-0 text-left group"
+        >
+          <ChevronDown
+            size={12}
+            className={cn(
+              'text-gray-600 transition-transform flex-shrink-0',
+              open && 'rotate-0',
+              !open && '-rotate-90',
+            )}
+          />
+          <FileText size={12} className="text-gray-600 flex-shrink-0" />
+          <input
+            className="bg-transparent text-xs font-medium text-gray-300 focus:outline-none focus:text-white flex-1 min-w-0"
+            value={doc.title}
+            onChange={(e) => onChange({ ...doc, title: e.target.value, updatedAt: now })}
+            onClick={(e) => e.stopPropagation()}
+            placeholder="Document title"
+          />
+        </button>
+        <button
+          onClick={onDelete}
+          className="text-gray-700 hover:text-red-400 transition-colors flex-shrink-0"
+        >
+          <X size={13} />
+        </button>
+      </div>
+      {open && (
+        <textarea
+          className="w-full bg-gray-950/60 px-3 py-2 text-xs text-gray-300 font-mono focus:outline-none resize-none min-h-[120px] placeholder-gray-700"
+          value={doc.content}
+          onChange={(e) => onChange({ ...doc, content: e.target.value, updatedAt: now })}
+          placeholder="Paste markdown, notes, documentation, README content…"
+          rows={8}
+        />
+      )}
+    </div>
+  )
+}
+
 // ─── Template Picker ──────────────────────────────────────────────────────────
 
-function TemplatePicker({ onPick }: { onPick: (type: WorkspaceType) => void }) {
+function TemplatePicker({
+  onPick,
+  loading,
+}: {
+  onPick: (type: WorkspaceType) => void
+  loading?: boolean
+}) {
   return (
     <div className="p-6">
       <h2 className="text-base font-semibold text-white mb-1">New Workspace</h2>
@@ -181,7 +253,8 @@ function TemplatePicker({ onPick }: { onPick: (type: WorkspaceType) => void }) {
             <button
               key={type}
               onClick={() => onPick(type)}
-              className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-900 border border-gray-800 hover:border-gray-600 hover:bg-gray-800/80 transition-all text-left group"
+              disabled={loading}
+              className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-900 border border-gray-800 hover:border-gray-600 hover:bg-gray-800/80 transition-all text-left group disabled:opacity-50 disabled:cursor-wait"
             >
               <div
                 className={cn(
@@ -218,6 +291,7 @@ function TemplatePicker({ onPick }: { onPick: (type: WorkspaceType) => void }) {
           )
         })}
       </div>
+      {loading && <p className="mt-4 text-xs text-gray-600 text-center">Creating workspace…</p>}
     </div>
   )
 }
@@ -403,6 +477,35 @@ function WorkspaceEditor({ workspace, onSave, onDelete, saving }: WorkspaceEdito
     setDraft((p) => ({ ...p, fields: [...p.fields, newField()] }))
   }
 
+  function updateDoc(idx: number, d: WorkspaceDocument) {
+    setDraft((p) => {
+      const docs = [...p.documents]
+      docs[idx] = d
+      return { ...p, documents: docs }
+    })
+  }
+
+  function deleteDoc(idx: number) {
+    setDraft((p) => ({ ...p, documents: p.documents.filter((_, i) => i !== idx) }))
+  }
+
+  function addDoc() {
+    const now = new Date().toISOString()
+    setDraft((p) => ({
+      ...p,
+      documents: [
+        ...p.documents,
+        {
+          id: `doc-${Date.now()}`,
+          title: 'New Document',
+          content: '',
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+    }))
+  }
+
   function commitName() {
     setEditingName(false)
     if (nameDraft.trim()) setDraft((p) => ({ ...p, name: nameDraft.trim() }))
@@ -546,6 +649,36 @@ function WorkspaceEditor({ workspace, onSave, onDelete, saving }: WorkspaceEdito
           <Plus size={13} className="group-hover:text-blue-400" />
           Add field
         </button>
+
+        {/* Documents */}
+        <div className="mt-5 pt-4 border-t border-gray-800/40">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <span className="text-[10px] uppercase tracking-widest text-gray-700 font-semibold">
+                Documents
+              </span>
+              <p className="text-[10px] text-gray-700 mt-0.5">
+                Markdown files, READMEs, notes — indexed for semantic search
+              </p>
+            </div>
+            <span className="text-[10px] text-gray-700">{draft.documents.length}</span>
+          </div>
+          {draft.documents.map((doc, i) => (
+            <DocumentRow
+              key={doc.id}
+              doc={doc}
+              onChange={(d) => updateDoc(i, d)}
+              onDelete={() => deleteDoc(i)}
+            />
+          ))}
+          <button
+            onClick={addDoc}
+            className="flex items-center gap-2 text-xs text-gray-600 hover:text-gray-300 transition-colors py-1 group"
+          >
+            <Plus size={13} className="group-hover:text-blue-400" />
+            Add document
+          </button>
+        </div>
       </div>
 
       {/* Footer */}
@@ -615,9 +748,13 @@ function WorkspaceCard({ workspace, active, onClick }: WorkspaceCardProps) {
           <Icon size={10} className={cn('flex-shrink-0', meta.color)} />
           <span className="text-[10px] text-gray-600 truncate">{meta.label}</span>
           <span className="text-[10px] text-gray-700">·</span>
-          <span className="text-[10px] text-gray-700">
-            {workspace.fields.length} field{workspace.fields.length !== 1 ? 's' : ''}
-          </span>
+          <span className="text-[10px] text-gray-700">{workspace.fields.length}f</span>
+          {workspace.documents.length > 0 && (
+            <>
+              <span className="text-[10px] text-gray-700">·</span>
+              <span className="text-[10px] text-gray-700">{workspace.documents.length}d</span>
+            </>
+          )}
         </div>
       </div>
     </button>
@@ -630,6 +767,7 @@ export default function WorkspacesPage() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [selected, setSelected] = useState<string | null>(null)
   const [showPicker, setShowPicker] = useState(false)
+  const [creating, setCreating] = useState(false)
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
@@ -645,24 +783,31 @@ export default function WorkspacesPage() {
   const selectedWs = workspaces.find((w) => w.id === selected) ?? null
 
   async function handlePick(type: WorkspaceType) {
+    if (creating) return
+    setCreating(true)
     const tmpl = TEMPLATES[type]
     const meta = TYPE_META[type]
-    const res = await fetch('/api/workspaces', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: `New ${meta.label}`,
-        type,
-        emoji: tmpl.emoji,
-        description: '',
-        fields: tmpl.fields.map((f, i) => ({ ...f, id: `f-${Date.now()}-${i}` })),
-        active: false,
-      }),
-    })
-    const data = (await res.json()) as { workspace: Workspace }
-    setWorkspaces((prev) => [data.workspace, ...prev])
-    setSelected(data.workspace.id)
-    setShowPicker(false)
+    try {
+      const res = await fetch('/api/workspaces', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: `New ${meta.label}`,
+          type,
+          emoji: tmpl.emoji,
+          description: '',
+          fields: tmpl.fields.map((f, i) => ({ ...f, id: `f-${Date.now()}-${i}` })),
+          documents: [],
+          active: false,
+        }),
+      })
+      const data = (await res.json()) as { workspace: Workspace }
+      setWorkspaces((prev) => [data.workspace, ...prev])
+      setSelected(data.workspace.id)
+      setShowPicker(false)
+    } finally {
+      setCreating(false)
+    }
   }
 
   async function handleSave(ws: Workspace) {
@@ -755,7 +900,7 @@ export default function WorkspacesPage() {
       <div className="flex-1 overflow-hidden">
         {showPicker ? (
           <div className="h-full overflow-y-auto max-w-lg">
-            <TemplatePicker onPick={(t) => void handlePick(t)} />
+            <TemplatePicker onPick={(t) => void handlePick(t)} loading={creating} />
           </div>
         ) : selectedWs ? (
           <WorkspaceEditor

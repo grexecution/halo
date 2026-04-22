@@ -46,6 +46,10 @@ interface Settings {
     toolsEnabled: Record<string, boolean>
   }
   telemetry: { enabled: boolean; otelEndpoint: string }
+  memory: {
+    observationModelId: string
+    fallbackModelId?: string
+  }
 }
 
 interface LiveModel {
@@ -73,6 +77,7 @@ const DEFAULT_SETTINGS: Settings = {
     },
   },
   telemetry: { enabled: false, otelEndpoint: '' },
+  memory: { observationModelId: 'auto' },
 }
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -905,6 +910,145 @@ function TelemetryTab({
   )
 }
 
+// ---- Tab: Memory ----
+
+function MemoryTab({
+  settings,
+  setSettings,
+  onSave,
+  saved,
+}: {
+  settings: Settings
+  setSettings: React.Dispatch<React.SetStateAction<Settings>>
+  onSave: () => void
+  saved: boolean
+}) {
+  const models = settings.llm.models
+  const mem = settings.memory ?? { observationModelId: 'auto' }
+
+  function setMem(patch: { observationModelId?: string; fallbackModelId?: string | undefined }) {
+    setSettings((prev) => {
+      const merged = { ...prev.memory, ...patch }
+      const memory: Settings['memory'] = { observationModelId: merged.observationModelId }
+      if (merged.fallbackModelId) memory.fallbackModelId = merged.fallbackModelId
+      return { ...prev, memory }
+    })
+  }
+
+  const MODEL_OPTIONS = [
+    {
+      id: 'auto',
+      label: 'Auto (Anthropic haiku → local Ollama)',
+      description: 'Uses ANTHROPIC_API_KEY if set, otherwise falls back to local Ollama',
+    },
+    {
+      id: 'disabled',
+      label: 'Disabled',
+      description: 'Turn off ObservationalMemory synthesis entirely',
+    },
+    ...models.map((m) => ({
+      id: m.id,
+      label: `${m.name} (${m.provider})`,
+      description: `${m.provider} · ${m.modelId}`,
+    })),
+  ]
+
+  const FALLBACK_OPTIONS = [
+    { id: '', label: 'None' },
+    ...models.map((m) => ({ id: m.id, label: `${m.name} (${m.provider})` })),
+  ]
+
+  const selectedPrimary = MODEL_OPTIONS.find((o) => o.id === mem.observationModelId)
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-sm font-semibold text-white">Memory</h2>
+        <p className="text-xs text-gray-500 mt-0.5">
+          Configure how the agent synthesizes and recalls conversation history.
+        </p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>ObservationalMemory</CardTitle>
+          <CardDescription>
+            A background LLM that reads conversation history and synthesizes structured observations
+            — facts, decisions, user preferences. These observations persist across all chat
+            sessions. Equivalent to mem0, runs locally or via API.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="space-y-2">
+            <Label>Primary synthesis model</Label>
+            <Select
+              value={mem.observationModelId}
+              onChange={(e) => setMem({ observationModelId: e.target.value })}
+            >
+              {MODEL_OPTIONS.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
+            {selectedPrimary && (
+              <p className="text-[11px] text-gray-600">{selectedPrimary.description}</p>
+            )}
+          </div>
+
+          {mem.observationModelId !== 'disabled' && (
+            <div className="space-y-2">
+              <Label>Fallback model</Label>
+              <Select
+                value={mem.fallbackModelId ?? ''}
+                onChange={(e) =>
+                  setMem(
+                    e.target.value
+                      ? { fallbackModelId: e.target.value }
+                      : { fallbackModelId: undefined },
+                  )
+                }
+              >
+                {FALLBACK_OPTIONS.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.label}
+                  </option>
+                ))}
+              </Select>
+              <p className="text-[11px] text-gray-600">
+                Used if the primary model fails. Typically a faster/cheaper model.
+              </p>
+            </div>
+          )}
+
+          <Separator />
+
+          <div className="rounded-lg bg-gray-900 border border-gray-800 p-3 space-y-1.5">
+            <p className="text-[11px] font-medium text-gray-400">Recommended models by use case</p>
+            <div className="grid grid-cols-2 gap-1 text-[11px] text-gray-600">
+              <span className="font-mono">claude-haiku-4-5-20251001</span>
+              <span>Best quality, cheapest cloud ($0.25/MTok)</span>
+              <span className="font-mono">qwen2.5:3b</span>
+              <span>Best local — excellent summarization, 2GB RAM</span>
+              <span className="font-mono">llama3.2</span>
+              <span>Good local fallback, widely available</span>
+              <span className="font-mono">llama3.2:1b</span>
+              <span>Minimal resources, 800MB RAM</span>
+            </div>
+            <p className="text-[11px] text-gray-700 pt-1">
+              To add a model, configure it in the Models tab first, then select it here.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end">
+        <SaveButton onSave={onSave} saved={saved} />
+      </div>
+    </div>
+  )
+}
+
 // ---- Tab: About ----
 
 function AboutTab() {
@@ -1034,6 +1178,7 @@ export default function SettingsPage() {
         <Tabs defaultValue="models">
           <TabsList>
             <TabsTrigger value="models">Models</TabsTrigger>
+            <TabsTrigger value="memory">Memory</TabsTrigger>
             <TabsTrigger value="vision-voice">Vision and Voice</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
             <TabsTrigger value="telemetry">Telemetry</TabsTrigger>
@@ -1047,6 +1192,15 @@ export default function SettingsPage() {
               liveModels={liveModels}
               onSave={() => handleSave('models')}
               saved={savedTab === 'models'}
+            />
+          </TabsContent>
+
+          <TabsContent value="memory">
+            <MemoryTab
+              settings={settings}
+              setSettings={setSettings}
+              onSave={() => handleSave('memory')}
+              saved={savedTab === 'memory'}
             />
           </TabsContent>
 

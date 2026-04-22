@@ -1,9 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
-import { join } from 'node:path'
-import { homedir } from 'node:os'
-
-const DIR = join(homedir(), '.open-greg')
-const FILE = join(DIR, 'agents.json')
+import { getDb } from '../../lib/db'
 
 export interface AgentTools {
   shell: boolean
@@ -20,6 +15,14 @@ export interface Agent {
   tools: AgentTools
 }
 
+interface DbRow {
+  handle: string
+  name: string
+  model: string
+  system_prompt: string
+  tools: string
+}
+
 const DEFAULT_AGENTS: Agent[] = [
   {
     handle: 'main',
@@ -30,44 +33,45 @@ const DEFAULT_AGENTS: Agent[] = [
   },
 ]
 
-function ensureDir() {
-  if (!existsSync(DIR)) mkdirSync(DIR, { recursive: true })
-}
-
-function read(): Agent[] {
-  if (!existsSync(FILE)) return DEFAULT_AGENTS
-  try {
-    return JSON.parse(readFileSync(FILE, 'utf-8')) as Agent[]
-  } catch {
-    return DEFAULT_AGENTS
+function toAgent(r: DbRow): Agent {
+  return {
+    handle: r.handle,
+    name: r.name,
+    model: r.model,
+    systemPrompt: r.system_prompt,
+    tools: JSON.parse(r.tools || '{}') as AgentTools,
   }
-}
-
-function write(agents: Agent[]) {
-  ensureDir()
-  writeFileSync(FILE, JSON.stringify(agents, null, 2), 'utf-8')
 }
 
 export function listAgents(): Agent[] {
-  return read()
+  const db = getDb()
+  const rows = db.prepare('SELECT * FROM agents ORDER BY created_at ASC').all() as DbRow[]
+  if (rows.length === 0) {
+    for (const a of DEFAULT_AGENTS) upsertAgent(a)
+    return DEFAULT_AGENTS
+  }
+  return rows.map(toAgent)
 }
 
 export function upsertAgent(agent: Agent): Agent {
-  const agents = read()
-  const idx = agents.findIndex((a) => a.handle === agent.handle)
-  if (idx >= 0) {
-    agents[idx] = agent
-  } else {
-    agents.push(agent)
-  }
-  write(agents)
+  const db = getDb()
+  db.prepare(
+    `
+    INSERT INTO agents (handle, name, model, system_prompt, tools, updated_at)
+    VALUES (?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(handle) DO UPDATE SET
+      name = excluded.name,
+      model = excluded.model,
+      system_prompt = excluded.system_prompt,
+      tools = excluded.tools,
+      updated_at = excluded.updated_at
+  `,
+  ).run(agent.handle, agent.name, agent.model, agent.systemPrompt, JSON.stringify(agent.tools))
   return agent
 }
 
 export function deleteAgent(handle: string): boolean {
-  const agents = read()
-  const filtered = agents.filter((a) => a.handle !== handle)
-  if (filtered.length === agents.length) return false
-  write(filtered)
-  return true
+  const db = getDb()
+  const result = db.prepare('DELETE FROM agents WHERE handle = ?').run(handle)
+  return result.changes > 0
 }

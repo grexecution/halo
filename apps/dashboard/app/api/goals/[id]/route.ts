@@ -1,8 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { homedir } from 'node:os'
+import { getDb } from '../../../lib/db'
 
 interface Goal {
   id: string
@@ -15,49 +13,37 @@ interface Goal {
   lastRunAt?: string
 }
 
-interface GoalsFile {
-  goals: Goal[]
+interface DbRow {
+  id: string
+  title: string
+  description: string | null
+  priority: number
+  status: string
+  created_at: string
+  updated_at: string
+  last_run_at: string | null
 }
 
-function getDataDir(): string {
-  return resolve(homedir(), '.open-greg')
-}
-
-function ensureDataDir(): void {
-  const dir = getDataDir()
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true })
+function toGoal(r: DbRow): Goal {
+  return {
+    id: r.id,
+    title: r.title,
+    ...(r.description ? { description: r.description } : {}),
+    priority: r.priority,
+    status: r.status as Goal['status'],
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    ...(r.last_run_at ? { lastRunAt: r.last_run_at } : {}),
   }
-}
-
-function getGoalsPath(): string {
-  return resolve(getDataDir(), 'goals.json')
-}
-
-function readGoals(): GoalsFile {
-  const path = getGoalsPath()
-  if (!existsSync(path)) return { goals: [] }
-  try {
-    return JSON.parse(readFileSync(path, 'utf-8')) as GoalsFile
-  } catch {
-    return { goals: [] }
-  }
-}
-
-function writeGoals(data: GoalsFile): void {
-  ensureDataDir()
-  writeFileSync(getGoalsPath(), JSON.stringify(data, null, 2), 'utf-8')
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const data = readGoals()
-    const goal = data.goals.find((g) => g.id === id)
-    if (!goal) {
-      return NextResponse.json({ error: 'Goal not found' }, { status: 404 })
-    }
-    return NextResponse.json(goal)
+    const db = getDb()
+    const row = db.prepare('SELECT * FROM goals WHERE id = ?').get(id) as DbRow | undefined
+    if (!row) return NextResponse.json({ error: 'Goal not found' }, { status: 404 })
+    return NextResponse.json(toGoal(row))
   } catch (e) {
     return NextResponse.json(
       { error: `Failed to read goal: ${e instanceof Error ? e.message : String(e)}` },
@@ -73,24 +59,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       title?: string
       description?: string
       priority?: number
-      status?: 'pending' | 'running' | 'completed' | 'failed'
+      status?: Goal['status']
     }
-
-    const data = readGoals()
-    const index = data.goals.findIndex((g) => g.id === id)
-    if (index === -1) {
-      return NextResponse.json({ error: 'Goal not found' }, { status: 404 })
-    }
-
-    const goal = data.goals[index]!
-    if (body.title !== undefined) goal.title = body.title
-    if (body.description !== undefined) goal.description = body.description
-    if (body.priority !== undefined) goal.priority = body.priority
-    if (body.status !== undefined) goal.status = body.status
-    goal.updatedAt = new Date().toISOString()
-
-    writeGoals(data)
-    return NextResponse.json(goal)
+    const db = getDb()
+    const existing = db.prepare('SELECT * FROM goals WHERE id = ?').get(id) as DbRow | undefined
+    if (!existing) return NextResponse.json({ error: 'Goal not found' }, { status: 404 })
+    const now = new Date().toISOString()
+    db.prepare(
+      'UPDATE goals SET title=?, description=?, priority=?, status=?, updated_at=? WHERE id=?',
+    ).run(
+      body.title ?? existing.title,
+      body.description !== undefined ? body.description : existing.description,
+      body.priority ?? existing.priority,
+      body.status ?? existing.status,
+      now,
+      id,
+    )
+    const updated = db.prepare('SELECT * FROM goals WHERE id = ?').get(id) as DbRow
+    return NextResponse.json(toGoal(updated))
   } catch (e) {
     return NextResponse.json(
       { error: `Failed to update goal: ${e instanceof Error ? e.message : String(e)}` },
@@ -102,13 +88,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const data = readGoals()
-    const before = data.goals.length
-    data.goals = data.goals.filter((g) => g.id !== id)
-    if (data.goals.length === before) {
-      return NextResponse.json({ error: 'Goal not found' }, { status: 404 })
-    }
-    writeGoals(data)
+    const db = getDb()
+    const result = db.prepare('DELETE FROM goals WHERE id = ?').run(id)
+    if (result.changes === 0) return NextResponse.json({ error: 'Goal not found' }, { status: 404 })
     return NextResponse.json({ ok: true })
   } catch (e) {
     return NextResponse.json(

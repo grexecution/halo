@@ -4,7 +4,8 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { homedir } from 'node:os'
 import { getActiveWorkspaces } from '../../../workspaces/store'
-import { getRelevantMemories, upsertMemory } from '../../../memory/store'
+import { upsertMemory } from '../../../memory/store'
+import { getMemory } from '../../../../lib/memory'
 import { AGENT_ACTIONS_PROMPT, parseAgentActions } from '../../agent-utils'
 
 interface ChatMessage {
@@ -175,10 +176,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       systemParts.push(`### Active Workspace Context\n\n${wsBlock}`)
     }
 
-    const relevantMemories = await getRelevantMemories(body.message, 5)
-    if (relevantMemories.length > 0) {
-      const memBlock = relevantMemories.map((m) => `- ${m.content}`).join('\n')
-      systemParts.push(`### Relevant Context from Memory\n\n${memBlock}`)
+    const ctx = await getMemory()
+      .getContext({ threadId: id, resourceId: 'default' })
+      .catch(() => null)
+    if (ctx?.systemMessage) {
+      systemParts.push(`### Memory & Working Context\n\n${ctx.systemMessage}`)
+    }
+    // otherThreadsContext surfaces semantically relevant content from workspace threads
+    if (ctx?.otherThreadsContext) {
+      systemParts.push(`### Related Workspace & Project Context\n\n${ctx.otherThreadsContext}`)
     }
 
     systemParts.push(AGENT_ACTIONS_PROMPT)
@@ -229,6 +235,32 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       createdAt: now,
       updatedAt: new Date().toISOString(),
     })
+
+    const now2 = new Date()
+    await getMemory()
+      .saveMessages({
+        messages: [
+          {
+            id: userMessage.id,
+            role: 'user',
+            createdAt: new Date(userMessage.timestamp),
+            threadId: id,
+            resourceId: 'default',
+            content: { format: 2, parts: [{ type: 'text', text: userMessage.content }] },
+          },
+          {
+            id: assistantMessage.id,
+            role: 'assistant',
+            createdAt: now2,
+            threadId: id,
+            resourceId: 'default',
+            content: { format: 2, parts: [{ type: 'text', text: assistantContent }] },
+          },
+        ],
+      })
+      .catch(() => {
+        /* best effort */
+      })
 
     const index = readIndex()
     const entry = index.sessions.find((s) => s.id === id)

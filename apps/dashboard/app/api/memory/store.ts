@@ -1,8 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
-import { join } from 'node:path'
-import { homedir } from 'node:os'
-import { vecUpsert, vecSearch, vecDelete, vecBulkUpsert } from './vector-store'
-import { warmUpEmbedder } from './embedder'
+import { getDb } from '../../lib/db'
 
 export type MemorySource = 'workspace' | 'chat' | 'manual'
 
@@ -18,51 +14,31 @@ export interface MemoryEntry {
   updatedAt: string
 }
 
-const DIR = join(homedir(), '.open-greg')
-const FILE = join(DIR, 'memories.json')
-const MIGRATED_FLAG = join(DIR, 'memories-migrated.flag')
-
-function ensureDir() {
-  if (!existsSync(DIR)) mkdirSync(DIR, { recursive: true })
+interface DbRow {
+  id: string
+  content: string
+  source: string
+  source_id: string | null
+  type: string
+  tags: string
+  metadata: string
+  created_at: string
+  updated_at: string
 }
 
-function readJson(): { entries: MemoryEntry[] } {
-  if (!existsSync(FILE)) return { entries: [] }
-  try {
-    return JSON.parse(readFileSync(FILE, 'utf-8')) as { entries: MemoryEntry[] }
-  } catch {
-    return { entries: [] }
+function toEntry(r: DbRow): MemoryEntry {
+  return {
+    id: r.id,
+    content: r.content,
+    source: r.source as MemorySource,
+    sourceId: r.source_id ?? undefined,
+    type: r.type,
+    tags: JSON.parse(r.tags || '[]') as string[],
+    metadata: JSON.parse(r.metadata || '{}') as Record<string, string>,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
   }
 }
-
-function writeJson(store: { entries: MemoryEntry[] }) {
-  ensureDir()
-  writeFileSync(FILE, JSON.stringify(store, null, 2), 'utf-8')
-}
-
-// One-time migration: embed all existing JSON memories into LanceDB
-async function maybeMigrate() {
-  if (existsSync(MIGRATED_FLAG)) return
-  const store = readJson()
-  if (store.entries.length === 0) {
-    ensureDir()
-    writeFileSync(MIGRATED_FLAG, new Date().toISOString(), 'utf-8')
-    return
-  }
-  try {
-    await vecBulkUpsert(store.entries)
-    ensureDir()
-    writeFileSync(MIGRATED_FLAG, new Date().toISOString(), 'utf-8')
-  } catch {
-    // Migration failed — will retry next startup
-  }
-}
-
-// Kick off migration + embedder warmup once at module load
-warmUpEmbedder()
-void maybeMigrate()
-
-// ── Public API ────────────────────────────────────────────────────────────────
 
 export async function searchMemories(opts: {
   query?: string
@@ -75,93 +51,84 @@ export async function searchMemories(opts: {
   total: number
   stats: { bySource: Record<string, number> }
 }> {
-  const store = readJson()
-  const offset = opts.offset ?? 0
+  const db = getDb()
   const limit = opts.limit ?? 20
+  const offset = opts.offset ?? 0
 
+  const statsRows = db
+    .prepare('SELECT source, COUNT(*) as cnt FROM memories GROUP BY source')
+    .all() as Array<{ source: string; cnt: number }>
   const bySource: Record<string, number> = {}
-  for (const e of store.entries) {
-    bySource[e.source] = (bySource[e.source] ?? 0) + 1
-  }
+  for (const r of statsRows) bySource[r.source] = r.cnt
+
+  const conditions: string[] = []
+  const args: unknown[] = []
 
   if (opts.query) {
-    // Vector search for semantic retrieval
-    let semanticResults = await vecSearch(opts.query, (opts.limit ?? 20) + offset)
-
-    // Apply source/type filters on top of semantic results
-    if (opts.source) semanticResults = semanticResults.filter((e) => e.source === opts.source)
-    if (opts.type) semanticResults = semanticResults.filter((e) => e.type === opts.type)
-
-    if (semanticResults.length > 0) {
-      return {
-        results: semanticResults.slice(offset, offset + limit),
-        total: semanticResults.length,
-        stats: { bySource },
-      }
-    }
-
-    // Fallback to keyword search if vector search returns nothing
-    let entries = store.entries.filter(
-      (e) =>
-        e.content.toLowerCase().includes(opts.query!.toLowerCase()) ||
-        e.tags.some((t) => t.toLowerCase().includes(opts.query!.toLowerCase())),
-    )
-    if (opts.source) entries = entries.filter((e) => e.source === opts.source)
-    if (opts.type) entries = entries.filter((e) => e.type === opts.type)
-    return {
-      results: entries.slice(offset, offset + limit),
-      total: entries.length,
-      stats: { bySource },
-    }
+    conditions.push('(content LIKE ? OR tags LIKE ?)')
+    args.push(`%${opts.query}%`, `%${opts.query}%`)
+  }
+  if (opts.source) {
+    conditions.push('source = ?')
+    args.push(opts.source)
+  }
+  if (opts.type) {
+    conditions.push('type = ?')
+    args.push(opts.type)
   }
 
-  // No query — list all with optional filters
-  let entries = store.entries
-  if (opts.source) entries = entries.filter((e) => e.source === opts.source)
-  if (opts.type) entries = entries.filter((e) => e.type === opts.type)
+  const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : ''
+  const total = (
+    db.prepare(`SELECT COUNT(*) as cnt FROM memories ${where}`).get(...args) as { cnt: number }
+  ).cnt
+  const rows = db
+    .prepare(`SELECT * FROM memories ${where} ORDER BY updated_at DESC LIMIT ? OFFSET ?`)
+    .all(...args, limit, offset) as DbRow[]
 
-  return {
-    results: entries.slice(offset, offset + limit),
-    total: entries.length,
-    stats: { bySource },
-  }
+  return { results: rows.map(toEntry), total, stats: { bySource } }
 }
 
 export async function getRelevantMemories(query: string, topK = 5): Promise<MemoryEntry[]> {
-  const results = await vecSearch(query, topK)
-  if (results.length > 0) return results
-
-  // Fallback to keyword search
-  const store = readJson()
-  const q = query.toLowerCase()
-  return store.entries
-    .filter(
-      (e) => e.content.toLowerCase().includes(q) || e.tags.some((t) => t.toLowerCase().includes(q)),
+  const db = getDb()
+  const q = `%${query}%`
+  const rows = db
+    .prepare(
+      'SELECT * FROM memories WHERE content LIKE ? OR tags LIKE ? ORDER BY updated_at DESC LIMIT ?',
     )
-    .slice(0, topK)
+    .all(q, q, topK) as DbRow[]
+  return rows.map(toEntry)
 }
 
 export async function upsertMemory(entry: MemoryEntry): Promise<void> {
-  // Write to JSON first (synchronous, always succeeds)
-  const store = readJson()
-  const idx = store.entries.findIndex((e) => e.id === entry.id)
-  if (idx >= 0) {
-    store.entries[idx] = entry
-  } else {
-    store.entries.unshift(entry)
-  }
-  writeJson(store)
-
-  // Then embed + write to LanceDB (best-effort)
-  void vecUpsert(entry)
+  const db = getDb()
+  db.prepare(
+    `
+    INSERT INTO memories (id, content, source, source_id, type, tags, metadata, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      content = excluded.content,
+      source = excluded.source,
+      source_id = excluded.source_id,
+      type = excluded.type,
+      tags = excluded.tags,
+      metadata = excluded.metadata,
+      updated_at = excluded.updated_at
+  `,
+  ).run(
+    entry.id,
+    entry.content,
+    entry.source,
+    entry.sourceId ?? null,
+    entry.type,
+    JSON.stringify(entry.tags),
+    JSON.stringify(entry.metadata),
+    entry.createdAt,
+    entry.updatedAt,
+  )
 }
 
 export async function deleteMemory(id: string): Promise<boolean> {
-  const store = readJson()
-  const prev = store.entries.length
-  store.entries = store.entries.filter((e) => e.id !== id)
-  if (store.entries.length === prev) return false
-  writeJson(store)
-  void vecDelete(id)
-  return true
+  const db = getDb()
+  const result = db.prepare('DELETE FROM memories WHERE id = ?').run(id)
+  return result.changes > 0
 }

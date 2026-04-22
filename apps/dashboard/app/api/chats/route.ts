@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { homedir } from 'node:os'
+import { getMemory } from '../../lib/memory'
 
 interface ChatSessionMeta {
   id: string
@@ -91,6 +92,17 @@ export async function POST(req: NextRequest) {
     }
     index.sessions.unshift(meta)
     writeIndex(index)
+
+    // Register thread in Mastra memory for semantic recall
+    void getMemory().saveThread({
+      thread: {
+        id,
+        title,
+        resourceId: 'default',
+        createdAt: new Date(now),
+        updatedAt: new Date(now),
+      },
+    })
 
     return NextResponse.json({ id, title, createdAt: now }, { status: 201 })
   } catch (e) {

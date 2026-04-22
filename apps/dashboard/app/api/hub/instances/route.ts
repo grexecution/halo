@@ -1,37 +1,19 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { homedir } from 'node:os'
-
-const INSTANCES_FILE = resolve(homedir(), '.open-greg', 'instances.json')
+import { getDb } from '../../../lib/db'
 
 interface StoredInstance {
   id: string
   name: string
   url: string
-  addedAt: string
+  added_at: string
 }
 
 function readInstances(): StoredInstance[] {
-  try {
-    if (!existsSync(INSTANCES_FILE)) return []
-    return JSON.parse(readFileSync(INSTANCES_FILE, 'utf-8')) as StoredInstance[]
-  } catch {
-    return []
-  }
-}
-
-function writeInstances(instances: StoredInstance[]): void {
-  const dir = resolve(homedir(), '.open-greg')
-  try {
-    if (!existsSync(dir)) {
-      mkdirSync(dir, { recursive: true })
-    }
-    writeFileSync(INSTANCES_FILE, JSON.stringify(instances, null, 2))
-  } catch {
-    /* ignore write failures */
-  }
+  const db = getDb()
+  return db
+    .prepare('SELECT id, name, url, added_at FROM hub_instances ORDER BY added_at ASC')
+    .all() as StoredInstance[]
 }
 
 async function pingInstance(
@@ -96,19 +78,18 @@ export async function POST(req: NextRequest) {
   const url = body.url?.trim()
   if (!url) return NextResponse.json({ error: 'url required' }, { status: 400 })
 
-  const instances = readInstances()
-  if (instances.some((i) => i.url === url)) {
-    return NextResponse.json({ error: 'already registered' }, { status: 409 })
-  }
+  const db = getDb()
+  const existing = db.prepare('SELECT id FROM hub_instances WHERE url = ?').get(url)
+  if (existing) return NextResponse.json({ error: 'already registered' }, { status: 409 })
 
   const id = `inst-${Date.now()}`
-  instances.push({
+  const name = body.name ?? new URL(url).hostname
+  db.prepare('INSERT INTO hub_instances (id, name, url, added_at) VALUES (?, ?, ?, ?)').run(
     id,
-    name: body.name ?? new URL(url).hostname,
+    name,
     url,
-    addedAt: new Date().toISOString(),
-  })
-  writeInstances(instances)
+    new Date().toISOString(),
+  )
 
   return NextResponse.json({ id, url }, { status: 201 })
 }

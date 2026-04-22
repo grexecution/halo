@@ -1,67 +1,39 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { homedir } from 'node:os'
+import { getDb } from '../../lib/db'
 import { getMemory } from '../../lib/memory'
 
-interface ChatSessionMeta {
+interface ChatRow {
   id: string
   title: string
-  createdAt: string
-  updatedAt: string
-  messageCount: number
-}
-
-interface ChatIndex {
-  sessions: ChatSessionMeta[]
-}
-
-interface ChatSession {
-  id: string
-  title: string
-  messages: Array<{ id: string; role: string; content: string; timestamp: string }>
-}
-
-function getDataDir(): string {
-  return resolve(homedir(), '.open-greg')
-}
-
-function getChatsDir(): string {
-  return resolve(getDataDir(), 'chats')
-}
-
-function ensureChatsDir(): void {
-  const dir = getChatsDir()
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true })
-  }
-}
-
-function getIndexPath(): string {
-  return resolve(getChatsDir(), 'index.json')
-}
-
-function readIndex(): ChatIndex {
-  const path = getIndexPath()
-  if (!existsSync(path)) return { sessions: [] }
-  try {
-    const raw = readFileSync(path, 'utf-8')
-    return JSON.parse(raw) as ChatIndex
-  } catch {
-    return { sessions: [] }
-  }
-}
-
-function writeIndex(index: ChatIndex): void {
-  ensureChatsDir()
-  writeFileSync(getIndexPath(), JSON.stringify(index, null, 2), 'utf-8')
+  agent_id: string
+  created_at: string
+  updated_at: string
 }
 
 export async function GET() {
   try {
-    const index = readIndex()
-    return NextResponse.json(index)
+    const db = getDb()
+    const rows = db
+      .prepare(
+        `SELECT c.id, c.title, c.agent_id, c.created_at, c.updated_at,
+                COUNT(m.id) AS message_count
+         FROM chats c
+         LEFT JOIN chat_messages m ON m.chat_id = c.id
+         GROUP BY c.id
+         ORDER BY c.updated_at DESC`,
+      )
+      .all() as (ChatRow & { message_count: number })[]
+
+    const sessions = rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      agentId: r.agent_id,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      messageCount: r.message_count,
+    }))
+    return NextResponse.json({ sessions })
   } catch (e) {
     return NextResponse.json(
       { error: `Failed to read chats: ${e instanceof Error ? e.message : String(e)}` },
@@ -72,26 +44,16 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as { title?: string }
+    const body = (await req.json()) as { title?: string; agentId?: string }
     const id = `chat-${Date.now()}`
     const now = new Date().toISOString()
     const title = body.title?.trim() || 'New Chat'
+    const agentId = body.agentId ?? 'greg'
 
-    ensureChatsDir()
-
-    const session: ChatSession = { id, title, messages: [] }
-    writeFileSync(resolve(getChatsDir(), `${id}.json`), JSON.stringify(session, null, 2), 'utf-8')
-
-    const index = readIndex()
-    const meta: ChatSessionMeta = {
-      id,
-      title,
-      createdAt: now,
-      updatedAt: now,
-      messageCount: 0,
-    }
-    index.sessions.unshift(meta)
-    writeIndex(index)
+    const db = getDb()
+    db.prepare(
+      'INSERT INTO chats (id, title, agent_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
+    ).run(id, title, agentId, now, now)
 
     // Register thread in Mastra memory for semantic recall
     void getMemory().saveThread({
@@ -104,7 +66,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    return NextResponse.json({ id, title, createdAt: now }, { status: 201 })
+    return NextResponse.json({ id, title, agentId, createdAt: now }, { status: 201 })
   } catch (e) {
     return NextResponse.json(
       { error: `Failed to create chat: ${e instanceof Error ? e.message : String(e)}` },

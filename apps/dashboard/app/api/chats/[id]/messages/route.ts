@@ -8,37 +8,17 @@
  */
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { homedir } from 'node:os'
+import { getDb } from '../../../../lib/db'
 import { getActiveWorkspaces } from '../../../workspaces/store'
 import { upsertMemory } from '../../../memory/store'
 import { getMemory } from '../../../../lib/memory'
 import { AGENT_ACTIONS_PROMPT, parseAgentActions } from '../../agent-utils'
 
-interface ChatMessage {
+interface MessageRow {
   id: string
   role: string
   content: string
-  timestamp: string
-}
-
-interface ChatSession {
-  id: string
-  title: string
-  messages: ChatMessage[]
-}
-
-interface ChatSessionMeta {
-  id: string
-  title: string
-  createdAt: string
-  updatedAt: string
-  messageCount: number
-}
-
-interface ChatIndex {
-  sessions: ChatSessionMeta[]
+  created_at: string
 }
 
 const CONTROL_PLANE_URL = process.env['CONTROL_PLANE_URL'] ?? 'http://localhost:3001'
@@ -46,47 +26,6 @@ const OLLAMA_URL = process.env['OLLAMA_URL'] ?? 'http://localhost:11434'
 const OLLAMA_MODEL = process.env['OLLAMA_MODEL'] ?? 'llama3.2'
 const ANTHROPIC_API_KEY = process.env['ANTHROPIC_API_KEY']
 const LLM_PROVIDER = process.env['LLM_PROVIDER'] ?? (ANTHROPIC_API_KEY ? 'anthropic' : 'ollama')
-
-function getChatsDir(): string {
-  return resolve(homedir(), '.open-greg', 'chats')
-}
-
-function ensureChatsDir(): void {
-  const dir = getChatsDir()
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-}
-
-function getChatPath(id: string): string {
-  return resolve(getChatsDir(), `${id}.json`)
-}
-
-function getIndexPath(): string {
-  return resolve(getChatsDir(), 'index.json')
-}
-
-function readChat(id: string): ChatSession | null {
-  const path = getChatPath(id)
-  if (!existsSync(path)) return null
-  try {
-    return JSON.parse(readFileSync(path, 'utf-8')) as ChatSession
-  } catch {
-    return null
-  }
-}
-
-function readIndex(): ChatIndex {
-  const path = getIndexPath()
-  if (!existsSync(path)) return { sessions: [] }
-  try {
-    return JSON.parse(readFileSync(path, 'utf-8')) as ChatIndex
-  } catch {
-    return { sessions: [] }
-  }
-}
-
-function writeIndex(index: ChatIndex): void {
-  writeFileSync(getIndexPath(), JSON.stringify(index, null, 2), 'utf-8')
-}
 
 // ---------------------------------------------------------------------------
 // LLM dispatch helpers
@@ -100,12 +39,7 @@ async function callControlPlane(
   const resp = await fetch(`${CONTROL_PLANE_URL}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message,
-      history,
-      threadId,
-      resourceId: 'user',
-    }),
+    body: JSON.stringify({ message, history, threadId, resourceId: 'user' }),
     signal: AbortSignal.timeout(120_000),
   })
   if (!resp.ok) {
@@ -166,22 +100,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id } = await params
     const body = (await req.json()) as { message: string; model?: string }
+    const db = getDb()
 
-    ensureChatsDir()
-
-    const chat = readChat(id)
-    if (!chat) {
-      return NextResponse.json({ error: 'Chat not found' }, { status: 404 })
-    }
+    const chat = db.prepare('SELECT id, title FROM chats WHERE id = ?').get(id) as
+      | { id: string; title: string }
+      | undefined
+    if (!chat) return NextResponse.json({ error: 'Chat not found' }, { status: 404 })
 
     const now = new Date().toISOString()
-    const userMessage: ChatMessage = {
-      id: `msg-${Date.now()}-user`,
-      role: 'user',
-      content: body.message,
-      timestamp: now,
-    }
-    chat.messages.push(userMessage)
+    const userMsgId = `msg-${Date.now()}-user`
+
+    // Persist user message
+    db.prepare(
+      'INSERT INTO chat_messages (id, chat_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)',
+    ).run(userMsgId, id, 'user', body.message, now)
+
+    // Build history for context (prior messages)
+    const priorMessages = db
+      .prepare(
+        'SELECT role, content FROM chat_messages WHERE chat_id = ? AND id != ? ORDER BY created_at ASC',
+      )
+      .all(id, userMsgId) as MessageRow[]
 
     // Build system context from active workspaces + Mastra memory
     const systemParts: string[] = []
@@ -213,21 +152,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     systemParts.push(AGENT_ACTIONS_PROMPT)
 
-    // Build history for the LLM (system + prior messages)
     const historyForLLM: Array<{ role: string; content: string }> = []
     if (systemParts.length > 0) {
       historyForLLM.push({ role: 'system', content: systemParts.join('\n\n---\n\n') })
     }
-    historyForLLM.push(
-      ...chat.messages.slice(0, -1).map(({ role, content }) => ({ role, content })),
-    )
+    historyForLLM.push(...priorMessages.map(({ role, content }) => ({ role, content })))
 
     // Call the LLM via control-plane, then fall back to direct calls
     let assistantContent: string
     try {
       assistantContent = await callControlPlane(body.message, historyForLLM, id)
     } catch {
-      // Control-plane unavailable — fall back to direct LLM
       historyForLLM.push({ role: 'user', content: body.message })
       try {
         if (LLM_PROVIDER === 'anthropic' && ANTHROPIC_API_KEY) {
@@ -243,46 +178,46 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
     }
 
-    const assistantMessage: ChatMessage = {
-      id: `msg-${Date.now()}-assistant`,
-      role: 'assistant',
-      content: assistantContent,
-      timestamp: new Date().toISOString(),
-    }
-    chat.messages.push(assistantMessage)
+    const assistantMsgId = `msg-${Date.now()}-assistant`
+    const assistantAt = new Date().toISOString()
 
-    writeFileSync(getChatPath(id), JSON.stringify(chat, null, 2), 'utf-8')
+    // Persist assistant message
+    db.prepare(
+      'INSERT INTO chat_messages (id, chat_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)',
+    ).run(assistantMsgId, id, 'assistant', assistantContent, assistantAt)
 
-    // Index conversation turn to local memory store
+    // Update chat updated_at
+    db.prepare('UPDATE chats SET updated_at = ? WHERE id = ?').run(assistantAt, id)
+
+    // Index to local memory store
     await upsertMemory({
-      id: `chat-${id}-${userMessage.id}`,
-      content: `User: ${userMessage.content}\nAssistant: ${assistantContent}`,
+      id: `chat-${id}-${userMsgId}`,
+      content: `User: ${body.message}\nAssistant: ${assistantContent}`,
       source: 'chat',
       sourceId: id,
       type: 'conversation',
       tags: [],
       metadata: { sessionId: id },
       createdAt: now,
-      updatedAt: new Date().toISOString(),
+      updatedAt: assistantAt,
     })
 
-    // Also persist to Mastra memory for semantic recall in future turns
-    const now2 = new Date()
+    // Persist to Mastra memory for semantic recall
     await getMemory()
       .saveMessages({
         messages: [
           {
-            id: userMessage.id,
+            id: userMsgId,
             role: 'user',
-            createdAt: new Date(userMessage.timestamp),
+            createdAt: new Date(now),
             threadId: id,
             resourceId: 'default',
-            content: { format: 2, parts: [{ type: 'text', text: userMessage.content }] },
+            content: { format: 2, parts: [{ type: 'text', text: body.message }] },
           },
           {
-            id: assistantMessage.id,
+            id: assistantMsgId,
             role: 'assistant',
-            createdAt: now2,
+            createdAt: new Date(assistantAt),
             threadId: id,
             resourceId: 'default',
             content: { format: 2, parts: [{ type: 'text', text: assistantContent }] },
@@ -293,13 +228,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         /* best effort */
       })
 
-    // Update the session index
-    const index = readIndex()
-    const entry = index.sessions.find((s) => s.id === id)
-    if (entry) {
-      entry.updatedAt = new Date().toISOString()
-      entry.messageCount = chat.messages.length
-      writeIndex(index)
+    const assistantMessage = {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: assistantContent,
+      timestamp: assistantAt,
     }
 
     const pendingActions = parseAgentActions(assistantContent)

@@ -1,34 +1,54 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { spawn, execSync } from 'node:child_process'
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
+import { getDb } from '../../lib/db'
 
 const DIR = join(homedir(), '.open-greg')
-const STATE_FILE = join(DIR, 'tunnel.json')
 
-interface TunnelState {
+interface TunnelRow {
+  running: number
+  url: string | null
+  pid: number | null
+  started_at: string | null
+  mode: string
+}
+
+function readState() {
+  const db = getDb()
+  const row = db
+    .prepare('SELECT running, url, pid, started_at, mode FROM tunnel WHERE id = 1')
+    .get() as TunnelRow | undefined
+  if (!row) return { running: false, url: null, pid: null, startedAt: null, mode: 'quick' as const }
+  return {
+    running: row.running === 1,
+    url: row.url,
+    pid: row.pid,
+    startedAt: row.started_at,
+    mode: (row.mode ?? 'quick') as 'quick' | 'named',
+  }
+}
+
+function writeState(s: {
   running: boolean
   url: string | null
   pid: number | null
   startedAt: string | null
   mode: 'quick' | 'named'
-}
-
-function readState(): TunnelState {
-  if (!existsSync(STATE_FILE))
-    return { running: false, url: null, pid: null, startedAt: null, mode: 'quick' }
-  try {
-    return JSON.parse(readFileSync(STATE_FILE, 'utf-8')) as TunnelState
-  } catch {
-    return { running: false, url: null, pid: null, startedAt: null, mode: 'quick' }
-  }
-}
-
-function writeState(s: TunnelState) {
-  if (!existsSync(DIR)) mkdirSync(DIR, { recursive: true })
-  writeFileSync(STATE_FILE, JSON.stringify(s, null, 2), 'utf-8')
+}) {
+  const db = getDb()
+  db.prepare(
+    `INSERT INTO tunnel (id, running, url, pid, started_at, mode)
+     VALUES (1, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       running = excluded.running,
+       url = excluded.url,
+       pid = excluded.pid,
+       started_at = excluded.started_at,
+       mode = excluded.mode`,
+  ).run(s.running ? 1 : 0, s.url, s.pid, s.startedAt, s.mode)
 }
 
 function isCloudflaredInstalled(): boolean {
@@ -88,7 +108,6 @@ export async function POST(req: NextRequest) {
     const port = body.port ?? 3000
     const logFile = join(DIR, 'tunnel.log')
 
-    // Use quick tunnel (no account needed) — output URL to stdout
     const proc = spawn(
       'cloudflared',
       ['tunnel', '--url', `http://localhost:${port}`, '--no-autoupdate'],
@@ -100,7 +119,6 @@ export async function POST(req: NextRequest) {
 
     let url: string | null = null
 
-    // cloudflared prints the URL to stderr in the form: "https://xxx.trycloudflare.com"
     const extractUrl = (chunk: Buffer) => {
       const text = chunk.toString()
       const match = text.match(/https?:\/\/[a-z0-9-]+\.trycloudflare\.com/i)
@@ -114,7 +132,6 @@ export async function POST(req: NextRequest) {
           mode: 'quick',
         })
       }
-      // append to log
       try {
         writeFileSync(logFile, text, { flag: 'a' })
       } catch {

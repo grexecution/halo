@@ -1,37 +1,17 @@
 import { NextResponse } from 'next/server'
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { resolve } from 'node:path'
-import { homedir } from 'node:os'
-
-const CREDS_FILE = resolve(homedir(), '.open-greg', 'plugin-credentials.json')
-
-interface PluginCredentials {
-  pluginId: string
-  fields: Record<string, string>
-  connectedAt: string
-}
-
-function readAllCredentials(): Record<string, PluginCredentials> {
-  try {
-    if (!existsSync(CREDS_FILE)) return {}
-    return JSON.parse(readFileSync(CREDS_FILE, 'utf-8')) as Record<string, PluginCredentials>
-  } catch {
-    return {}
-  }
-}
+import { getDb } from '../../lib/db'
 
 export async function GET() {
-  const all = readAllCredentials()
-  // Return only plugin IDs that are connected (no credential values exposed)
-  const connected = Object.keys(all)
+  const db = getDb()
+  const rows = db.prepare('SELECT plugin_id FROM plugin_credentials').all() as {
+    plugin_id: string
+  }[]
+  const connected = rows.map((r) => r.plugin_id)
   return NextResponse.json({ connected })
 }
 
 export async function DELETE() {
-  try {
-    writeFileSync(CREDS_FILE, JSON.stringify({}, null, 2))
-  } catch {
-    /* ignore */
-  }
+  const db = getDb()
+  db.prepare('DELETE FROM plugin_credentials').run()
   return NextResponse.json({ ok: true })
 }

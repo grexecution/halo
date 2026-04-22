@@ -20,6 +20,7 @@ export function getDb(): Database.Database {
   _db.pragma('foreign_keys = ON')
   initSchema(_db)
   migrateJson(_db)
+  migrateJsonV2(_db)
   return _db
 }
 
@@ -98,6 +99,51 @@ function initSchema(db: Database.Database) {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS auth (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      enabled INTEGER NOT NULL DEFAULT 0,
+      username TEXT NOT NULL DEFAULT 'admin',
+      password_hash TEXT NOT NULL DEFAULT '',
+      totp_enabled INTEGER NOT NULL DEFAULT 0,
+      totp_secret TEXT NOT NULL DEFAULT '',
+      session_secret TEXT NOT NULL DEFAULT ''
+    );
+    CREATE TABLE IF NOT EXISTS tunnel (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      running INTEGER NOT NULL DEFAULT 0,
+      url TEXT,
+      pid INTEGER,
+      started_at TEXT,
+      mode TEXT NOT NULL DEFAULT 'quick'
+    );
+    CREATE TABLE IF NOT EXISTS hub_instances (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      api_key TEXT NOT NULL DEFAULT '',
+      added_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS plugin_credentials (
+      plugin_id TEXT PRIMARY KEY,
+      fields TEXT NOT NULL DEFAULT '{}',
+      connected_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS chats (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL DEFAULT 'New Chat',
+      agent_id TEXT NOT NULL DEFAULT 'greg',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id TEXT PRIMARY KEY,
+      chat_id TEXT NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      tool_calls TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_chat_id ON chat_messages(chat_id);
   `)
 }
 
@@ -271,6 +317,94 @@ function migrateJson(db: Database.Database) {
         m.createdAt,
         m.updatedAt,
       )
+  }
+
+  writeFileSync(flag, new Date().toISOString(), 'utf-8')
+}
+
+function migrateJsonV2(db: Database.Database) {
+  const flag = join(DIR, 'app-migrated-v2.flag')
+  if (existsSync(flag)) return
+
+  // auth.json → auth table
+  interface MigrAuth {
+    enabled?: boolean
+    username?: string
+    passwordHash?: string
+    totpEnabled?: boolean
+    totpSecret?: string
+    sessionSecret?: string
+  }
+  const auth = tryReadJson<MigrAuth>(join(DIR, 'auth.json'))
+  if (auth) {
+    db.prepare(
+      `INSERT OR IGNORE INTO auth (id, enabled, username, password_hash, totp_enabled, totp_secret, session_secret)
+       VALUES (1, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      auth.enabled ? 1 : 0,
+      auth.username ?? 'admin',
+      auth.passwordHash ?? '',
+      auth.totpEnabled ? 1 : 0,
+      auth.totpSecret ?? '',
+      auth.sessionSecret ?? '',
+    )
+  }
+
+  // tunnel.json → tunnel table
+  interface MigrTunnel {
+    running?: boolean
+    url?: string | null
+    pid?: number | null
+    startedAt?: string | null
+    mode?: string
+  }
+  const tunnel = tryReadJson<MigrTunnel>(join(DIR, 'tunnel.json'))
+  if (tunnel) {
+    db.prepare(
+      `INSERT OR IGNORE INTO tunnel (id, running, url, pid, started_at, mode)
+       VALUES (1, ?, ?, ?, ?, ?)`,
+    ).run(
+      tunnel.running ? 1 : 0,
+      tunnel.url ?? null,
+      tunnel.pid ?? null,
+      tunnel.startedAt ?? null,
+      tunnel.mode ?? 'quick',
+    )
+  }
+
+  // plugin-credentials.json → plugin_credentials table
+  interface MigrPluginCred {
+    pluginId: string
+    fields: Record<string, string>
+    connectedAt: string
+  }
+  const pluginCreds = tryReadJson<Record<string, MigrPluginCred>>(
+    join(DIR, 'plugin-credentials.json'),
+  )
+  if (pluginCreds) {
+    const stmt = db.prepare(
+      'INSERT OR IGNORE INTO plugin_credentials (plugin_id, fields, connected_at) VALUES (?, ?, ?)',
+    )
+    for (const entry of Object.values(pluginCreds)) {
+      stmt.run(entry.pluginId, JSON.stringify(entry.fields ?? {}), entry.connectedAt)
+    }
+  }
+
+  // instances.json → hub_instances table
+  interface MigrInstance {
+    id: string
+    name: string
+    url: string
+    addedAt: string
+  }
+  const instances = tryReadJson<MigrInstance[]>(join(DIR, 'instances.json'))
+  if (Array.isArray(instances)) {
+    const stmt = db.prepare(
+      'INSERT OR IGNORE INTO hub_instances (id, name, url, added_at) VALUES (?, ?, ?, ?)',
+    )
+    for (const inst of instances) {
+      stmt.run(inst.id, inst.name, inst.url, inst.addedAt)
+    }
   }
 
   writeFileSync(flag, new Date().toISOString(), 'utf-8')

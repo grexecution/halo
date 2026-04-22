@@ -37,13 +37,12 @@ app.get<{
     since?: string
   }
 }>('/api/logs', async (req) => {
-  const q: LogQuery = {
-    level: req.query.level || undefined,
-    agentId: req.query.agentId || undefined,
-    toolId: req.query.toolId || undefined,
-    limit: req.query.limit ? Number(req.query.limit) : undefined,
-    since: req.query.since || undefined,
-  }
+  const q: LogQuery = {}
+  if (req.query.level) q.level = req.query.level
+  if (req.query.agentId) q.agentId = req.query.agentId
+  if (req.query.toolId) q.toolId = req.query.toolId
+  if (req.query.limit) q.limit = Number(req.query.limit)
+  if (req.query.since) q.since = req.query.since
   return {
     logs: queryLogs(q),
     agents: knownAgents(),
@@ -94,7 +93,12 @@ app.post<{
     })
     return { content: result.content, toolCalls: result.toolCalls }
   } catch (err) {
-    emitLog({ level: 'error', agentId: 'greg', message: `chat error: ${String(err)}`, durationMs: Date.now() - t0 })
+    emitLog({
+      level: 'error',
+      agentId: 'greg',
+      message: `chat error: ${String(err)}`,
+      durationMs: Date.now() - t0,
+    })
     app.log.error(err)
     return reply.code(500).send({ error: String(err) })
   }
@@ -129,6 +133,7 @@ app.post<{
     reply.raw.write(`data: ${JSON.stringify(obj)}\n\n`)
   }
 
+  const t0 = Date.now()
   try {
     const toolCalls: Array<{ toolId: string; args: unknown; result: unknown }> = []
     await orchestrator.runTurn({
@@ -150,11 +155,30 @@ app.post<{
       onChunk: (chunk) => send({ type: 'chunk', text: chunk }),
       onToolCall: (name, args) => {
         toolCalls.push({ toolId: name, args, result: {} })
+        emitLog({
+          level: 'info',
+          agentId: 'greg',
+          toolId: name,
+          message: `tool call: ${name}`,
+          meta: { args } as Record<string, unknown>,
+        })
         send({ type: 'tool', name, args })
       },
     })
+    emitLog({
+      level: 'info',
+      agentId: 'greg',
+      message: `stream turn complete (${toolCalls.length} tool calls)`,
+      durationMs: Date.now() - t0,
+    })
     send({ type: 'done', toolCalls })
   } catch (err) {
+    emitLog({
+      level: 'error',
+      agentId: 'greg',
+      message: `stream error: ${String(err)}`,
+      durationMs: Date.now() - t0,
+    })
     app.log.error(err)
     send({ type: 'error', message: String(err) })
   } finally {

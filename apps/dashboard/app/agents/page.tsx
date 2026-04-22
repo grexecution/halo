@@ -95,7 +95,7 @@ interface AgentDialogProps {
   isEditing: boolean
   existingHandles: string[]
   onClose: () => void
-  onSave: (data: AgentFormData) => void
+  onSave: (data: AgentFormData) => void | Promise<void>
 }
 
 function AgentDialog({
@@ -261,7 +261,7 @@ interface AgentCardProps {
   agent: Agent
   isPrimary: boolean
   onEdit: (agent: Agent) => void
-  onDelete: (handle: string) => void
+  onDelete: (handle: string) => void | Promise<void>
 }
 
 function AgentCard({ agent, isPrimary, onEdit, onDelete }: AgentCardProps) {
@@ -336,10 +336,11 @@ export default function AgentsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null)
 
-  // Structured as a useEffect for easy swap to API calls later
   useEffect(() => {
-    // TODO: replace with fetch('/api/agents') when the route exists
-    setAgents(INITIAL_AGENTS)
+    fetch('/api/agents')
+      .then((r) => r.json())
+      .then((data: { agents: Agent[] }) => setAgents(data.agents))
+      .catch(() => setAgents(INITIAL_AGENTS))
   }, [])
 
   function openNew() {
@@ -352,20 +353,31 @@ export default function AgentsPage() {
     setDialogOpen(true)
   }
 
-  function handleSave(data: AgentFormData) {
+  async function handleSave(data: AgentFormData) {
     if (editingAgent) {
+      await fetch(`/api/agents/${editingAgent.handle}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
       setAgents((prev) =>
         prev.map((a) => (a.handle === editingAgent.handle ? { ...a, ...data } : a)),
       )
     } else {
+      await fetch('/api/agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
       setAgents((prev) => [...prev, data])
     }
     setDialogOpen(false)
     setEditingAgent(null)
   }
 
-  function handleDelete(handle: string) {
+  async function handleDelete(handle: string) {
     if (!window.confirm(`Delete agent @${handle}?`)) return
+    await fetch(`/api/agents/${handle}`, { method: 'DELETE' })
     setAgents((prev) => prev.filter((a) => a.handle !== handle))
   }
 

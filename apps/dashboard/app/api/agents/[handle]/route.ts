@@ -1,0 +1,21 @@
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
+import { upsertAgent, deleteAgent } from '../store'
+import type { Agent } from '../store'
+
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ handle: string }> }) {
+  const { handle } = await params
+  const body = (await req.json()) as Agent
+  const agent = upsertAgent({ ...body, handle })
+  return NextResponse.json({ agent })
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ handle: string }> },
+) {
+  const { handle } = await params
+  const ok = deleteAgent(handle)
+  if (!ok) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  return NextResponse.json({ ok: true })
+}

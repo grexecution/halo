@@ -1,30 +1,47 @@
 /**
- * F-013: Connectors page
+ * F-013: Connectors page — plugin marketplace
  */
-import { describe, it, expect } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import ConnectorsPage from '../app/connectors/page.js'
 
+beforeEach(() => {
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ connected: [] }),
+  } as unknown as Response)
+})
+
 describe('F-013: Connectors page', () => {
-  it('renders connector list', () => {
+  it('renders the plugin marketplace heading', async () => {
     render(<ConnectorsPage />)
-    expect(screen.getByTestId('connector-list')).toBeDefined()
+    expect(screen.getByText('Plugin Marketplace')).toBeDefined()
   })
 
-  it('shows Gmail connector', () => {
+  it('shows category sidebar', async () => {
     render(<ConnectorsPage />)
-    expect(screen.getByTestId('connector-gmail')).toBeDefined()
+    expect(screen.getByText('Categories')).toBeDefined()
+    expect(screen.getByText('All plugins')).toBeDefined()
   })
 
-  it('can enable a connector', () => {
+  it('shows Gmail plugin card', async () => {
     render(<ConnectorsPage />)
-    const toggleBtn = screen.getByTestId('toggle-gmail')
-    fireEvent.click(toggleBtn)
-    expect(toggleBtn.textContent).toBe('Enabled')
+    await waitFor(() => expect(screen.getByText('Gmail')).toBeDefined())
   })
 
-  it('has Add Connector button', () => {
+  it('shows multiple plugin categories', async () => {
     render(<ConnectorsPage />)
-    expect(screen.getByTestId('add-connector-button')).toBeDefined()
+    await waitFor(() => {
+      expect(screen.getAllByText('Google Workspace').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Communication').length).toBeGreaterThan(0)
+    })
+  })
+
+  it('shows Connect button for disconnected plugins', async () => {
+    render(<ConnectorsPage />)
+    await waitFor(() => {
+      const connectBtns = screen.getAllByText('Connect')
+      expect(connectBtns.length).toBeGreaterThan(0)
+    })
   })
 })

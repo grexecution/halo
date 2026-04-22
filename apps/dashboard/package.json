@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@claw-alt/connectors": "workspace:*",
     "@claw-alt/shared": "workspace:*",
     "next": "^15.1.0",
     "react": "^19.0.0",

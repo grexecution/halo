@@ -80,7 +80,7 @@ async function executeAction(action: ActionPayload): Promise<{ ok: boolean; mess
       updatedAt: now,
     }
     createWorkspace(ws)
-    indexWorkspaceToMemory(ws)
+    await indexWorkspaceToMemory(ws)
     return { ok: true, message: `Created workspace "${ws.name}"` }
   }
 
@@ -89,7 +89,7 @@ async function executeAction(action: ActionPayload): Promise<{ ok: boolean; mess
     const patch = action.patch as Partial<Workspace>
     const updated = updateWorkspace(id, patch)
     if (!updated) return { ok: false, message: `Workspace ${id} not found` }
-    indexWorkspaceToMemory(updated)
+    await indexWorkspaceToMemory(updated)
     return { ok: true, message: `Updated workspace "${updated.name}"` }
   }
 
@@ -136,7 +136,7 @@ async function executeAction(action: ActionPayload): Promise<{ ok: boolean; mess
   // ── Memory actions ───────────────────────────────────────────────────────────
   if (type === 'memory.add') {
     const now = new Date().toISOString()
-    upsertMemory({
+    await upsertMemory({
       id: `mem-agent-${Date.now()}`,
       content: String(action.content ?? ''),
       source: 'manual',

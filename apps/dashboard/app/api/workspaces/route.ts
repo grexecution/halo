@@ -23,6 +23,6 @@ export async function POST(req: NextRequest) {
     updatedAt: now,
   }
   createWorkspace(ws)
-  indexWorkspaceToMemory(ws)
+  await indexWorkspaceToMemory(ws)
   return NextResponse.json({ workspace: ws }, { status: 201 })
 }

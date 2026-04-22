@@ -17,7 +17,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = (await req.json()) as Partial<Workspace>
   const updated = updateWorkspace(id, body)
   if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  indexWorkspaceToMemory(updated)
+  await indexWorkspaceToMemory(updated)
   return NextResponse.json({ workspace: updated })
 }
 

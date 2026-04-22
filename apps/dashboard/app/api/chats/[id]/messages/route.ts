@@ -175,7 +175,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       systemParts.push(`### Active Workspace Context\n\n${wsBlock}`)
     }
 
-    const relevantMemories = getRelevantMemories(body.message, 5)
+    const relevantMemories = await getRelevantMemories(body.message, 5)
     if (relevantMemories.length > 0) {
       const memBlock = relevantMemories.map((m) => `- ${m.content}`).join('\n')
       systemParts.push(`### Relevant Context from Memory\n\n${memBlock}`)
@@ -218,7 +218,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     writeFileSync(getChatPath(id), JSON.stringify(chat, null, 2), 'utf-8')
 
     // Index conversation turn to memory for future retrieval
-    upsertMemory({
+    await upsertMemory({
       id: `chat-${id}-${userMessage.id}`,
       content: `User: ${userMessage.content}\nAssistant: ${assistantContent}`,
       source: 'chat',

@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { searchMemories, upsertMemory } from './store'
 import type { MemoryEntry } from './store'
 
-export function GET(req: NextRequest) {
+export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
   const q = searchParams.get('q') ?? ''
   const source = searchParams.get('source') ?? undefined
@@ -15,7 +15,7 @@ export function GET(req: NextRequest) {
   if (source) opts.source = source
   if (type) opts.type = type
 
-  return NextResponse.json(searchMemories(opts))
+  return NextResponse.json(await searchMemories(opts))
 }
 
 export async function POST(req: NextRequest) {
@@ -32,6 +32,6 @@ export async function POST(req: NextRequest) {
     createdAt: body.createdAt ?? now,
     updatedAt: now,
   }
-  upsertMemory(entry)
+  await upsertMemory(entry)
   return NextResponse.json({ entry }, { status: 201 })
 }

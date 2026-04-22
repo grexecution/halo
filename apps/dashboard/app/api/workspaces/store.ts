@@ -88,13 +88,13 @@ export function getActiveWorkspaces(): Workspace[] {
   return read().workspaces.filter((w) => w.active)
 }
 
-export function indexWorkspaceToMemory(ws: Workspace) {
+export async function indexWorkspaceToMemory(ws: Workspace): Promise<void> {
   const lines = [`Workspace: ${ws.name} (${ws.type})`]
   if (ws.description) lines.push(`Description: ${ws.description}`)
   for (const f of ws.fields) {
     if (f.value && f.type !== 'secret') lines.push(`${f.key}: ${f.value}`)
   }
-  upsertMemory({
+  await upsertMemory({
     id: `ws-${ws.id}`,
     content: lines.join('\n'),
     source: 'workspace',

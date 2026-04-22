@@ -37,6 +37,8 @@ Do not read all of these at once. Read the one(s) relevant to your current task.
 | `docs/RUNBOOK.md`         | **When something breaks.** Known failure modes + recovery. Check before asking for help.                                            |
 | `docs/OPEN_DECISIONS.md`  | Unresolved questions. Check before making big assumptions.                                                                          |
 | `BUILD_PROMPT.md`         | The master prompt to run the full build end-to-end.                                                                                 |
+| `docs/AUDIT.md`           | **Current ground-truth audit.** Real feature status vs FEATURES.md. Read before starting any work. Update when status changes.      |
+| `REBUILD_STATE.md`        | Mid-migration state (Mastra+DBOS). Read if resuming interrupted work.                                                               |
 
 ---
 
@@ -51,6 +53,7 @@ Do not read all of these at once. Read the one(s) relevant to your current task.
 7. **Cross-reference before adding.** Before adding a new feature, grep `docs/FEATURES.md` for overlap. Don't duplicate.
 8. **Bounded iteration.** Max 5 attempts on a failing test, max 3 on a phase gate. On timeout: write `STUCK.md` and escalate. See `docs/SELF_REPAIR.md`. Never mark a feature `done` without a passing test in the same commit.
 9. **Fail fast on safety regressions.** Security tests, permission bypasses, deleted migrations, committed secrets, broken budget enforcement — STOP, do not work around, escalate immediately. See `docs/SELF_REPAIR.md#8`.
+10. **Keep `docs/AUDIT.md` current.** When you change a feature's implementation status (add tests, fix a stub, complete a migration step), update `docs/AUDIT.md` in the same commit. The audit is only useful if it's accurate.
 
 ---
 
@@ -159,6 +162,50 @@ Phase gate (L2) — before declaring phase complete:
 - **Every tool call has a timeout** (default 60s, configurable per tool). No indefinite awaits. If a tool times out, the orchestrator marks it failed, logs, moves on.
 - **Drizzle migrations are immutable after merge.** Never edit a committed migration — generate a new one. The agent building this should never delete `drizzle/migrations/*.sql`.
 - **Timezone is stored in `~/.open-greg/config.yml`** as IANA string (e.g. `Europe/Vienna`). Injected into every agent's system prompt so "today" is unambiguous.
+
+---
+
+## 9. Real project state (2026-04-22)
+
+> Read `docs/AUDIT.md` for full detail. Summary:
+
+**Test baseline:** `pnpm test` → **234/234 passing**. `pnpm typecheck` → **0 errors**. These must never regress.
+
+**Feature tests:** `pnpm test:features` has **16 regressions** — test files referenced in FEATURES.md that don't exist on disk. Root causes:
+
+- `packages/memory/` does not exist (replaced by `@mastra/memory` in control-plane during Mastra migration)
+- `packages/tools/` does not exist (tools migrated to `services/control-plane/src/mastra-tools.ts`)
+- 8 control-plane test files not yet created (delegate, critic, self-health, resume, cron, goal-loop, notifications, self-diagnose)
+
+**Stub components** (tests pass via dry-run, real implementation not wired):
+
+- `services/browser-service` — pool management works; scrape/act are stubs; no Playwright
+- `services/voice-service` — all 4 functions raise `NotImplementedError`
+- `services/vision-service` — all 3 functions raise `NotImplementedError`
+- `apps/cli` — interactive wizard not implemented; local-llm install is dry-run only
+
+**Solid components:**
+
+- `apps/dashboard` — 90% complete, 56 tests passing
+- `services/control-plane` — real Mastra+DBOS server, 34 tests passing
+- All 6 `packages/*` are implemented with passing tests
+
+**Active migration:** `REBUILD_STATE.md` step 1 of 7 is "IN PROGRESS" (Mastra+DBOS integration).
+
+### Regression prevention
+
+Before finishing any task, run:
+
+```bash
+pnpm test             # must stay 234/234
+pnpm -w run typecheck # must stay 0 errors
+```
+
+When adding or completing a feature:
+
+1. Create the test file at the path listed in FEATURES.md
+2. Ensure `pnpm test:features` shows PASS for that feature
+3. Update `docs/AUDIT.md` to reflect the new status
 
 ---
 

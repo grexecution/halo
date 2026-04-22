@@ -1,12 +1,106 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Plus, Trash2, MessageSquare, Send, ChevronDown, Zap } from 'lucide-react'
+import { Plus, Trash2, MessageSquare, Send, ChevronDown, Zap, Check, X, Wrench } from 'lucide-react'
 import { Button, EmptyState, cn } from '../components/ui/index'
 
 interface ActiveWorkspace {
   id: string
   name: string
   emoji: string
+}
+
+interface PendingAction {
+  raw: string
+  parsed: Record<string, unknown> | null
+}
+
+// Strip <action>...</action> blocks from displayed message text
+function cleanMessageText(text: string): string {
+  return text.replace(/<action>[\s\S]*?<\/action>/g, '').trim()
+}
+
+// Approval card shown beneath a message that contains agent actions
+function ActionCard({
+  action,
+  onApprove,
+  onDeny,
+}: {
+  action: PendingAction
+  onApprove: () => void
+  onDeny: () => void
+}) {
+  const [status, setStatus] = useState<'pending' | 'approved' | 'denied' | 'loading'>('pending')
+
+  async function approve() {
+    if (!action.parsed) return
+    setStatus('loading')
+    try {
+      await fetch('/api/agent-actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: action.parsed }),
+      })
+      setStatus('approved')
+      onApprove()
+    } catch {
+      setStatus('denied')
+    }
+  }
+
+  const typeLabel = action.parsed?.type ? String(action.parsed.type) : 'unknown action'
+
+  return (
+    <div
+      className={cn(
+        'mt-2 rounded-xl border p-3 text-xs',
+        status === 'approved'
+          ? 'bg-green-900/20 border-green-800/50'
+          : status === 'denied'
+            ? 'bg-gray-900/60 border-gray-800 opacity-60'
+            : 'bg-blue-900/20 border-blue-800/50',
+      )}
+    >
+      <div className="flex items-start gap-2">
+        <Wrench size={12} className="text-blue-400 flex-shrink-0 mt-0.5" />
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-white mb-1">
+            Agent wants to: <span className="text-blue-300 font-mono">{typeLabel}</span>
+          </p>
+          <pre className="text-[10px] text-gray-500 font-mono whitespace-pre-wrap break-all mb-2 max-h-24 overflow-y-auto">
+            {action.raw}
+          </pre>
+          {status === 'approved' && (
+            <p className="text-green-400 flex items-center gap-1">
+              <Check size={11} /> Executed
+            </p>
+          )}
+          {status === 'denied' && <p className="text-gray-500">Denied</p>}
+          {(status === 'pending' || status === 'loading') && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => void approve()}
+                disabled={!action.parsed || status === 'loading'}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 transition-colors"
+              >
+                <Check size={11} />
+                {status === 'loading' ? 'Running…' : 'Allow'}
+              </button>
+              <button
+                onClick={() => {
+                  setStatus('denied')
+                  onDeny()
+                }}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
+              >
+                <X size={11} />
+                Deny
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 interface ChatSession {
@@ -22,6 +116,7 @@ interface Message {
   role: 'user' | 'assistant'
   content: string
   timestamp: string
+  pendingActions: PendingAction[] | undefined
 }
 
 interface Model {
@@ -160,6 +255,7 @@ export default function ChatPage() {
       role: 'user',
       content: input.trim(),
       timestamp: new Date().toISOString(),
+      pendingActions: undefined,
     }
     setMessages((prev) => [...prev, userMsg])
     const sentInput = input.trim()
@@ -172,8 +268,12 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: sentInput, model: selectedModel || undefined }),
       })
-      const data = (await res.json()) as { message: Message }
-      setMessages((prev) => [...prev, data.message])
+      const data = (await res.json()) as { message: Message; pendingActions?: PendingAction[] }
+      const msg: Message = {
+        ...data.message,
+        pendingActions: data.pendingActions?.length ? data.pendingActions : undefined,
+      }
+      setMessages((prev) => [...prev, msg])
       setSessions((prev) =>
         prev.map((s) =>
           s.id === activeSessionId
@@ -189,6 +289,7 @@ export default function ChatPage() {
           role: 'assistant',
           content: 'Error: failed to reach the server.',
           timestamp: new Date().toISOString(),
+          pendingActions: undefined,
         },
       ])
     } finally {
@@ -373,15 +474,33 @@ export default function ChatPage() {
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  data-testid={msg.role === 'user' ? 'message-user' : 'message-assistant'}
-                  className={cn(
-                    'px-3 py-2 rounded-xl text-sm max-w-[70%] leading-relaxed',
-                    msg.role === 'user'
-                      ? 'bg-blue-600 text-white ml-auto'
-                      : 'bg-gray-800 text-gray-100 mr-auto',
-                  )}
+                  className={cn(msg.role === 'user' ? 'flex justify-end' : 'flex justify-start')}
                 >
-                  {msg.content}
+                  <div className="max-w-[75%]">
+                    <div
+                      data-testid={msg.role === 'user' ? 'message-user' : 'message-assistant'}
+                      className={cn(
+                        'px-3 py-2 rounded-xl text-sm leading-relaxed',
+                        msg.role === 'user'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-800 text-gray-100',
+                      )}
+                    >
+                      {cleanMessageText(msg.content)}
+                    </div>
+                    {msg.pendingActions?.map((action, i) => (
+                      <ActionCard
+                        key={i}
+                        action={action}
+                        onApprove={() => {
+                          /* action already executed */
+                        }}
+                        onDeny={() => {
+                          /* user denied, no-op */
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
               ))}
               {isLoading && (

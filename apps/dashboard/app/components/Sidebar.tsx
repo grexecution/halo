@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
-  LayoutGrid,
   MessageSquare,
   Bot,
   Target,
@@ -16,12 +15,12 @@ import {
   Activity,
   Settings,
   FileText,
+  Globe,
   Circle,
 } from 'lucide-react'
 import { cn } from './ui/cn'
 
 const CORE_NAV = [
-  { href: '/hub', label: 'Hub', icon: LayoutGrid },
   { href: '/chat', label: 'Chat', icon: MessageSquare },
   { href: '/agents', label: 'Agents', icon: Bot },
   { href: '/cron-goals', label: 'Goals & Cron', icon: Target },
@@ -31,6 +30,7 @@ const CORE_NAV = [
   { href: '/registry', label: 'Registry', icon: Package },
   { href: '/logs', label: 'Logs', icon: ScrollText },
   { href: '/build-health', label: 'Build Health', icon: Activity },
+  { href: '/expose', label: 'Expose', icon: Globe },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 

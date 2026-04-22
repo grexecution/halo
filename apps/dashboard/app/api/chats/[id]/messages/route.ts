@@ -5,6 +5,7 @@ import { resolve } from 'node:path'
 import { homedir } from 'node:os'
 import { getActiveWorkspaces } from '../../../workspaces/store'
 import { getRelevantMemories, upsertMemory } from '../../../memory/store'
+import { AGENT_ACTIONS_PROMPT, parseAgentActions } from '../../agent-utils'
 
 interface ChatMessage {
   id: string
@@ -180,6 +181,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       systemParts.push(`### Relevant Context from Memory\n\n${memBlock}`)
     }
 
+    systemParts.push(AGENT_ACTIONS_PROMPT)
+
     const historyForLLM: Array<{ role: string; content: string }> = []
     if (systemParts.length > 0) {
       historyForLLM.push({ role: 'system', content: systemParts.join('\n\n---\n\n') })
@@ -235,7 +238,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       writeIndex(index)
     }
 
-    return NextResponse.json({ message: assistantMessage }, { status: 201 })
+    const pendingActions = parseAgentActions(assistantContent)
+    return NextResponse.json({ message: assistantMessage, pendingActions }, { status: 201 })
   } catch (e) {
     return NextResponse.json(
       { error: `Failed to process message: ${e instanceof Error ? e.message : String(e)}` },

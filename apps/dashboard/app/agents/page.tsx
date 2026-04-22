@@ -485,14 +485,12 @@ export default function AgentsPage() {
       .then((data) => setAgents((data as { agents: Agent[] }).agents))
       .catch(() => setAgents(INITIAL_AGENTS))
 
-    fetch('/api/settings')
+    fetch('/api/models')
       .then((r) => r.json())
       .then((data) => {
-        const d = data as {
-          llm?: { models?: Array<{ modelId: string; name: string; provider: string }> }
-        }
-        const models = (d.llm?.models ?? []).map((m) => ({
-          modelId: m.modelId,
+        const d = data as { models?: Array<{ id: string; name: string; provider: string }> }
+        const models = (d.models ?? []).map((m) => ({
+          modelId: m.id,
           name: m.name,
           provider: m.provider,
         }))

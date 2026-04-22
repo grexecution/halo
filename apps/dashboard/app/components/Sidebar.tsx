@@ -10,12 +10,9 @@ import {
   Brain,
   Briefcase,
   Plug,
-  Package,
   ScrollText,
-  Activity,
   Settings,
   FileText,
-  Globe,
   Circle,
 } from 'lucide-react'
 import { cn } from './ui/cn'
@@ -27,10 +24,7 @@ const CORE_NAV = [
   { href: '/memory', label: 'Memory', icon: Brain },
   { href: '/workspaces', label: 'Workspaces', icon: Briefcase },
   { href: '/connectors', label: 'Connectors', icon: Plug },
-  { href: '/registry', label: 'Registry', icon: Package },
   { href: '/logs', label: 'Logs', icon: ScrollText },
-  { href: '/build-health', label: 'Build Health', icon: Activity },
-  { href: '/expose', label: 'Expose', icon: Globe },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 

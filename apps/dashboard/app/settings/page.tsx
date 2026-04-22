@@ -1,6 +1,24 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { Star, StarOff, Trash2, Plus, X, Info } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import {
+  Globe,
+  Wifi,
+  WifiOff,
+  Copy,
+  Check,
+  ExternalLink,
+  Shield,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  Terminal,
+  AlertTriangle,
+  ChevronRight,
+  Smartphone,
+  Activity,
+  Plus,
+  X,
+} from 'lucide-react'
 import {
   Button,
   Card,
@@ -14,7 +32,6 @@ import {
   Select,
   Switch,
   Separator,
-  Dialog,
   Tabs,
   TabsList,
   TabsTrigger,
@@ -26,11 +43,14 @@ import {
 
 interface LLMModel {
   id: string
-  provider: 'ollama' | 'anthropic' | 'openai' | 'custom'
+  provider: 'ollama' | 'anthropic' | 'openai' | 'z.ai' | 'custom'
   name: string
   modelId: string
   apiKey?: string
   baseUrl?: string
+  enabled?: boolean
+  limitTokensPerDay?: number
+  limitCostPerDay?: number
 }
 
 interface Settings {
@@ -50,13 +70,6 @@ interface Settings {
     observationModelId: string
     fallbackModelId?: string
   }
-}
-
-interface LiveModel {
-  id: string
-  name: string
-  provider: string
-  available: boolean
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -80,21 +93,6 @@ const DEFAULT_SETTINGS: Settings = {
   memory: { observationModelId: 'auto' },
 }
 
-const PROVIDER_LABELS: Record<string, string> = {
-  ollama: 'Ollama',
-  anthropic: 'Anthropic',
-  openai: 'OpenAI',
-  custom: 'Custom',
-}
-
-const PROVIDER_BADGE_VARIANT: Record<string, 'default' | 'info' | 'success' | 'warning' | 'muted'> =
-  {
-    ollama: 'success',
-    anthropic: 'info',
-    openai: 'default',
-    custom: 'muted',
-  }
-
 // ---- Helpers ----
 
 function SaveButton({ onSave, saved }: { onSave: () => void; saved: boolean }) {
@@ -112,291 +110,39 @@ function SaveButton({ onSave, saved }: { onSave: () => void; saved: boolean }) {
   )
 }
 
-// ---- Add Model Dialog ----
+// ---- Tab: Models (redirect to Connectors) ----
 
-interface AddModelDialogProps {
-  open: boolean
-  onClose: () => void
-  onAdd: (model: LLMModel) => void
-}
-
-function AddModelDialog({ open, onClose, onAdd }: AddModelDialogProps) {
-  const [provider, setProvider] = useState<LLMModel['provider']>('ollama')
-  const [name, setName] = useState('')
-  const [modelId, setModelId] = useState('')
-  const [apiKey, setApiKey] = useState('')
-  const [baseUrl, setBaseUrl] = useState('')
-
-  function reset() {
-    setProvider('ollama')
-    setName('')
-    setModelId('')
-    setApiKey('')
-    setBaseUrl('')
-  }
-
-  function handleAdd() {
-    if (!name.trim() || !modelId.trim()) return
-    const newModel: LLMModel = {
-      id: `${provider}-${Date.now()}`,
-      provider,
-      name: name.trim(),
-      modelId: modelId.trim(),
-      ...(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
-      ...(baseUrl.trim() ? { baseUrl: baseUrl.trim() } : {}),
-    }
-    onAdd(newModel)
-    reset()
-    onClose()
-  }
-
-  function handleClose() {
-    reset()
-    onClose()
-  }
-
-  const showApiKey = provider === 'anthropic' || provider === 'openai' || provider === 'custom'
-  const showBaseUrl = provider === 'openai' || provider === 'custom'
-
-  return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      title="Add Model"
-      description="Configure a new language model."
-    >
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="add-provider">Provider</Label>
-          <Select
-            id="add-provider"
-            value={provider}
-            onChange={(e) => setProvider(e.target.value as LLMModel['provider'])}
-          >
-            <option value="ollama">Ollama</option>
-            <option value="anthropic">Anthropic</option>
-            <option value="openai">OpenAI</option>
-            <option value="custom">Custom</option>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor="add-name">Name</Label>
-          <Input
-            id="add-name"
-            placeholder="e.g. My Llama"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </div>
-        <div>
-          <Label htmlFor="add-modelid">Model ID</Label>
-          <Input
-            id="add-modelid"
-            placeholder="e.g. llama3:8b"
-            value={modelId}
-            onChange={(e) => setModelId(e.target.value)}
-          />
-        </div>
-        {showApiKey && (
-          <div>
-            <Label htmlFor="add-apikey">API Key (optional)</Label>
-            <Input
-              id="add-apikey"
-              type="password"
-              placeholder="sk-..."
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-            />
-          </div>
-        )}
-        {showBaseUrl && (
-          <div>
-            <Label htmlFor="add-baseurl">Base URL (optional)</Label>
-            <Input
-              id="add-baseurl"
-              placeholder="https://api.openai.com/v1"
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-            />
-          </div>
-        )}
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" size="sm" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleAdd}
-            disabled={!name.trim() || !modelId.trim()}
-          >
-            Add Model
-          </Button>
-        </div>
-      </div>
-    </Dialog>
-  )
-}
-
-// ---- Tab: Models ----
-
-function ModelsTab({
-  settings,
-  setSettings,
-  liveModels,
-  onSave,
-  saved,
-}: {
-  settings: Settings
-  setSettings: React.Dispatch<React.SetStateAction<Settings>>
-  liveModels: LiveModel[]
-  onSave: () => void
-  saved: boolean
-}) {
-  const [addOpen, setAddOpen] = useState(false)
-
-  function setPrimary(id: string) {
-    setSettings((prev) => ({ ...prev, llm: { ...prev.llm, primary: id } }))
-  }
-
-  function deleteModel(id: string) {
-    setSettings((prev) => ({
-      ...prev,
-      llm: {
-        ...prev.llm,
-        models: prev.llm.models.filter((m) => m.id !== id),
-        primary:
-          prev.llm.primary === id
-            ? (prev.llm.models.find((m) => m.id !== id)?.id ?? '')
-            : prev.llm.primary,
-      },
-    }))
-  }
-
-  function addModel(model: LLMModel) {
-    setSettings((prev) => ({
-      ...prev,
-      llm: {
-        ...prev.llm,
-        models: [...prev.llm.models, model],
-        primary: prev.llm.primary || model.id,
-      },
-    }))
-  }
-
-  const primaryModel = settings.llm.models.find((m) => m.id === settings.llm.primary)
-
+function ModelsTab() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-white">Language Models</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Configure the models available to the agent.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <SaveButton onSave={onSave} saved={saved} />
-          <Button variant="outline" size="sm" onClick={() => setAddOpen(true)}>
-            <Plus size={13} />
-            Add Model
-          </Button>
-        </div>
+      <div>
+        <h2 className="text-sm font-semibold text-white">Language Models</h2>
+        <p className="text-xs text-gray-500 mt-0.5">
+          Models are now managed in the Connectors page.
+        </p>
       </div>
-
       <Card>
-        {settings.llm.models.length === 0 ? (
-          <div className="px-5 py-10 text-center">
-            <p className="text-sm text-gray-500">No models configured.</p>
-            <p className="text-xs text-gray-600 mt-1">Click "Add Model" to add one.</p>
+        <CardContent className="py-10">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div className="w-12 h-12 rounded-xl bg-blue-900/30 border border-blue-800 flex items-center justify-center text-2xl">
+              🤖
+            </div>
+            <div>
+              <p className="text-white font-medium">AI Models live in Connectors</p>
+              <p className="text-sm text-gray-500 mt-1">
+                Connect providers, set the primary model, enable/disable, and configure usage limits
+                all in one place.
+              </p>
+            </div>
+            <a
+              href="/connectors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
+            >
+              Open Connectors →
+            </a>
           </div>
-        ) : (
-          <div className="divide-y divide-gray-800">
-            {settings.llm.models.map((model) => {
-              const isPrimary = model.id === settings.llm.primary
-              return (
-                <div key={model.id} className="flex items-center gap-3 px-5 py-3">
-                  <button
-                    onClick={() => setPrimary(model.id)}
-                    className={cn(
-                      'flex-shrink-0 transition-colors',
-                      isPrimary ? 'text-yellow-400' : 'text-gray-700 hover:text-yellow-400',
-                    )}
-                    aria-label={isPrimary ? 'Primary model' : 'Set as primary'}
-                  >
-                    {isPrimary ? <Star size={15} fill="currentColor" /> : <StarOff size={15} />}
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white font-medium">{model.name}</p>
-                    <p className="text-xs text-gray-500 font-mono">{model.modelId}</p>
-                  </div>
-                  <Badge variant={PROVIDER_BADGE_VARIANT[model.provider] ?? 'default'}>
-                    {PROVIDER_LABELS[model.provider] ?? model.provider}
-                  </Badge>
-                  {isPrimary && <Badge variant="warning">primary</Badge>}
-                  <button
-                    onClick={() => deleteModel(model.id)}
-                    className="flex-shrink-0 p-1.5 rounded text-gray-600 hover:text-red-400 hover:bg-gray-800 transition-colors"
-                    aria-label={`Delete ${model.name}`}
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-        )}
+        </CardContent>
       </Card>
-
-      {primaryModel && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Primary Model</CardTitle>
-            <CardDescription>The default model used for agent tasks.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-3">
-              <Star size={14} className="text-yellow-400" fill="currentColor" />
-              <span className="text-sm text-white font-medium">{primaryModel.name}</span>
-              <Badge variant={PROVIDER_BADGE_VARIANT[primaryModel.provider] ?? 'default'}>
-                {PROVIDER_LABELS[primaryModel.provider] ?? primaryModel.provider}
-              </Badge>
-              <span className="text-xs text-gray-500 font-mono">{primaryModel.modelId}</span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {liveModels.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Live Ollama Models</CardTitle>
-            <CardDescription>
-              Models currently available from the local Ollama server.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {liveModels.map((m) => (
-                <div key={m.id} className="flex items-center gap-3">
-                  <span className="text-sm text-gray-300 font-mono flex-1">{m.name}</span>
-                  {m.available ? (
-                    <Badge variant="success">available</Badge>
-                  ) : (
-                    <Badge variant="muted">unavailable</Badge>
-                  )}
-                  <Badge variant="info">
-                    <Info size={10} className="mr-1" />
-                    pull not yet supported
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <AddModelDialog open={addOpen} onClose={() => setAddOpen(false)} onAdd={addModel} />
     </div>
   )
 }
@@ -1049,6 +795,576 @@ function MemoryTab({
   )
 }
 
+// ---- Tab: Expose ----
+
+interface TunnelStatus {
+  installed: boolean
+  running: boolean
+  url: string | null
+  pid: number | null
+}
+
+interface AuthStatus {
+  enabled: boolean
+  username: string
+  totpEnabled: boolean
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      onClick={() => {
+        void navigator.clipboard.writeText(text)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }}
+      className="flex-shrink-0 text-gray-600 hover:text-gray-300 transition-colors"
+    >
+      {copied ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
+    </button>
+  )
+}
+
+function TunnelSection() {
+  const [status, setStatus] = useState<TunnelStatus | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const poll = useCallback(async () => {
+    try {
+      const res = await fetch('/api/expose')
+      setStatus((await res.json()) as TunnelStatus)
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  useEffect(() => {
+    void poll()
+    const t = setInterval(() => void poll(), 5000)
+    return () => clearInterval(t)
+  }, [poll])
+
+  async function start() {
+    setLoading(true)
+    await fetch('/api/expose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'start', port: 3000 }),
+    })
+    setLoading(false)
+    await poll()
+  }
+
+  async function stop() {
+    setLoading(true)
+    await fetch('/api/expose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'stop' }),
+    })
+    setLoading(false)
+    await poll()
+  }
+
+  if (!status) {
+    return (
+      <div className="flex items-center gap-2 py-4">
+        <RefreshCw size={14} className="text-gray-600 animate-spin" />
+        <span className="text-xs text-gray-600">Checking tunnel…</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4" data-testid="tunnel-section">
+      <div
+        className={cn(
+          'flex items-center gap-3 p-4 rounded-xl border',
+          status.running ? 'bg-green-900/20 border-green-800/50' : 'bg-gray-900/60 border-gray-800',
+        )}
+      >
+        <div
+          className={cn(
+            'w-2 h-2 rounded-full flex-shrink-0',
+            status.running ? 'bg-green-400 animate-pulse' : 'bg-gray-600',
+          )}
+        />
+        <div className="flex-1 min-w-0">
+          {status.running && status.url ? (
+            <>
+              <p className="text-xs font-medium text-white mb-0.5">Tunnel active</p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono text-green-300 truncate">{status.url}</span>
+                <CopyButton text={status.url} />
+                <a
+                  href={status.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-600 hover:text-gray-400"
+                >
+                  <ExternalLink size={12} />
+                </a>
+              </div>
+            </>
+          ) : (
+            <p className="text-xs text-gray-500">
+              Tunnel not running — dashboard accessible at localhost:3000 only
+            </p>
+          )}
+        </div>
+        <div className="flex-shrink-0">
+          {status.running ? (
+            <Button variant="outline" size="sm" onClick={() => void stop()} disabled={loading}>
+              <WifiOff size={12} className="mr-1" />
+              Stop
+            </Button>
+          ) : status.installed ? (
+            <Button variant="default" size="sm" onClick={() => void start()} disabled={loading}>
+              <Wifi size={12} className="mr-1" />
+              Start tunnel
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      {!status.installed && (
+        <div className="flex items-start gap-3 p-4 bg-yellow-900/20 border border-yellow-800/40 rounded-xl">
+          <AlertTriangle size={15} className="text-yellow-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-white mb-1">cloudflared not installed</p>
+            <p className="text-xs text-gray-400 mb-2">Install to expose the dashboard publicly.</p>
+            <div className="bg-gray-900 rounded-lg p-3 flex items-center gap-2">
+              <Terminal size={12} className="text-gray-600 flex-shrink-0" />
+              <code className="text-[11px] text-green-300 font-mono flex-1">
+                brew install cloudflare/cloudflare/cloudflared
+              </code>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-start gap-3 p-4 bg-blue-900/10 border border-blue-900/30 rounded-xl">
+        <Smartphone size={14} className="text-blue-400 flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-gray-500">
+          Once the tunnel is running, open the URL on any device.
+        </p>
+      </div>
+
+      {status.running && status.url && (
+        <div>
+          <button
+            className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            onClick={() => {
+              const el = document.getElementById('dns-instructions')
+              if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none'
+            }}
+          >
+            <ChevronRight size={13} />
+            Use a custom domain (DNS instructions)
+          </button>
+          <div
+            id="dns-instructions"
+            style={{ display: 'none' }}
+            className="mt-3 p-4 border border-gray-800 rounded-xl"
+          >
+            <p className="text-xs text-gray-500 mb-2">Add a CNAME record pointing to:</p>
+            <div className="flex items-center gap-2 bg-gray-900 rounded-lg p-2">
+              <code className="text-xs font-mono text-gray-300 flex-1">
+                {status.url.replace(/^https?:\/\//, '')}
+              </code>
+              <CopyButton text={status.url.replace(/^https?:\/\//, '')} />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AuthSection() {
+  const [auth, setAuth] = useState<AuthStatus | null>(null)
+  const [newUsername, setNewUsername] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saved2fa, setSaved2fa] = useState(false)
+  const [totpSetup, setTotpSetup] = useState<{ secret: string; qrDataUrl: string } | null>(null)
+  const [totpCode, setTotpCode] = useState('')
+
+  const loadAuth = useCallback(async () => {
+    try {
+      const res = await fetch('/api/auth')
+      setAuth((await res.json()) as AuthStatus)
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadAuth()
+  }, [loadAuth])
+
+  async function saveAuth(enable: boolean) {
+    setSaving(true)
+    await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'setup',
+        newUsername: newUsername.trim() || undefined,
+        newPassword: newPassword.trim() || undefined,
+        ...(enable ? {} : { disableAuth: true }),
+      }),
+    })
+    setSaving(false)
+    setSaved2fa(true)
+    setTimeout(() => setSaved2fa(false), 2000)
+    await loadAuth()
+    setNewPassword('')
+  }
+
+  async function startTotpSetup() {
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'totp-setup' }),
+    })
+    const data = (await res.json()) as { secret?: string; qrDataUrl?: string }
+    if (data.secret && data.qrDataUrl)
+      setTotpSetup({ secret: data.secret, qrDataUrl: data.qrDataUrl })
+  }
+
+  async function confirmTotp() {
+    if (!totpSetup || totpCode.length !== 6) return
+    await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'totp-confirm', code: totpCode, secret: totpSetup.secret }),
+    })
+    setTotpSetup(null)
+    setTotpCode('')
+    await loadAuth()
+  }
+
+  async function disableTotp() {
+    await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'totp-disable' }),
+    })
+    await loadAuth()
+  }
+
+  if (!auth)
+    return (
+      <div className="flex items-center gap-2 py-4">
+        <RefreshCw size={14} className="text-gray-600 animate-spin" />
+        <span className="text-xs text-gray-600">Loading…</span>
+      </div>
+    )
+
+  return (
+    <div className="space-y-6" data-testid="auth-section">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-white">Require login</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Protect the dashboard with username and password
+          </p>
+        </div>
+        <Switch checked={auth.enabled} onChange={(v) => void saveAuth(v)} disabled={saving} />
+      </div>
+
+      {!auth.enabled && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Username</Label>
+              <Input
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                placeholder="admin"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Password</Label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="pr-9"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                >
+                  {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                </button>
+              </div>
+            </div>
+          </div>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => void saveAuth(true)}
+            disabled={saving || !newUsername.trim() || !newPassword.trim()}
+          >
+            {saved2fa ? (
+              <>
+                <Check size={13} className="mr-1" />
+                Saved
+              </>
+            ) : (
+              'Enable auth'
+            )}
+          </Button>
+        </div>
+      )}
+
+      {auth.enabled && (
+        <div className="flex items-center gap-2 p-3 bg-green-900/20 border border-green-800/40 rounded-lg">
+          <Shield size={13} className="text-green-400" />
+          <p className="text-xs text-green-300">
+            Authentication active — logged in as <span className="font-mono">{auth.username}</span>
+          </p>
+        </div>
+      )}
+
+      {auth.enabled && (
+        <div className="space-y-3 pt-3 border-t border-gray-800">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-white">Two-factor authentication</p>
+              <p className="text-xs text-gray-500 mt-0.5">TOTP via authenticator app</p>
+            </div>
+            {auth.totpEnabled ? (
+              <Button variant="outline" size="sm" onClick={() => void disableTotp()}>
+                Disable 2FA
+              </Button>
+            ) : !totpSetup ? (
+              <Button variant="default" size="sm" onClick={() => void startTotpSetup()}>
+                Set up 2FA
+              </Button>
+            ) : null}
+          </div>
+
+          {totpSetup && (
+            <div className="space-y-4 p-4 border border-gray-800 rounded-xl">
+              <p className="text-xs text-gray-400">
+                Scan this QR code with your authenticator app.
+              </p>
+              <img src={totpSetup.qrDataUrl} alt="TOTP QR code" className="w-40 h-40 rounded-lg" />
+              <div className="flex items-center gap-2">
+                <Input
+                  value={totpCode}
+                  onChange={(e) => setTotpCode(e.target.value)}
+                  placeholder="000000"
+                  maxLength={6}
+                  className="w-28 font-mono text-center"
+                />
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => void confirmTotp()}
+                  disabled={totpCode.length !== 6}
+                >
+                  Verify
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {auth.totpEnabled && (
+            <div className="flex items-center gap-2 p-3 bg-green-900/20 border border-green-800/40 rounded-lg">
+              <Shield size={13} className="text-green-400" />
+              <p className="text-xs text-green-300">2FA active</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ExposeTab() {
+  return (
+    <div className="space-y-8 py-2">
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Globe size={15} className="text-gray-400" />
+          <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
+            Public tunnel
+          </h2>
+        </div>
+        <Card>
+          <CardContent className="pt-4">
+            <TunnelSection />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Shield size={15} className="text-gray-400" />
+          <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
+            Authentication
+          </h2>
+        </div>
+        <Card>
+          <CardContent className="pt-4">
+            <AuthSection />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Shield size={15} className="text-gray-400" />
+          <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
+            Security tips
+          </h2>
+        </div>
+        <Card>
+          <CardContent className="pt-4 space-y-2 text-xs text-gray-400">
+            <p>• Always enable authentication before exposing publicly</p>
+            <p>• Use TOTP 2FA for stronger protection</p>
+            <p>• Stop the tunnel when not needed</p>
+          </CardContent>
+        </Card>
+      </section>
+    </div>
+  )
+}
+
+// ---- Tab: Build Health ----
+
+interface FeatureResult {
+  id: string
+  title: string
+  result: string
+  ts: string
+}
+
+interface NightlyResult {
+  date: string
+  status: string
+  run_id: string
+}
+
+function BuildHealthTab() {
+  const [regressions, setRegressions] = useState<FeatureResult[]>([])
+  const [nightly, setNightly] = useState<NightlyResult[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/build-health')
+      .then((r) => r.json())
+      .then((data: { regressions: FeatureResult[]; nightly: NightlyResult[] }) => {
+        setRegressions(data.regressions ?? [])
+        setNightly(data.nightly ?? [])
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
+  return (
+    <div className="space-y-6 py-2">
+      <div className="flex items-center gap-2">
+        <Activity size={15} className="text-gray-400" />
+        <h2 className="text-sm font-semibold text-white uppercase tracking-wider">Build Health</h2>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Regressions</CardTitle>
+          <CardDescription>Last 20 regression events from feature test history</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div data-testid="regressions-section">
+            {loading ? (
+              <p className="text-xs text-gray-600">Loading…</p>
+            ) : regressions.length === 0 ? (
+              <p className="text-xs text-green-400" data-testid="no-regressions">
+                No regressions detected
+              </p>
+            ) : (
+              <ul className="space-y-1.5">
+                {regressions.map((r, i) => (
+                  <li
+                    key={i}
+                    data-testid={`regression-${r.id}`}
+                    className="text-xs text-red-400 font-mono"
+                  >
+                    REGRESSION: {r.id} — {r.title} <span className="text-gray-600">({r.ts})</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Nightly Runs</CardTitle>
+          <CardDescription>Last 7 days of CI runs</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div data-testid="nightly-section">
+            {loading ? (
+              <p className="text-xs text-gray-600">Loading…</p>
+            ) : nightly.length === 0 ? (
+              <p className="text-xs text-gray-600">No nightly runs recorded yet</p>
+            ) : (
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-gray-600 border-b border-gray-800">
+                    <th className="pb-2">Date</th>
+                    <th className="pb-2">Status</th>
+                    <th className="pb-2 font-mono">Run ID</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800/60">
+                  {nightly.map((n, i) => (
+                    <tr key={i} data-testid={`nightly-row-${n.date}`}>
+                      <td className="py-2 text-gray-400">{n.date}</td>
+                      <td
+                        className={cn(
+                          'py-2 font-semibold',
+                          n.status === 'success' ? 'text-green-400' : 'text-red-400',
+                        )}
+                      >
+                        {n.status}
+                      </td>
+                      <td className="py-2 font-mono text-gray-600">{n.run_id}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>STUCK.md Files</CardTitle>
+          <CardDescription>Active blockers flagged by the agent</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div data-testid="stuck-section">
+            <p className="text-xs text-gray-600">No STUCK.md files found</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 // ---- Tab: About ----
 
 function AboutTab() {
@@ -1121,12 +1437,10 @@ function AboutTab() {
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
-  const [liveModels, setLiveModels] = useState<LiveModel[]>([])
   const [savedTab, setSavedTab] = useState<string | null>(null)
 
   useEffect(() => {
     void fetchSettings()
-    void fetchLiveModels()
   }, [])
 
   async function fetchSettings() {
@@ -1136,16 +1450,6 @@ export default function SettingsPage() {
       setSettings((prev) => ({ ...prev, ...data }))
     } catch {
       // keep defaults
-    }
-  }
-
-  async function fetchLiveModels() {
-    try {
-      const res = await fetch('/api/models')
-      const data = (await res.json()) as { models: LiveModel[] }
-      setLiveModels(data.models ?? [])
-    } catch {
-      setLiveModels([])
     }
   }
 
@@ -1182,17 +1486,13 @@ export default function SettingsPage() {
             <TabsTrigger value="vision-voice">Vision and Voice</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
             <TabsTrigger value="telemetry">Telemetry</TabsTrigger>
+            <TabsTrigger value="expose">Expose</TabsTrigger>
+            <TabsTrigger value="build-health">Build Health</TabsTrigger>
             <TabsTrigger value="about">About</TabsTrigger>
           </TabsList>
 
           <TabsContent value="models">
-            <ModelsTab
-              settings={settings}
-              setSettings={setSettings}
-              liveModels={liveModels}
-              onSave={() => handleSave('models')}
-              saved={savedTab === 'models'}
-            />
+            <ModelsTab />
           </TabsContent>
 
           <TabsContent value="memory">
@@ -1229,6 +1529,14 @@ export default function SettingsPage() {
               onSave={() => handleSave('telemetry')}
               saved={savedTab === 'telemetry'}
             />
+          </TabsContent>
+
+          <TabsContent value="expose">
+            <ExposeTab />
+          </TabsContent>
+
+          <TabsContent value="build-health">
+            <BuildHealthTab />
           </TabsContent>
 
           <TabsContent value="about">

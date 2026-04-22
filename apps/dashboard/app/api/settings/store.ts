@@ -2,11 +2,15 @@ import { getDb } from '../../lib/db'
 
 export interface LLMModel {
   id: string
-  provider: 'ollama' | 'anthropic' | 'openai' | 'custom'
+  provider: 'ollama' | 'anthropic' | 'openai' | 'z.ai' | 'custom'
   name: string
   modelId: string
   apiKey?: string
   baseUrl?: string
+  // Usage controls (all optional — omit = unlimited)
+  enabled?: boolean // default true
+  limitTokensPerDay?: number // hard cap on tokens/day (0 = unlimited)
+  limitCostPerDay?: number // hard cap in USD/day (0 = unlimited)
 }
 
 export interface Settings {
@@ -33,9 +37,15 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   llm: {
-    primary: 'ollama/llama3.2',
+    primary: 'ollama-default',
     models: [
-      { id: 'ollama-default', provider: 'ollama', name: 'Llama 3.2 (local)', modelId: 'llama3.2' },
+      {
+        id: 'ollama-default',
+        provider: 'ollama',
+        name: 'Llama 3.2 (local)',
+        modelId: 'llama3.2',
+        enabled: true,
+      },
     ],
   },
   vision: { provider: 'local', model: 'paddleocr' },

@@ -84,7 +84,7 @@ describe('F-010: Chat page', () => {
   })
 
   it('displays error message when API returns non-ok response (no crash)', async () => {
-    // Simulate the API failing with an error JSON (no `message` field)
+    // Simulate the API failing — returns non-ok so the page shows an error bubble
     global.fetch = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
       if (url === '/api/chats' && opts?.method === 'POST')
         return Promise.resolve({ ok: true, json: async () => SESSION } as Response)
@@ -104,8 +104,9 @@ describe('F-010: Chat page', () => {
         return Promise.resolve({
           ok: false,
           status: 502,
+          body: null,
           json: async () => ({ error: 'LLM call failed: connection refused' }),
-        } as Response)
+        } as unknown as Response)
       return Promise.resolve({ ok: true, json: async () => ({}) } as Response)
     })
 

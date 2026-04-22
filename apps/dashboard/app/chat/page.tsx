@@ -1,6 +1,17 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Plus, Trash2, MessageSquare, Send, ChevronDown, Zap, Check, X, Wrench } from 'lucide-react'
+import {
+  Plus,
+  Trash2,
+  MessageSquare,
+  Send,
+  ChevronDown,
+  Zap,
+  Check,
+  X,
+  Wrench,
+  Terminal,
+} from 'lucide-react'
 import { Button, EmptyState, cn } from '../components/ui/index'
 
 interface ActiveWorkspace {
@@ -12,6 +23,11 @@ interface ActiveWorkspace {
 interface PendingAction {
   raw: string
   parsed: Record<string, unknown> | null
+}
+
+interface ToolCall {
+  name: string
+  args: unknown
 }
 
 // Strip <action>...</action> blocks from displayed message text
@@ -104,6 +120,31 @@ function ActionCard({
   )
 }
 
+// Inline tool-call pill shown during / after streaming
+function ToolCallPill({ call }: { call: ToolCall }) {
+  const [expanded, setExpanded] = useState(false)
+  return (
+    <div className="mt-1.5 rounded-lg border border-gray-700/60 bg-gray-900/60 text-[11px]">
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 w-full text-left text-gray-400 hover:text-gray-200 transition-colors"
+      >
+        <Terminal size={10} className="text-yellow-500 flex-shrink-0" />
+        <span className="font-mono text-yellow-400">{call.name}</span>
+        <ChevronDown
+          size={10}
+          className={cn('ml-auto text-gray-600 transition-transform', expanded && 'rotate-180')}
+        />
+      </button>
+      {expanded && (
+        <pre className="px-2.5 pb-2 text-[10px] text-gray-500 font-mono whitespace-pre-wrap break-all max-h-32 overflow-y-auto border-t border-gray-700/40 pt-1.5">
+          {JSON.stringify(call.args, null, 2)}
+        </pre>
+      )}
+    </div>
+  )
+}
+
 interface ChatSession {
   id: string
   title: string
@@ -118,6 +159,7 @@ interface Message {
   content: string
   timestamp: string
   pendingActions: PendingAction[] | undefined
+  toolCalls: ToolCall[] | undefined
 }
 
 interface Model {
@@ -204,7 +246,7 @@ export default function ChatPage() {
     try {
       const res = await fetch(`/api/chats/${id}`)
       const data = (await res.json()) as { id: string; title: string; messages: Message[] }
-      setMessages(data.messages ?? [])
+      setMessages((data.messages ?? []).map((m) => ({ ...m, toolCalls: m.toolCalls ?? undefined })))
     } catch {
       setMessages([])
     }
@@ -257,11 +299,24 @@ export default function ChatPage() {
       content: input.trim(),
       timestamp: new Date().toISOString(),
       pendingActions: undefined,
+      toolCalls: undefined,
     }
     setMessages((prev) => [...prev, userMsg])
     const sentInput = input.trim()
     setInput('')
     setIsLoading(true)
+
+    // Placeholder assistant message that accumulates streamed tokens
+    const placeholderId = `streaming-${Date.now()}`
+    const placeholderMsg: Message = {
+      id: placeholderId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date().toISOString(),
+      pendingActions: undefined,
+      toolCalls: undefined,
+    }
+    setMessages((prev) => [...prev, placeholderMsg])
 
     try {
       const res = await fetch(`/api/chats/${activeSessionId}/messages`, {
@@ -269,19 +324,85 @@ export default function ChatPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: sentInput, model: selectedModel || undefined }),
       })
-      const data = (await res.json()) as {
-        message?: Message
-        pendingActions?: PendingAction[]
-        error?: string
-      }
-      if (!res.ok || !data.message) {
+
+      if (!res.ok || !res.body) {
+        const data = (await res.json()) as { error?: string }
         throw new Error(data.error ?? `Server error (${res.status})`)
       }
-      const msg: Message = {
-        ...data.message,
-        pendingActions: data.pendingActions?.length ? data.pendingActions : undefined,
+
+      const reader = res.body.getReader()
+      const dec = new TextDecoder()
+      let buf = ''
+      let finalMsgId = placeholderId
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += dec.decode(value, { stream: true })
+        const lines = buf.split('\n')
+        buf = lines.pop() ?? ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const raw = line.slice(6).trim()
+          if (!raw) continue
+          try {
+            const evt = JSON.parse(raw) as {
+              type: string
+              text?: string
+              name?: string
+              args?: unknown
+              msgId?: string
+              timestamp?: string
+              pendingActions?: PendingAction[]
+            }
+
+            if (evt.type === 'chunk' && evt.text) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === placeholderId ? { ...m, content: m.content + evt.text! } : m,
+                ),
+              )
+            } else if (evt.type === 'tool' && evt.name) {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === placeholderId
+                    ? {
+                        ...m,
+                        toolCalls: [...(m.toolCalls ?? []), { name: evt.name!, args: evt.args }],
+                      }
+                    : m,
+                ),
+              )
+            } else if (evt.type === 'done') {
+              finalMsgId = evt.msgId ?? placeholderId
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === placeholderId
+                    ? {
+                        ...m,
+                        id: finalMsgId,
+                        timestamp: evt.timestamp ?? m.timestamp,
+                        pendingActions: evt.pendingActions?.length ? evt.pendingActions : undefined,
+                      }
+                    : m,
+                ),
+              )
+            } else if (evt.type === 'error') {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === placeholderId
+                    ? { ...m, content: `Error: ${evt.text ?? 'unknown error'}` }
+                    : m,
+                ),
+              )
+            }
+          } catch {
+            // malformed line
+          }
+        }
       }
-      setMessages((prev) => [...prev, msg])
+
       setSessions((prev) =>
         prev.map((s) =>
           s.id === activeSessionId
@@ -290,16 +411,11 @@ export default function ChatPage() {
         ),
       )
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `err-${Date.now()}`,
-          role: 'assistant',
-          content: 'Error: failed to reach the server.',
-          timestamp: new Date().toISOString(),
-          pendingActions: undefined,
-        },
-      ])
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === placeholderId ? { ...m, content: 'Error: failed to reach the server.' } : m,
+        ),
+      )
     } finally {
       setIsLoading(false)
       setTimeout(() => inputRef.current?.focus(), 50)
@@ -495,7 +611,20 @@ export default function ChatPage() {
                       )}
                     >
                       {cleanMessageText(msg.content)}
+                      {/* Blinking cursor while streaming */}
+                      {isLoading && msg.id.startsWith('streaming-') && (
+                        <span className="inline-block w-0.5 h-3.5 bg-gray-400 ml-0.5 animate-pulse align-middle" />
+                      )}
                     </div>
+                    {/* Tool calls */}
+                    {msg.toolCalls && msg.toolCalls.length > 0 && (
+                      <div className="mt-1 space-y-0.5">
+                        {msg.toolCalls.map((tc, i) => (
+                          <ToolCallPill key={i} call={tc} />
+                        ))}
+                      </div>
+                    )}
+                    {/* Action approval cards */}
                     {msg.pendingActions?.map((action, i) => (
                       <ActionCard
                         key={i}
@@ -511,7 +640,7 @@ export default function ChatPage() {
                   </div>
                 </div>
               ))}
-              {isLoading && (
+              {isLoading && !messages.some((m) => m.id.startsWith('streaming-')) && (
                 <div
                   data-testid="loading-indicator"
                   className="flex items-center gap-2 text-gray-500 text-sm"

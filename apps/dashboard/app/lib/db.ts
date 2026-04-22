@@ -141,6 +141,48 @@ function initSchema(db: Database.Database) {
       fields TEXT NOT NULL DEFAULT '{}',
       connected_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    -- User-defined custom plugins (extends the built-in plugin catalog)
+    CREATE TABLE IF NOT EXISTS custom_plugins (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      docs_url TEXT NOT NULL DEFAULT '',
+      usage_note TEXT NOT NULL DEFAULT '',
+      fields_schema TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Installed MCP servers (references MCP_SERVERS catalog + custom entries)
+    CREATE TABLE IF NOT EXISTS mcp_servers (
+      id TEXT PRIMARY KEY,
+      catalog_id TEXT,
+      name TEXT NOT NULL,
+      package TEXT,
+      url TEXT,
+      transport TEXT NOT NULL DEFAULT 'stdio',
+      env TEXT NOT NULL DEFAULT '{}',
+      args TEXT NOT NULL DEFAULT '[]',
+      status TEXT NOT NULL DEFAULT 'stopped',
+      installed_at TEXT NOT NULL DEFAULT (datetime('now')),
+      last_started_at TEXT
+    );
+
+    -- User-created skills (extends the built-in DEFAULT_SKILLS catalog)
+    CREATE TABLE IF NOT EXISTS skills (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      category TEXT NOT NULL DEFAULT 'productivity',
+      tags TEXT NOT NULL DEFAULT '[]',
+      system_prompt TEXT NOT NULL DEFAULT '',
+      steps TEXT NOT NULL DEFAULT '[]',
+      example_trigger TEXT NOT NULL DEFAULT '',
+      docs_url TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
     CREATE TABLE IF NOT EXISTS chats (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL DEFAULT 'New Chat',

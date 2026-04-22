@@ -35,7 +35,8 @@ describe('F-050: Shell execution tool', () => {
   it('respects custom cwd', async () => {
     const result = await shellExec({ cmd: 'pwd', cwd: '/tmp' })
     expect(result.ok).toBe(true)
-    expect(result.stdout.trim()).toBe('/tmp')
+    // On macOS /tmp is a symlink to /private/tmp — accept both
+    expect(result.stdout.trim()).toMatch(/^\/(?:private\/)?tmp$/)
   })
 
   it('times out if command exceeds timeoutMs', async () => {

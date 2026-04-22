@@ -14,6 +14,7 @@ export interface RunTurnOptions {
   message: string
   history?: Message[] | undefined
   onChunk?: ((chunk: string) => void) | undefined
+  onToolCall?: ((name: string, args: unknown) => void) | undefined
   sessionId?: string | undefined
   threadId?: string | undefined
   resourceId?: string | undefined
@@ -37,7 +38,7 @@ export class AgentOrchestrator {
   }
 
   async runTurn(opts: RunTurnOptions): Promise<TurnResult> {
-    const { agent, message, history = [], onChunk, threadId, resourceId } = opts
+    const { agent, message, history = [], onChunk, onToolCall, threadId, resourceId } = opts
 
     // Inject timezone + date into system context
     const contextualPrompt = buildSystemPrompt(agent.systemPrompt, agent.timezone)
@@ -81,7 +82,9 @@ export class AgentOrchestrator {
       if (toolCalls) {
         for (const tc of toolCalls) {
           const toolName = tc.payload.toolName
+          const toolArgs = tc.payload.args ?? {}
           toolCallLog.push({ toolCall: toolName })
+          onToolCall?.(toolName, toolArgs)
           const analysis = stuckDetector.analyze(toolCallLog)
           if (analysis.stuck) {
             // Inject reset prompt into the response to break the loop

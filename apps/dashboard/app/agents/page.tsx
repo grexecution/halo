@@ -40,9 +40,10 @@ interface Agent {
 }
 
 interface AvailableModel {
-  modelId: string
+  modelId: string // settings ID — stored as agent.model
   name: string
   provider: string
+  subModelId?: string // actual model name for display (e.g. "llama3.2:1b")
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -146,7 +147,9 @@ function FallbackPicker({ primaryModel, selected, models, onChange }: FallbackPi
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white truncate">{m.name}</p>
-                    <p className="text-[11px] text-gray-500 font-mono truncate">{m.modelId}</p>
+                    <p className="text-[11px] text-gray-500 font-mono truncate">
+                      {m.subModelId ?? m.modelId}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge variant="muted" className="text-[10px] capitalize">
@@ -323,7 +326,9 @@ function AgentDialog({
             ) : (
               availableModels.map((m) => (
                 <option key={m.modelId} value={m.modelId}>
-                  {m.name} ({m.provider})
+                  {m.name}
+                  {m.subModelId && m.subModelId !== m.name ? ` · ${m.subModelId}` : ''} [
+                  {m.provider}]
                 </option>
               ))
             )}
@@ -488,19 +493,42 @@ export default function AgentsPage() {
     fetch('/api/models')
       .then((r) => r.json())
       .then((data) => {
-        const d = data as { models?: Array<{ id: string; name: string; provider: string }> }
-        const models = (d.models ?? []).map((m) => ({
-          modelId: m.id,
-          name: m.name,
-          provider: m.provider,
-        }))
+        const d = data as {
+          models?: Array<{
+            id: string
+            name: string
+            provider: string
+            modelId: string
+            enabled: boolean
+            isDiscovered?: boolean
+          }>
+        }
+        // Only show enabled, configured models (not discovered-only stubs)
+        const models = (d.models ?? [])
+          .filter((m) => m.enabled !== false && !m.isDiscovered)
+          .map((m) => ({
+            modelId: m.id, // settings key — used as agent.model value
+            name: m.name,
+            provider: m.provider,
+            subModelId: m.modelId, // actual model name for display
+          }))
         setAvailableModels(models)
       })
       .catch(() => {
         setAvailableModels([
-          { modelId: 'claude-sonnet-4-6', name: 'Claude Sonnet', provider: 'anthropic' },
-          { modelId: 'claude-haiku-4-5-20251001', name: 'Claude Haiku', provider: 'anthropic' },
-          { modelId: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
+          {
+            modelId: 'claude-sonnet-4-6',
+            name: 'Claude Sonnet',
+            provider: 'anthropic',
+            subModelId: 'claude-sonnet-4-6',
+          },
+          {
+            modelId: 'claude-haiku-4-5-20251001',
+            name: 'Claude Haiku',
+            provider: 'anthropic',
+            subModelId: 'claude-haiku-4-5-20251001',
+          },
+          { modelId: 'gpt-4o', name: 'GPT-4o', provider: 'openai', subModelId: 'gpt-4o' },
         ])
       })
   }, [])

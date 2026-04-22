@@ -5,6 +5,8 @@ import { AgentOrchestrator } from './orchestrator.js'
 import { resetAgent } from './mastra-instance.js'
 import { initDBOS, shutdownDBOS, GoalWorkflow, CronWorkflow } from './dbos-workflows.js'
 import type { GoalWorkflowInput, CronWorkflowInput } from './dbos-workflows.js'
+import { emitLog, queryLogs, knownAgents, knownTools } from './log-store.js'
+import type { LogQuery } from './log-store.js'
 
 const app = Fastify({ logger: true })
 
@@ -25,6 +27,30 @@ app.get('/health', async () => ({
   timestamp: new Date().toISOString(),
 }))
 
+// GET /api/logs — query the in-memory ring buffer
+app.get<{
+  Querystring: {
+    level?: string
+    agentId?: string
+    toolId?: string
+    limit?: string
+    since?: string
+  }
+}>('/api/logs', async (req) => {
+  const q: LogQuery = {
+    level: req.query.level || undefined,
+    agentId: req.query.agentId || undefined,
+    toolId: req.query.toolId || undefined,
+    limit: req.query.limit ? Number(req.query.limit) : undefined,
+    since: req.query.since || undefined,
+  }
+  return {
+    logs: queryLogs(q),
+    agents: knownAgents(),
+    tools: knownTools(),
+  }
+})
+
 const orchestrator = new AgentOrchestrator()
 
 // POST /api/chat — mirrors tRPC chat mutation for simple fetch() callers
@@ -41,6 +67,7 @@ app.post<{
     return reply.code(400).send({ error: 'message is required' })
   }
 
+  const t0 = Date.now()
   try {
     const result = await orchestrator.runTurn({
       agent: {
@@ -59,10 +86,79 @@ app.post<{
       threadId: body.threadId,
       resourceId: body.resourceId,
     })
+    emitLog({
+      level: 'info',
+      agentId: 'greg',
+      message: `chat turn complete (${result.toolCalls?.length ?? 0} tool calls)`,
+      durationMs: Date.now() - t0,
+    })
     return { content: result.content, toolCalls: result.toolCalls }
   } catch (err) {
+    emitLog({ level: 'error', agentId: 'greg', message: `chat error: ${String(err)}`, durationMs: Date.now() - t0 })
     app.log.error(err)
     return reply.code(500).send({ error: String(err) })
+  }
+})
+
+// POST /api/chat/stream — SSE streaming endpoint
+// Emits: data: {"type":"chunk","text":"..."}\n\n
+//        data: {"type":"tool","name":"...","args":{...}}\n\n
+//        data: {"type":"done","msgId":"..."}\n\n
+//        data: {"type":"error","message":"..."}\n\n
+app.post<{
+  Body: {
+    message?: string
+    history?: Array<{ role: string; content: string; timestamp?: string }>
+    threadId?: string
+    resourceId?: string
+  }
+}>('/api/chat/stream', async (req, reply) => {
+  const body = req.body
+  if (!body.message) {
+    return reply.code(400).send({ error: 'message is required' })
+  }
+
+  reply.raw.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  })
+
+  const send = (obj: Record<string, unknown>) => {
+    reply.raw.write(`data: ${JSON.stringify(obj)}\n\n`)
+  }
+
+  try {
+    const toolCalls: Array<{ toolId: string; args: unknown; result: unknown }> = []
+    await orchestrator.runTurn({
+      agent: {
+        id: 'greg',
+        handle: 'greg',
+        systemPrompt: '',
+        model: 'auto',
+        timezone: process.env['TZ'] ?? 'UTC',
+      },
+      message: body.message,
+      history: body.history?.map((m) => ({
+        role: m.role as 'user' | 'assistant' | 'system',
+        content: m.content,
+        timestamp: m.timestamp ?? new Date().toISOString(),
+      })),
+      threadId: body.threadId,
+      resourceId: body.resourceId,
+      onChunk: (chunk) => send({ type: 'chunk', text: chunk }),
+      onToolCall: (name, args) => {
+        toolCalls.push({ toolId: name, args, result: {} })
+        send({ type: 'tool', name, args })
+      },
+    })
+    send({ type: 'done', toolCalls })
+  } catch (err) {
+    app.log.error(err)
+    send({ type: 'error', message: String(err) })
+  } finally {
+    reply.raw.end()
   }
 })
 

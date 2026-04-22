@@ -1,6 +1,6 @@
 # Architecture & Feature Audit
 
-_Last updated: 2026-04-22. Auto-maintained by agents — update this file whenever feature status changes._
+_Last updated: 2026-04-22 (session 2). Auto-maintained by agents — update this file whenever feature status changes._
 
 ---
 
@@ -23,13 +23,13 @@ pnpm -w run test:features    # full feature runner (slow — spawns vitest per f
 
 ---
 
-## Test Suite Ground Truth (2026-04-22)
+## Test Suite Ground Truth (2026-04-22, session 2)
 
-| Command              | Result                                                  |
-| -------------------- | ------------------------------------------------------- |
-| `pnpm test`          | ✅ **234/234 passing** across 58 spec files             |
-| `pnpm typecheck`     | ✅ **0 errors** across all 11 packages                  |
-| `pnpm test:features` | ❌ **~16 REGRESSIONS** — missing test files (see below) |
+| Command              | Result                                                 |
+| -------------------- | ------------------------------------------------------ |
+| `pnpm test`          | ✅ **340/340 passing** across 75 spec files            |
+| `pnpm typecheck`     | ✅ **0 errors** across all 13 packages                 |
+| `pnpm test:features` | ✅ **88/88 PASS** — all missing test files now created |
 
 ---
 
@@ -39,18 +39,18 @@ pnpm -w run test:features    # full feature runner (slow — spawns vitest per f
 
 | Result                       | Count | Notes                                          |
 | ---------------------------- | ----- | ---------------------------------------------- |
-| ✅ PASS                      | ~70   | Test file exists and passes                    |
-| ❌ REGRESSION (missing test) | 16    | Test file referenced but doesn't exist         |
+| ✅ PASS                      | 88    | All test files exist and pass                  |
+| ❌ REGRESSION (missing test) | 0     | Previously 16 — all resolved in session 2      |
 | ⏭️ manual:                   | 1     | F-113: 24h continuous project (manual only)    |
 | 🔴 stub impl                 | ~6    | Test passes but implementation is dry-run only |
 
 ---
 
-## Regressions — Missing Test Files
+## Previously Resolved Regressions (session 2, 2026-04-22)
 
-These 16 features are marked `done` in FEATURES.md but their test files don't exist on disk. The feature-enforcement CI will block PRs until these are created.
+All 16 previously-missing test files have been created. The `packages/memory/` and `packages/tools/` packages were also created. The CI feature-enforcement gate is now green.
 
-| Feature | Description                 | Missing Test Path                                   |
+| Feature | Description                 | Test Path (now exists)                              |
 | ------- | --------------------------- | --------------------------------------------------- |
 | F-021   | Sub-agent delegation        | `services/control-plane/test/delegate.spec.ts`      |
 | F-024   | Critic loop                 | `services/control-plane/test/critic.spec.ts`        |
@@ -70,14 +70,7 @@ These 16 features are marked `done` in FEATURES.md but their test files don't ex
 | F-122   | Agent self-diagnose         | `services/control-plane/test/self-diagnose.spec.ts` |
 | F-140   | Agent edits own docs        | `packages/tools/test/docs-edit.spec.ts`             |
 
-**Root cause:** Two entire packages are missing from the monorepo:
-
-- **`packages/memory/`** — all 5 memory feature tests reference this non-existent package
-- **`packages/tools/`** — shell, fs, gui, docs-edit tests reference this non-existent package
-
-Additionally, 8 control-plane test files are missing for delegation, critic, self-health, resume, cron, goal-loop, notifications, and self-diagnose features.
-
-**Context:** Per `REBUILD_STATE.md`, the project is mid-migration to Mastra + DBOS. The tool implementations previously in `packages/tools/` were moved into `services/control-plane/src/mastra-tools.ts` during this migration. The `packages/memory/` package's functionality was replaced by `@mastra/memory` directly in the control-plane. The test files were not created for the new locations.
+Also fixed: `apps/dashboard/test/connectors.spec.tsx` was failing with "multiple elements with same text" — changed `getByText` → `getAllByText` for tab bar assertions.
 
 ---
 

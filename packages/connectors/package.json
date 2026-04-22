@@ -11,6 +11,14 @@
     "./plugins": {
       "import": "./src/plugins.ts",
       "types": "./src/plugins.ts"
+    },
+    "./mcps": {
+      "import": "./src/mcps.ts",
+      "types": "./src/mcps.ts"
+    },
+    "./skills": {
+      "import": "./src/skills.ts",
+      "types": "./src/skills.ts"
     }
   },
   "scripts": {

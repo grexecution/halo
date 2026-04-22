@@ -1,10 +1,15 @@
 /**
  * POST /api/chats/[id]/messages
  *
- * Appends a user message to a chat session, calls the control-plane agent
- * (with Mastra memory), persists the response, and returns it.
+ * Appends a user message, streams the response back as text/event-stream SSE.
  *
- * Falls back to direct Ollama if the control-plane is unavailable.
+ * SSE event format (mirrors control-plane):
+ *   data: {"type":"chunk","text":"..."}
+ *   data: {"type":"tool","name":"...","args":{...}}
+ *   data: {"type":"done","toolCalls":[...]}
+ *   data: {"type":"error","message":"..."}
+ *
+ * Falls back to direct Anthropic/Ollama (non-streaming) if control-plane unavailable.
  */
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
@@ -28,28 +33,8 @@ const ANTHROPIC_API_KEY = process.env['ANTHROPIC_API_KEY']
 const LLM_PROVIDER = process.env['LLM_PROVIDER'] ?? (ANTHROPIC_API_KEY ? 'anthropic' : 'ollama')
 
 // ---------------------------------------------------------------------------
-// LLM dispatch helpers
+// Fallback non-streaming LLM calls (used when control-plane is down)
 // ---------------------------------------------------------------------------
-
-async function callControlPlane(
-  message: string,
-  history: Array<{ role: string; content: string }>,
-  threadId: string,
-): Promise<string> {
-  const resp = await fetch(`${CONTROL_PLANE_URL}/api/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message, history, threadId, resourceId: 'user' }),
-    signal: AbortSignal.timeout(120_000),
-  })
-  if (!resp.ok) {
-    const text = await resp.text()
-    throw new Error(`Control-plane error (${resp.status}): ${text.slice(0, 200)}`)
-  }
-  const data = (await resp.json()) as { content?: string; error?: string }
-  if (data.error) throw new Error(data.error)
-  return data.content ?? '(no response)'
-}
 
 async function callOllama(
   messages: Array<{ role: string; content: string }>,
@@ -61,10 +46,7 @@ async function callOllama(
     body: JSON.stringify({ model, messages, stream: false }),
     signal: AbortSignal.timeout(60_000),
   })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Ollama error (${res.status}): ${text.slice(0, 200)}`)
-  }
+  if (!res.ok) throw new Error(`Ollama error (${res.status}): ${(await res.text()).slice(0, 200)}`)
   const data = (await res.json()) as { message?: { content: string } }
   return data.message?.content ?? '(no response)'
 }
@@ -84,163 +66,217 @@ async function callAnthropic(messages: Array<{ role: string; content: string }>)
     }),
     signal: AbortSignal.timeout(60_000),
   })
-  if (!res.ok) {
-    const text = await res.text()
-    throw new Error(`Anthropic error: ${text.slice(0, 200)}`)
-  }
+  if (!res.ok) throw new Error(`Anthropic error: ${(await res.text()).slice(0, 200)}`)
   const data = (await res.json()) as { content?: Array<{ text: string }> }
   return data.content?.[0]?.text ?? '(no response)'
 }
 
 // ---------------------------------------------------------------------------
-// Route handler
+// Route handler — returns SSE stream
 // ---------------------------------------------------------------------------
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
-    const body = (await req.json()) as { message: string; model?: string }
-    const db = getDb()
+  const { id } = await params
+  const body = (await req.json()) as { message: string; model?: string }
+  const db = getDb()
 
-    const chat = db.prepare('SELECT id, title FROM chats WHERE id = ?').get(id) as
-      | { id: string; title: string }
-      | undefined
-    if (!chat) return NextResponse.json({ error: 'Chat not found' }, { status: 404 })
+  const chat = db.prepare('SELECT id, title FROM chats WHERE id = ?').get(id) as
+    | { id: string; title: string }
+    | undefined
+  if (!chat) return NextResponse.json({ error: 'Chat not found' }, { status: 404 })
 
-    const now = new Date().toISOString()
-    const userMsgId = `msg-${Date.now()}-user`
+  const now = new Date().toISOString()
+  const userMsgId = `msg-${Date.now()}-user`
 
-    // Persist user message
-    db.prepare(
-      'INSERT INTO chat_messages (id, chat_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)',
-    ).run(userMsgId, id, 'user', body.message, now)
+  db.prepare(
+    'INSERT INTO chat_messages (id, chat_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)',
+  ).run(userMsgId, id, 'user', body.message, now)
 
-    // Build history for context (prior messages)
-    const priorMessages = db
-      .prepare(
-        'SELECT role, content FROM chat_messages WHERE chat_id = ? AND id != ? ORDER BY created_at ASC',
-      )
-      .all(id, userMsgId) as MessageRow[]
-
-    // Build system context from active workspaces + Mastra memory
-    const systemParts: string[] = []
-
-    const activeWorkspaces = getActiveWorkspaces()
-    if (activeWorkspaces.length > 0) {
-      const wsBlock = activeWorkspaces
-        .map((ws) => {
-          const lines = [`## Workspace: ${ws.name} (${ws.type})`]
-          if (ws.description) lines.push(ws.description)
-          for (const f of ws.fields) {
-            if (f.value && f.type !== 'secret') lines.push(`${f.key}: ${f.value}`)
-          }
-          return lines.join('\n')
-        })
-        .join('\n\n')
-      systemParts.push(`### Active Workspace Context\n\n${wsBlock}`)
-    }
-
-    const ctx = await getMemory()
-      .getContext({ threadId: id, resourceId: 'default' })
-      .catch(() => null)
-    if (ctx?.systemMessage) {
-      systemParts.push(`### Memory & Working Context\n\n${ctx.systemMessage}`)
-    }
-    if (ctx?.otherThreadsContext) {
-      systemParts.push(`### Related Workspace & Project Context\n\n${ctx.otherThreadsContext}`)
-    }
-
-    systemParts.push(AGENT_ACTIONS_PROMPT)
-
-    const historyForLLM: Array<{ role: string; content: string }> = []
-    if (systemParts.length > 0) {
-      historyForLLM.push({ role: 'system', content: systemParts.join('\n\n---\n\n') })
-    }
-    historyForLLM.push(...priorMessages.map(({ role, content }) => ({ role, content })))
-
-    // Call the LLM via control-plane, then fall back to direct calls
-    let assistantContent: string
-    try {
-      assistantContent = await callControlPlane(body.message, historyForLLM, id)
-    } catch {
-      historyForLLM.push({ role: 'user', content: body.message })
-      try {
-        if (LLM_PROVIDER === 'anthropic' && ANTHROPIC_API_KEY) {
-          assistantContent = await callAnthropic(historyForLLM)
-        } else {
-          assistantContent = await callOllama(historyForLLM, body.model ?? OLLAMA_MODEL)
-        }
-      } catch (e) {
-        return NextResponse.json(
-          { error: `LLM call failed: ${e instanceof Error ? e.message : String(e)}` },
-          { status: 502 },
-        )
-      }
-    }
-
-    const assistantMsgId = `msg-${Date.now()}-assistant`
-    const assistantAt = new Date().toISOString()
-
-    // Persist assistant message
-    db.prepare(
-      'INSERT INTO chat_messages (id, chat_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)',
-    ).run(assistantMsgId, id, 'assistant', assistantContent, assistantAt)
-
-    // Update chat updated_at
-    db.prepare('UPDATE chats SET updated_at = ? WHERE id = ?').run(assistantAt, id)
-
-    // Index to local memory store
-    await upsertMemory({
-      id: `chat-${id}-${userMsgId}`,
-      content: `User: ${body.message}\nAssistant: ${assistantContent}`,
-      source: 'chat',
-      sourceId: id,
-      type: 'conversation',
-      tags: [],
-      metadata: { sessionId: id },
-      createdAt: now,
-      updatedAt: assistantAt,
-    })
-
-    // Persist to Mastra memory for semantic recall
-    await getMemory()
-      .saveMessages({
-        messages: [
-          {
-            id: userMsgId,
-            role: 'user',
-            createdAt: new Date(now),
-            threadId: id,
-            resourceId: 'default',
-            content: { format: 2, parts: [{ type: 'text', text: body.message }] },
-          },
-          {
-            id: assistantMsgId,
-            role: 'assistant',
-            createdAt: new Date(assistantAt),
-            threadId: id,
-            resourceId: 'default',
-            content: { format: 2, parts: [{ type: 'text', text: assistantContent }] },
-          },
-        ],
-      })
-      .catch(() => {
-        /* best effort */
-      })
-
-    const assistantMessage = {
-      id: assistantMsgId,
-      role: 'assistant',
-      content: assistantContent,
-      timestamp: assistantAt,
-    }
-
-    const pendingActions = parseAgentActions(assistantContent)
-    return NextResponse.json({ message: assistantMessage, pendingActions }, { status: 201 })
-  } catch (e) {
-    return NextResponse.json(
-      { error: `Failed to process message: ${e instanceof Error ? e.message : String(e)}` },
-      { status: 500 },
+  const priorMessages = db
+    .prepare(
+      'SELECT role, content FROM chat_messages WHERE chat_id = ? AND id != ? ORDER BY created_at ASC',
     )
+    .all(id, userMsgId) as MessageRow[]
+
+  // Build system context
+  const systemParts: string[] = []
+
+  const activeWorkspaces = getActiveWorkspaces()
+  if (activeWorkspaces.length > 0) {
+    const wsBlock = activeWorkspaces
+      .map((ws) => {
+        const lines = [`## Workspace: ${ws.name} (${ws.type})`]
+        if (ws.description) lines.push(ws.description)
+        for (const f of ws.fields) {
+          if (f.value && f.type !== 'secret') lines.push(`${f.key}: ${f.value}`)
+        }
+        return lines.join('\n')
+      })
+      .join('\n\n')
+    systemParts.push(`### Active Workspace Context\n\n${wsBlock}`)
   }
+
+  const ctx = await getMemory()
+    .getContext({ threadId: id, resourceId: 'default' })
+    .catch(() => null)
+  if (ctx?.systemMessage) systemParts.push(`### Memory & Working Context\n\n${ctx.systemMessage}`)
+  if (ctx?.otherThreadsContext)
+    systemParts.push(`### Related Context\n\n${ctx.otherThreadsContext}`)
+  systemParts.push(AGENT_ACTIONS_PROMPT)
+
+  const historyForLLM: Array<{ role: string; content: string }> = []
+  if (systemParts.length > 0) {
+    historyForLLM.push({ role: 'system', content: systemParts.join('\n\n---\n\n') })
+  }
+  historyForLLM.push(...priorMessages.map(({ role, content }) => ({ role, content })))
+
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (obj: Record<string, unknown>) => {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`))
+      }
+
+      let assistantContent = ''
+      const assistantMsgId = `msg-${Date.now()}-assistant`
+
+      try {
+        // --- Try control-plane streaming ---
+        const cpRes = await fetch(`${CONTROL_PLANE_URL}/api/chat/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: body.message,
+            history: historyForLLM,
+            threadId: id,
+            resourceId: 'user',
+          }),
+          signal: AbortSignal.timeout(120_000),
+        })
+
+        if (!cpRes.ok || !cpRes.body) throw new Error(`control-plane ${cpRes.status}`)
+
+        // Forward SSE events from control-plane to browser
+        const reader = cpRes.body.getReader()
+        const dec = new TextDecoder()
+        let buf = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          const lines = buf.split('\n')
+          buf = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            const raw = line.slice(6).trim()
+            if (!raw) continue
+            try {
+              const evt = JSON.parse(raw) as {
+                type: string
+                text?: string
+                name?: string
+                args?: unknown
+                toolCalls?: unknown[]
+                message?: string
+              }
+              if (evt.type === 'chunk' && evt.text) {
+                assistantContent += evt.text
+                send({ type: 'chunk', text: evt.text })
+              } else if (evt.type === 'tool') {
+                send({ type: 'tool', name: evt.name, args: evt.args })
+              } else if (evt.type === 'done') {
+                // fall through to persist below
+              } else if (evt.type === 'error') {
+                send({ type: 'error', message: evt.message })
+              }
+            } catch {
+              // malformed SSE line — ignore
+            }
+          }
+        }
+      } catch {
+        // --- Fallback: direct LLM call (non-streaming) ---
+        const msgs = [...historyForLLM, { role: 'user', content: body.message }]
+        try {
+          if (LLM_PROVIDER === 'anthropic' && ANTHROPIC_API_KEY) {
+            assistantContent = await callAnthropic(msgs)
+          } else {
+            assistantContent = await callOllama(msgs, body.model ?? OLLAMA_MODEL)
+          }
+          // Emit full content as a single chunk so the UI gets something
+          send({ type: 'chunk', text: assistantContent })
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e)
+          send({ type: 'error', message: `LLM call failed: ${msg}` })
+          assistantContent = `Error: ${msg}`
+        }
+      }
+
+      // Persist assistant message
+      const assistantAt = new Date().toISOString()
+      db.prepare(
+        'INSERT INTO chat_messages (id, chat_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)',
+      ).run(assistantMsgId, id, 'assistant', assistantContent, assistantAt)
+      db.prepare('UPDATE chats SET updated_at = ? WHERE id = ?').run(assistantAt, id)
+
+      // Index to memory stores (best effort)
+      void upsertMemory({
+        id: `chat-${id}-${userMsgId}`,
+        content: `User: ${body.message}\nAssistant: ${assistantContent}`,
+        source: 'chat',
+        sourceId: id,
+        type: 'conversation',
+        tags: [],
+        metadata: { sessionId: id },
+        createdAt: now,
+        updatedAt: assistantAt,
+      })
+
+      void getMemory()
+        .saveMessages({
+          messages: [
+            {
+              id: userMsgId,
+              role: 'user',
+              createdAt: new Date(now),
+              threadId: id,
+              resourceId: 'default',
+              content: { format: 2, parts: [{ type: 'text', text: body.message }] },
+            },
+            {
+              id: assistantMsgId,
+              role: 'assistant',
+              createdAt: new Date(assistantAt),
+              threadId: id,
+              resourceId: 'default',
+              content: { format: 2, parts: [{ type: 'text', text: assistantContent }] },
+            },
+          ],
+        })
+        .catch(() => {
+          /* best effort */
+        })
+
+      const pendingActions = parseAgentActions(assistantContent)
+      send({
+        type: 'done',
+        msgId: assistantMsgId,
+        timestamp: assistantAt,
+        pendingActions,
+      })
+
+      controller.close()
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    },
+  })
 }

@@ -25,6 +25,20 @@ export interface PluginField {
   helpUrl?: string
 }
 
+/** Metadata for AI plugins that expose an OpenAI-compatible LLM endpoint. */
+export interface PluginLlmMeta {
+  /** OpenAI-compatible base URL (e.g. "https://api.moonshot.cn/v1") */
+  baseUrl: string
+  /** Provider label shown in UI (e.g. "z.ai", "Anthropic") */
+  provider: string
+  /** Default model IDs this plugin exposes */
+  defaultModels: string[]
+  /** Field key in plugin credentials that holds the API key (default "api_key") */
+  apiKeyField?: string
+  /** Field key in plugin credentials that holds the selected model (default "model") */
+  modelField?: string
+}
+
 export interface Plugin {
   id: string
   name: string
@@ -38,6 +52,8 @@ export interface Plugin {
   docsUrl?: string
   status: 'official' | 'beta' | 'community' | 'planned'
   supportsMultiple?: boolean
+  /** If set, this plugin provides an LLM endpoint and should appear in model pickers. */
+  llmMeta?: PluginLlmMeta
 }
 
 export const ALL_PLUGINS: Plugin[] = [
@@ -813,6 +829,13 @@ export const ALL_PLUGINS: Plugin[] = [
     setupUrl: 'https://platform.moonshot.ai/console/api-keys',
     docsUrl: 'https://platform.moonshot.ai/docs',
     status: 'community',
+    llmMeta: {
+      baseUrl: 'https://api.moonshot.cn/v1',
+      provider: 'z.ai',
+      defaultModels: ['kimi-k2.5', 'kimi-k2', 'kimi-k2-thinking', 'moonshot-v1-128k'],
+      apiKeyField: 'api_key',
+      modelField: 'model',
+    },
   },
   {
     id: 'deepseek',
@@ -839,6 +862,13 @@ export const ALL_PLUGINS: Plugin[] = [
     setupUrl: 'https://platform.deepseek.com/api_keys',
     docsUrl: 'https://platform.deepseek.com/api-docs',
     status: 'community',
+    llmMeta: {
+      baseUrl: 'https://api.deepseek.com/v1',
+      provider: 'deepseek',
+      defaultModels: ['deepseek-chat', 'deepseek-reasoner'],
+      apiKeyField: 'api_key',
+      modelField: 'model',
+    },
   },
   {
     id: 'xai_grok',
@@ -866,6 +896,13 @@ export const ALL_PLUGINS: Plugin[] = [
     setupUrl: 'https://console.x.ai/',
     docsUrl: 'https://docs.x.ai/docs',
     status: 'community',
+    llmMeta: {
+      baseUrl: 'https://api.x.ai/v1',
+      provider: 'xai',
+      defaultModels: ['grok-4', 'grok-3', 'grok-3-mini', 'grok-3-fast'],
+      apiKeyField: 'api_key',
+      modelField: 'model',
+    },
   },
   {
     id: 'mistral',
@@ -897,6 +934,13 @@ export const ALL_PLUGINS: Plugin[] = [
     setupUrl: 'https://console.mistral.ai/api-keys/',
     docsUrl: 'https://docs.mistral.ai/',
     status: 'community',
+    llmMeta: {
+      baseUrl: 'https://api.mistral.ai/v1',
+      provider: 'mistral',
+      defaultModels: ['mistral-large-latest', 'mistral-small-latest', 'codestral-latest'],
+      apiKeyField: 'api_key',
+      modelField: 'model',
+    },
   },
   {
     id: 'groq',
@@ -929,6 +973,13 @@ export const ALL_PLUGINS: Plugin[] = [
     setupUrl: 'https://console.groq.com/keys',
     docsUrl: 'https://console.groq.com/docs',
     status: 'community',
+    llmMeta: {
+      baseUrl: 'https://api.groq.com/openai/v1',
+      provider: 'groq',
+      defaultModels: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
+      apiKeyField: 'api_key',
+      modelField: 'model',
+    },
   },
   {
     id: 'together_ai',
@@ -1138,7 +1189,8 @@ export const ALL_PLUGINS: Plugin[] = [
   {
     id: 'custom_openai_compatible',
     name: 'Custom / OpenAI-Compatible',
-    description: 'Any LM Studio, vLLM, llama.cpp, Jan, or other OpenAI-compatible local or remote server.',
+    description:
+      'Any LM Studio, vLLM, llama.cpp, Jan, or other OpenAI-compatible local or remote server.',
     category: 'ai',
     connectionType: 'credentials',
     fields: [

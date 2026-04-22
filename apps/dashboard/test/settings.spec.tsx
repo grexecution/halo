@@ -71,6 +71,7 @@ describe('F-018: Settings page', () => {
 
   it('renders save button', () => {
     render(<SettingsPage />)
+    clickTab('Permissions')
     expect(screen.getByTestId('save-settings-button')).toBeDefined()
   })
 })

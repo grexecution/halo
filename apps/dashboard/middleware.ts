@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { SESSION_COOKIE } from './app/api/auth/session'
 
+const SESSION_COOKIE = 'og_session'
 const PUBLIC = ['/login', '/api/auth', '/_next', '/favicon']
 
 export async function middleware(req: NextRequest) {

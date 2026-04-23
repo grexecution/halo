@@ -250,3 +250,10 @@ The project is mid-Mastra+DBOS migration (`REBUILD_STATE.md`, step 1 of 7 is "IN
 - `packages/memory/src/user-model.ts` — UserModel: preference tracking, correction signals, drift detection, export/import
 - `packages/memory/test/user-model.spec.ts` — 14 tests: preferences, upsert, correction count, drift threshold, prompt block, round-trip
 - Test suite: **373/373 passing** | typecheck: **0 errors**
+
+### F-206 — execute_code tool (done)
+
+- `services/control-plane/src/execute-code.ts` — VM sandbox executor + Mastra tool wrapper
+- `services/control-plane/src/mastra-tools.ts` — added `execute_code` to `allMastraTools`
+- `services/control-plane/test/execute-code.spec.ts` — 9 tests: expression eval, stdout, timeout, isolation, error handling
+- Test suite: **382/382 passing** | typecheck: **0 errors**

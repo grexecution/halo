@@ -752,6 +752,13 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 **Acceptance:** Mistake recording, recurrence increment, drift threshold filtering, and prompt block drift section tests all pass.
 **Test:** `packages/memory/test/user-model.spec.ts`
 
+### F-206 — execute_code tool
+
+**Status:** done · **Phase:** 8
+**Spec:** A `execute_code` Mastra tool runs JS snippets in a `node:vm` isolated sandbox. No access to Node builtins (process, fs, require). Returns the last expression value, stdout, and error info. Enforces a configurable timeout (max 30s, default 5s).
+**Acceptance:** Simple expression, console.log, multi-line, syntax error, runtime error, timeout, and isolation tests all pass. Tool is registered in `allMastraTools`.
+**Test:** `services/control-plane/test/execute-code.spec.ts`
+
 ---
 
 ## Feature-test runner

@@ -14,6 +14,7 @@ import type { PermissionMiddleware } from '@open-greg/permissions'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { withTimeout } from './timeout.js'
+import { executeCodeTool } from './execute-code.js'
 
 // ---------------------------------------------------------------------------
 // Permissions middleware — loaded lazily, cached
@@ -295,4 +296,5 @@ export const allMastraTools = {
   browser_navigate: browserNavigateTool,
   vision_analyze: visionAnalyzeTool,
   computer_use: computerUseTool,
+  execute_code: executeCodeTool,
 }

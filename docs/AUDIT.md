@@ -257,3 +257,11 @@ The project is mid-Mastra+DBOS migration (`REBUILD_STATE.md`, step 1 of 7 is "IN
 - `services/control-plane/src/mastra-tools.ts` — added `execute_code` to `allMastraTools`
 - `services/control-plane/test/execute-code.spec.ts` — 9 tests: expression eval, stdout, timeout, isolation, error handling
 - Test suite: **382/382 passing** | typecheck: **0 errors**
+
+### F-207 — Voice pipeline real implementation (done)
+
+- `services/voice-service/src/voice.py` — real stt_local (Parakeet), stt_cloud (Deepgram/Whisper), tts_local (Piper), tts_cloud (ElevenLabs)
+- `services/voice-service/requirements.txt` — added
+- `services/voice-service/test/test_stt.py` — 12 STT tests; `test_tts.py` — 8 TTS tests; all 20 passing via Python unittest
+- Previous `NotImplementedError` stubs replaced with real subprocess + HTTP calls
+- JS test suite: **382/382 passing** unchanged

@@ -752,6 +752,13 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 **Acceptance:** Mistake recording, recurrence increment, drift threshold filtering, and prompt block drift section tests all pass.
 **Test:** `packages/memory/test/user-model.spec.ts`
 
+### F-207 — Voice pipeline real implementation
+
+**Status:** done · **Phase:** 8
+**Spec:** Implement real STT and TTS in `services/voice-service/`. Replace `NotImplementedError` stubs with: `stt_local` (Parakeet via subprocess), `stt_cloud` (Deepgram + Whisper), `tts_local` (Piper via subprocess), `tts_cloud` (ElevenLabs). All functions raise `ModelNotAvailableError` gracefully when binary/key not present.
+**Acceptance:** 20 Python unittest tests pass (mocking subprocess + API calls). Binary discovery, error handling, language flags, model download path, and API key checks all tested.
+**Test:** `services/voice-service/test/test_stt.py` · `services/voice-service/test/test_tts.py`
+
 ### F-206 — execute_code tool
 
 **Status:** done · **Phase:** 8

@@ -1,0 +1,5 @@
+# Voice service dependencies
+# Parakeet STT: via nemo_toolkit or parakeet-mlx (Apple Silicon) or subprocess to parakeet CLI
+# Piper TTS: via piper-tts PyPI package or subprocess to piper binary
+requests>=2.32.0
+pydantic>=2.0.0

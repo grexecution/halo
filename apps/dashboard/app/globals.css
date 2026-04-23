@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── assistant-ui markdown styles ──────────────────────────────────────── */
+@import "@assistant-ui/react-markdown/styles/dot.css";
+
 /* ── skeleton shimmer ───────────────────────────────────────────────────── */
 @keyframes pulse {
   0%, 100% { opacity: 1; }

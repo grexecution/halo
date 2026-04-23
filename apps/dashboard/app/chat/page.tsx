@@ -1,150 +1,13 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
-import {
-  Plus,
-  Trash2,
-  MessageSquare,
-  Send,
-  ChevronDown,
-  Zap,
-  Check,
-  X,
-  Wrench,
-  Terminal,
-} from 'lucide-react'
-import { Button, EmptyState, cn } from '../components/ui/index'
-import { ChatSidebarSkeleton } from '../components/ui/skeleton'
 
-interface ActiveWorkspace {
-  id: string
-  name: string
-  emoji: string
-}
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { Plus, Trash2, MessageSquare, Bot, PenLine, Check, X } from 'lucide-react'
+import { AssistantRuntimeProvider, useLocalRuntime, type ChatModelAdapter, type ChatModelRunResult } from '@assistant-ui/react'
+import { Thread } from '@/app/components/assistant-ui/thread'
+import { ChatSidebarSkeleton } from '@/app/components/ui/skeleton'
+import { cn } from '@/app/components/ui/cn'
 
-interface PendingAction {
-  raw: string
-  parsed: Record<string, unknown> | null
-}
-
-interface ToolCall {
-  name: string
-  args: unknown
-}
-
-// Strip <action>...</action> blocks from displayed message text
-function cleanMessageText(text: string | undefined | null): string {
-  if (typeof text !== 'string') return ''
-  return text.replace(/<action>[\s\S]*?<\/action>/g, '').trim()
-}
-
-// Approval card shown beneath a message that contains agent actions
-function ActionCard({
-  action,
-  onApprove,
-  onDeny,
-}: {
-  action: PendingAction
-  onApprove: () => void
-  onDeny: () => void
-}) {
-  const [status, setStatus] = useState<'pending' | 'approved' | 'denied' | 'loading'>('pending')
-
-  async function approve() {
-    if (!action.parsed) return
-    setStatus('loading')
-    try {
-      await fetch('/api/agent-actions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: action.parsed }),
-      })
-      setStatus('approved')
-      onApprove()
-    } catch {
-      setStatus('denied')
-    }
-  }
-
-  const typeLabel = action.parsed?.type ? String(action.parsed.type) : 'unknown action'
-
-  return (
-    <div
-      className={cn(
-        'mt-2 rounded-xl border p-3 text-xs',
-        status === 'approved'
-          ? 'bg-green-900/20 border-green-800/50'
-          : status === 'denied'
-            ? 'bg-gray-900/60 border-gray-800 opacity-60'
-            : 'bg-blue-900/20 border-blue-800/50',
-      )}
-    >
-      <div className="flex items-start gap-2">
-        <Wrench size={12} className="text-blue-400 flex-shrink-0 mt-0.5" />
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-white mb-1">
-            Agent wants to: <span className="text-blue-300 font-mono">{typeLabel}</span>
-          </p>
-          <pre className="text-[10px] text-gray-500 font-mono whitespace-pre-wrap break-all mb-2 max-h-24 overflow-y-auto">
-            {action.raw}
-          </pre>
-          {status === 'approved' && (
-            <p className="text-green-400 flex items-center gap-1">
-              <Check size={11} /> Executed
-            </p>
-          )}
-          {status === 'denied' && <p className="text-gray-500">Denied</p>}
-          {(status === 'pending' || status === 'loading') && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => void approve()}
-                disabled={!action.parsed || status === 'loading'}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 transition-colors"
-              >
-                <Check size={11} />
-                {status === 'loading' ? 'Running…' : 'Allow'}
-              </button>
-              <button
-                onClick={() => {
-                  setStatus('denied')
-                  onDeny()
-                }}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
-              >
-                <X size={11} />
-                Deny
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Inline tool-call pill shown during / after streaming
-function ToolCallPill({ call }: { call: ToolCall }) {
-  const [expanded, setExpanded] = useState(false)
-  return (
-    <div className="mt-1.5 rounded-lg border border-gray-700/60 bg-gray-900/60 text-[11px]">
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 w-full text-left text-gray-400 hover:text-gray-200 transition-colors"
-      >
-        <Terminal size={10} className="text-yellow-500 flex-shrink-0" />
-        <span className="font-mono text-yellow-400">{call.name}</span>
-        <ChevronDown
-          size={10}
-          className={cn('ml-auto text-gray-600 transition-transform', expanded && 'rotate-180')}
-        />
-      </button>
-      {expanded && (
-        <pre className="px-2.5 pb-2 text-[10px] text-gray-500 font-mono whitespace-pre-wrap break-all max-h-32 overflow-y-auto border-t border-gray-700/40 pt-1.5">
-          {JSON.stringify(call.args, null, 2)}
-        </pre>
-      )}
-    </div>
-  )
-}
+// ─── Session types ─────────────────────────────────────────────────────────
 
 interface ChatSession {
   id: string
@@ -154,553 +17,386 @@ interface ChatSession {
   messageCount: number
 }
 
-interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: string
-  pendingActions: PendingAction[] | undefined
-  toolCalls: ToolCall[] | undefined
+// ─── SSE adapter — bridges LocalRuntime ↔ /api/chats/[id]/messages ─────────
+
+function makeAdapter(
+  sessionIdRef: React.MutableRefObject<string | null>,
+  onNewSession: (id: string, title: string) => void,
+): ChatModelAdapter {
+  return {
+    async *run({ messages, abortSignal }): AsyncGenerator<ChatModelRunResult, void> {
+      const lastMsg = messages.at(-1)
+      if (!lastMsg || lastMsg.role !== 'user') return
+
+      const userText = lastMsg.content
+        .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+        .map((p) => p.text)
+        .join('')
+
+      // Auto-create session on first message
+      if (!sessionIdRef.current) {
+        const res = await fetch('/api/chats', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: userText.slice(0, 60) || 'New chat' }),
+          signal: abortSignal,
+        })
+        if (!res.ok) throw new Error('Failed to create chat')
+        const data = (await res.json()) as { id: string; title: string }
+        sessionIdRef.current = data.id
+        onNewSession(data.id, data.title)
+      }
+
+      const chatId = sessionIdRef.current!
+
+      const res = await fetch(`/api/chats/${chatId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userText }),
+        signal: abortSignal,
+      })
+
+      if (!res.ok || !res.body) {
+        throw new Error(`Request failed: ${res.status}`)
+      }
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+      let text = ''
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += decoder.decode(value, { stream: true })
+          const lines = buf.split('\n')
+          buf = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            const raw = line.slice(6).trim()
+            if (!raw) continue
+            try {
+              const evt = JSON.parse(raw) as { type: string; text?: string; name?: string; args?: unknown; message?: string }
+              if (evt.type === 'chunk' && evt.text) {
+                text += evt.text
+                yield { content: [{ type: 'text' as const, text }] }
+              } else if (evt.type === 'tool') {
+                const toolArgsJson = JSON.stringify(evt.args ?? {})
+                yield {
+                  content: [
+                    { type: 'text' as const, text },
+                    {
+                      type: 'tool-call' as const,
+                      toolCallId: `tool-${Date.now()}`,
+                      toolName: String(evt.name ?? 'tool'),
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      args: (evt.args ?? {}) as any,
+                      argsText: toolArgsJson,
+                    },
+                  ],
+                }
+              } else if (evt.type === 'error') {
+                throw new Error(evt.message ?? 'Agent error')
+              }
+            } catch {
+              // skip malformed events
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock()
+      }
+
+      if (text) yield { content: [{ type: 'text' as const, text }] }
+    },
+  }
 }
 
-interface Model {
-  id: string
-  name: string
-  provider: string
-  available: boolean
+// ─── Sidebar ──────────────────────────────────────────────────────────────
+
+interface SidebarProps {
+  sessions: ChatSession[]
+  sessionsFetched: boolean
+  activeId: string | null
+  onSelect: (id: string) => void
+  onNew: () => void
+  onDelete: (id: string, e: React.MouseEvent) => void
+  editingId: string | null
+  editTitle: string
+  onEditStart: (id: string, title: string) => void
+  onEditSave: (id: string) => void
+  onEditCancel: () => void
+  onEditChange: (v: string) => void
 }
+
+function Sidebar({
+  sessions, sessionsFetched, activeId, onSelect, onNew, onDelete,
+  editingId, editTitle, onEditStart, onEditSave, onEditCancel, onEditChange,
+}: SidebarProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editingId) inputRef.current?.focus()
+  }, [editingId])
+
+  return (
+    <aside className="flex flex-col h-full border-r border-gray-800 bg-gray-950">
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-3 border-b border-gray-800">
+        <div className="flex items-center gap-2">
+          <MessageSquare size={13} className="text-gray-500" />
+          <span className="text-xs font-medium text-gray-400">Chats</span>
+        </div>
+        <button
+          onClick={onNew}
+          className="p-1 rounded-md hover:bg-gray-800 text-gray-500 hover:text-gray-300 transition-colors"
+          aria-label="New chat"
+        >
+          <Plus size={14} />
+        </button>
+      </div>
+
+      {/* List */}
+      <div className="flex-1 overflow-y-auto py-1">
+        {!sessionsFetched ? (
+          <ChatSidebarSkeleton />
+        ) : sessions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-40 gap-2 px-4 text-center">
+            <Bot size={22} className="text-gray-700" />
+            <p className="text-xs text-gray-600">No conversations yet</p>
+          </div>
+        ) : (
+          sessions.map((s) => (
+            <div
+              key={s.id}
+              onClick={() => onSelect(s.id)}
+              className={cn(
+                'group flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors rounded-lg mx-1',
+                activeId === s.id ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200',
+              )}
+            >
+              {editingId === s.id ? (
+                <div className="flex-1 flex items-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    ref={inputRef}
+                    value={editTitle}
+                    onChange={(e) => onEditChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') onEditSave(s.id)
+                      if (e.key === 'Escape') onEditCancel()
+                    }}
+                    className="flex-1 min-w-0 bg-gray-700 rounded px-2 py-0.5 text-xs text-white outline-none border border-gray-600 focus:border-blue-500"
+                  />
+                  <button onClick={() => onEditSave(s.id)} className="text-green-400 hover:text-green-300 p-0.5">
+                    <Check size={11} />
+                  </button>
+                  <button onClick={onEditCancel} className="text-gray-500 hover:text-gray-300 p-0.5">
+                    <X size={11} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <span className="flex-1 min-w-0 text-xs truncate">{s.title || 'Untitled'}</span>
+                  <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onEditStart(s.id, s.title) }}
+                      className="p-1 rounded hover:bg-gray-700 text-gray-500 hover:text-gray-300 transition-colors"
+                    >
+                      <PenLine size={10} />
+                    </button>
+                    <button
+                      onClick={(e) => onDelete(s.id, e)}
+                      className="p-1 rounded hover:bg-gray-700 text-gray-500 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 size={10} />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </aside>
+  )
+}
+
+// ─── Delete confirm modal ──────────────────────────────────────────────────
+
+function DeleteModal({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: (purge: boolean) => void
+  onCancel: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-gray-900 border border-gray-700 rounded-xl p-5 w-80 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-sm font-semibold text-white mb-1">Delete conversation?</h3>
+        <p className="text-xs text-gray-400 mb-4">
+          Remove it from the list while keeping it in the database for learning, or also purge any
+          memories extracted from this conversation.
+        </p>
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={() => onConfirm(false)}
+            className="w-full text-left px-3 py-2.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-xs text-white transition-colors"
+          >
+            <span className="font-medium">Remove from list</span>
+            <p className="text-gray-400 mt-0.5">Keeps messages + memories in DB for learning</p>
+          </button>
+          <button
+            onClick={() => onConfirm(true)}
+            className="w-full text-left px-3 py-2.5 rounded-lg bg-red-950/60 hover:bg-red-900/60 border border-red-800/40 text-xs text-white transition-colors"
+          >
+            <span className="font-medium text-red-300">Remove + purge memory</span>
+            <p className="text-red-400/70 mt-0.5">Also deletes memories tied to this conversation</p>
+          </button>
+          <button
+            onClick={onCancel}
+            className="w-full px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────
 
 export default function ChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [sessionsFetched, setSessionsFetched] = useState(false)
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [models, setModels] = useState<Model[]>([])
-  const [selectedModel, setSelectedModel] = useState<string>('')
-  const [editingTitle, setEditingTitle] = useState(false)
-  const [titleDraft, setTitleDraft] = useState('')
-  const [hoveredSessionId, setHoveredSessionId] = useState<string | null>(null)
-  const [activeWorkspaces, setActiveWorkspaces] = useState<ActiveWorkspace[]>([])
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState('')
 
-  const inputRef = useRef<HTMLInputElement>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const titleInputRef = useRef<HTMLInputElement>(null)
+  // Ref so the adapter closure can read/write current session id without stale closure
+  const sessionIdRef = useRef<string | null>(activeSessionId)
+  useEffect(() => { sessionIdRef.current = activeSessionId }, [activeSessionId])
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [])
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages, scrollToBottom])
-
-  useEffect(() => {
-    void fetchSessions()
-    void fetchModels()
-    void fetchActiveWorkspaces()
-  }, [])
-
-  async function fetchActiveWorkspaces() {
-    try {
-      const res = await fetch('/api/workspaces')
-      const data = (await res.json()) as {
-        workspaces: Array<{ id: string; name: string; emoji: string; active: boolean }>
-      }
-      setActiveWorkspaces((data.workspaces ?? []).filter((w) => w.active))
-    } catch {
-      setActiveWorkspaces([])
-    }
-  }
-
-  useEffect(() => {
-    if (editingTitle && titleInputRef.current) {
-      titleInputRef.current.focus()
-      titleInputRef.current.select()
-    }
-  }, [editingTitle])
-
-  async function fetchSessions() {
+  // ── Fetch sessions ──────────────────────────────────────────────────────
+  const fetchSessions = useCallback(async () => {
     try {
       const res = await fetch('/api/chats')
-      const data = (await res.json()) as { sessions: ChatSession[] }
-      setSessions(data.sessions ?? [])
-    } catch {
-      setSessions([])
+      if (res.ok) {
+        const data = (await res.json()) as ChatSession[]
+        setSessions(data)
+      }
     } finally {
       setSessionsFetched(true)
     }
-  }
+  }, [])
 
-  async function fetchModels() {
-    try {
-      const res = await fetch('/api/models')
-      const data = (await res.json()) as { models: Model[] }
-      const list = data.models ?? []
-      setModels(list)
-      const first = list.find((m) => m.available) ?? list[0]
-      if (first) setSelectedModel(first.id)
-    } catch {
-      setModels([])
-    }
-  }
+  useEffect(() => { void fetchSessions() }, [fetchSessions])
 
-  async function fetchSessionMessages(id: string) {
-    try {
-      const res = await fetch(`/api/chats/${id}`)
-      const data = (await res.json()) as { id: string; title: string; messages: Message[] }
-      setMessages((data.messages ?? []).map((m) => ({ ...m, toolCalls: m.toolCalls ?? undefined })))
-    } catch {
-      setMessages([])
-    }
-  }
-
-  async function createNewChat() {
-    try {
-      const res = await fetch('/api/chats', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      })
-      const session = (await res.json()) as ChatSession
-      setSessions((prev) => [session, ...prev])
-      setActiveSessionId(session.id)
-      setMessages([])
-      setTimeout(() => inputRef.current?.focus(), 50)
-    } catch {
-      // silently fail
-    }
-  }
-
-  async function selectSession(id: string) {
+  // ── Session selection ───────────────────────────────────────────────────
+  function selectSession(id: string) {
     setActiveSessionId(id)
-    setEditingTitle(false)
-    await fetchSessionMessages(id)
-    setTimeout(() => inputRef.current?.focus(), 50)
+    sessionIdRef.current = id
   }
 
-  async function deleteSession(id: string, e: React.MouseEvent) {
+  function newSession() {
+    setActiveSessionId(null)
+    sessionIdRef.current = null
+  }
+
+  function handleNewSession(id: string, title: string) {
+    const newS: ChatSession = {
+      id,
+      title,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      messageCount: 1,
+    }
+    setSessions((prev) => [newS, ...prev])
+    setActiveSessionId(id)
+    sessionIdRef.current = id
+  }
+
+  // ── Delete ──────────────────────────────────────────────────────────────
+  function requestDelete(id: string, e: React.MouseEvent) {
     e.stopPropagation()
+    setDeleteConfirm(id)
+  }
+
+  async function confirmDelete(purge: boolean) {
+    if (!deleteConfirm) return
+    const id = deleteConfirm
+    setDeleteConfirm(null)
     try {
-      await fetch(`/api/chats/${id}`, { method: 'DELETE' })
+      await fetch(`/api/chats/${id}?purge=${purge}`, { method: 'DELETE' })
       setSessions((prev) => prev.filter((s) => s.id !== id))
-      if (activeSessionId === id) {
-        setActiveSessionId(null)
-        setMessages([])
-      }
+      if (activeSessionId === id) newSession()
     } catch {
       // silently fail
     }
   }
 
-  async function handleSend() {
-    if (!input.trim() || !activeSessionId || isLoading) return
-
-    const userMsg: Message = {
-      id: `tmp-${Date.now()}`,
-      role: 'user',
-      content: input.trim(),
-      timestamp: new Date().toISOString(),
-      pendingActions: undefined,
-      toolCalls: undefined,
-    }
-    setMessages((prev) => [...prev, userMsg])
-    const sentInput = input.trim()
-    setInput('')
-    setIsLoading(true)
-
-    // Placeholder assistant message that accumulates streamed tokens
-    const placeholderId = `streaming-${Date.now()}`
-    const placeholderMsg: Message = {
-      id: placeholderId,
-      role: 'assistant',
-      content: '',
-      timestamp: new Date().toISOString(),
-      pendingActions: undefined,
-      toolCalls: undefined,
-    }
-    setMessages((prev) => [...prev, placeholderMsg])
-
+  // ── Edit title ──────────────────────────────────────────────────────────
+  async function saveTitle(id: string) {
+    if (!editTitle.trim()) { setEditingId(null); return }
     try {
-      const res = await fetch(`/api/chats/${activeSessionId}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: sentInput, model: selectedModel || undefined }),
-      })
-
-      if (!res.ok || !res.body) {
-        const data = (await res.json()) as { error?: string }
-        throw new Error(data.error ?? `Server error (${res.status})`)
-      }
-
-      const reader = res.body.getReader()
-      const dec = new TextDecoder()
-      let buf = ''
-      let finalMsgId = placeholderId
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buf += dec.decode(value, { stream: true })
-        const lines = buf.split('\n')
-        buf = lines.pop() ?? ''
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const raw = line.slice(6).trim()
-          if (!raw) continue
-          try {
-            const evt = JSON.parse(raw) as {
-              type: string
-              text?: string
-              name?: string
-              args?: unknown
-              msgId?: string
-              timestamp?: string
-              pendingActions?: PendingAction[]
-            }
-
-            if (evt.type === 'chunk' && evt.text) {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === placeholderId ? { ...m, content: m.content + evt.text! } : m,
-                ),
-              )
-            } else if (evt.type === 'tool' && evt.name) {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === placeholderId
-                    ? {
-                        ...m,
-                        toolCalls: [...(m.toolCalls ?? []), { name: evt.name!, args: evt.args }],
-                      }
-                    : m,
-                ),
-              )
-            } else if (evt.type === 'done') {
-              finalMsgId = evt.msgId ?? placeholderId
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === placeholderId
-                    ? {
-                        ...m,
-                        id: finalMsgId,
-                        timestamp: evt.timestamp ?? m.timestamp,
-                        pendingActions: evt.pendingActions?.length ? evt.pendingActions : undefined,
-                      }
-                    : m,
-                ),
-              )
-            } else if (evt.type === 'error') {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === placeholderId
-                    ? { ...m, content: `Error: ${evt.text ?? 'unknown error'}` }
-                    : m,
-                ),
-              )
-            }
-          } catch {
-            // malformed line
-          }
-        }
-      }
-
-      setSessions((prev) =>
-        prev.map((s) =>
-          s.id === activeSessionId
-            ? { ...s, messageCount: s.messageCount + 2, updatedAt: new Date().toISOString() }
-            : s,
-        ),
-      )
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : 'Failed to reach the server.'
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === placeholderId
-            ? {
-                ...m,
-                content: `⚠️ ${errMsg}\n\nMake sure the control-plane is running (\`pnpm dev:control-plane\`).`,
-              }
-            : m,
-        ),
-      )
-    } finally {
-      setIsLoading(false)
-      setTimeout(() => inputRef.current?.focus(), 50)
-    }
-  }
-
-  async function commitTitleEdit() {
-    if (!activeSessionId || !titleDraft.trim()) {
-      setEditingTitle(false)
-      return
-    }
-    try {
-      await fetch(`/api/chats/${activeSessionId}`, {
+      await fetch(`/api/chats/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: titleDraft.trim() }),
+        body: JSON.stringify({ title: editTitle.trim() }),
       })
-      setSessions((prev) =>
-        prev.map((s) => (s.id === activeSessionId ? { ...s, title: titleDraft.trim() } : s)),
-      )
-    } catch {
-      // silently fail
+      setSessions((prev) => prev.map((s) => s.id === id ? { ...s, title: editTitle.trim() } : s))
+    } finally {
+      setEditingId(null)
     }
-    setEditingTitle(false)
   }
 
-  const activeSession = sessions.find((s) => s.id === activeSessionId) ?? null
+  // ── Runtime — stable; sessionIdRef + handleNewSession captured via ref pattern ───
+  const adapter = useMemo(() => makeAdapter(sessionIdRef, handleNewSession), []) // stable
+  const runtime = useLocalRuntime(adapter)
 
   return (
-    <div className="flex h-screen bg-gray-950 overflow-hidden">
-      {/* Sidebar */}
-      <div className="w-56 flex-shrink-0 bg-gray-950 border-r border-gray-800 flex flex-col">
-        <div className="p-3 border-b border-gray-800">
-          <Button
-            variant="default"
-            size="sm"
-            className="w-full justify-start gap-2"
-            onClick={() => void createNewChat()}
-          >
-            <Plus size={14} />
-            New Chat
-          </Button>
+    <AssistantRuntimeProvider runtime={runtime}>
+      <div className="flex h-full overflow-hidden">
+        {/* Sidebar */}
+        <div className="w-56 shrink-0 flex flex-col">
+          <Sidebar
+            sessions={sessions}
+            sessionsFetched={sessionsFetched}
+            activeId={activeSessionId}
+            onSelect={selectSession}
+            onNew={newSession}
+            onDelete={requestDelete}
+            editingId={editingId}
+            editTitle={editTitle}
+            onEditStart={(id, title) => { setEditingId(id); setEditTitle(title) }}
+            onEditSave={saveTitle}
+            onEditCancel={() => setEditingId(null)}
+            onEditChange={setEditTitle}
+          />
         </div>
 
-        <div className="flex-1 overflow-y-auto py-2">
-          {!sessionsFetched ? (
-            <ChatSidebarSkeleton />
-          ) : sessions.length === 0 ? (
-            <div className="px-3 py-8 text-center">
-              <p className="text-xs text-gray-600">No conversations yet</p>
-            </div>
-          ) : (
-            sessions.map((session) => (
-              <div
-                key={session.id}
-                onClick={() => void selectSession(session.id)}
-                onMouseEnter={() => setHoveredSessionId(session.id)}
-                onMouseLeave={() => setHoveredSessionId(null)}
-                className={cn(
-                  'group relative flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors',
-                  activeSessionId === session.id
-                    ? 'bg-gray-800 text-white'
-                    : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200',
-                )}
-              >
-                <MessageSquare size={13} className="flex-shrink-0 opacity-60" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium truncate">{session.title}</p>
-                  <p className="text-[10px] text-gray-600 mt-0.5">{session.messageCount} msgs</p>
-                </div>
-                {hoveredSessionId === session.id && (
-                  <button
-                    onClick={(e) => void deleteSession(session.id, e)}
-                    className="flex-shrink-0 p-1 rounded text-gray-600 hover:text-red-400 hover:bg-gray-800 transition-colors"
-                    aria-label="Delete session"
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                )}
-              </div>
-            ))
-          )}
+        {/* Thread — full assistant-ui Thread component */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-gray-950">
+          <Thread />
         </div>
       </div>
 
-      {/* Main area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-gray-950">
-        {activeSession === null ? (
-          <div className="flex-1 flex items-center justify-center">
-            <EmptyState
-              icon={<MessageSquare size={32} />}
-              title="Select or create a chat"
-              description="Choose a conversation from the sidebar or start a new one."
-              action={
-                <Button variant="default" size="md" onClick={() => void createNewChat()}>
-                  <Plus size={14} />
-                  New Chat
-                </Button>
-              }
-            />
-          </div>
-        ) : (
-          <>
-            {/* Top bar */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 gap-3">
-              <div className="flex-1 min-w-0">
-                {editingTitle ? (
-                  <input
-                    ref={titleInputRef}
-                    className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-blue-500 w-full max-w-xs"
-                    value={titleDraft}
-                    onChange={(e) => setTitleDraft(e.target.value)}
-                    onBlur={() => void commitTitleEdit()}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') void commitTitleEdit()
-                      if (e.key === 'Escape') setEditingTitle(false)
-                    }}
-                  />
-                ) : (
-                  <button
-                    className="text-sm font-medium text-white hover:text-blue-400 transition-colors truncate max-w-xs text-left"
-                    onClick={() => {
-                      setTitleDraft(activeSession.title)
-                      setEditingTitle(true)
-                    }}
-                    title="Click to rename"
-                  >
-                    {activeSession.title}
-                  </button>
-                )}
-              </div>
-
-              {/* Active workspace chips */}
-              {activeWorkspaces.length > 0 && (
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {activeWorkspaces.slice(0, 3).map((ws) => (
-                    <a
-                      key={ws.id}
-                      href="/workspaces"
-                      className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-yellow-900/30 text-yellow-400 border border-yellow-800/50 hover:bg-yellow-900/50 transition-colors"
-                      title={`Workspace "${ws.name}" is injected into this chat`}
-                    >
-                      <Zap size={9} />
-                      {ws.emoji} {ws.name}
-                    </a>
-                  ))}
-                  {activeWorkspaces.length > 3 && (
-                    <span className="text-[10px] text-gray-600">
-                      +{activeWorkspaces.length - 3}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* Model selector */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <ChevronDown size={13} className="text-gray-600 -mr-1 pointer-events-none" />
-                <select
-                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 appearance-none pr-6"
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  style={{ backgroundImage: 'none' }}
-                >
-                  {models.length === 0 && <option value="">No models available</option>}
-                  {models.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.provider} · {m.name}
-                      {m.available ? '' : ' (unavailable)'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Message list */}
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3" data-testid="message-list">
-              {messages.length === 0 && (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-sm text-gray-600">Send a message to start the conversation.</p>
-                </div>
-              )}
-              {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={cn(msg.role === 'user' ? 'flex justify-end' : 'flex justify-start')}
-                >
-                  <div className="max-w-[75%]">
-                    <div
-                      data-testid={msg.role === 'user' ? 'message-user' : 'message-assistant'}
-                      className={cn(
-                        'px-3 py-2 rounded-xl text-sm leading-relaxed',
-                        msg.role === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-800 text-gray-100',
-                      )}
-                    >
-                      {cleanMessageText(msg.content)}
-                      {/* Blinking cursor while streaming */}
-                      {isLoading && msg.id.startsWith('streaming-') && (
-                        <span className="inline-block w-0.5 h-3.5 bg-gray-400 ml-0.5 animate-pulse align-middle" />
-                      )}
-                    </div>
-                    {/* Tool calls */}
-                    {msg.toolCalls && msg.toolCalls.length > 0 && (
-                      <div className="mt-1 space-y-0.5">
-                        {msg.toolCalls.map((tc, i) => (
-                          <ToolCallPill key={i} call={tc} />
-                        ))}
-                      </div>
-                    )}
-                    {/* Action approval cards */}
-                    {msg.pendingActions?.map((action, i) => (
-                      <ActionCard
-                        key={i}
-                        action={action}
-                        onApprove={() => {
-                          /* action already executed */
-                        }}
-                        onDeny={() => {
-                          /* user denied, no-op */
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-              {isLoading && !messages.some((m) => m.id.startsWith('streaming-')) && (
-                <div
-                  data-testid="loading-indicator"
-                  className="flex items-center gap-2 text-gray-500 text-sm"
-                >
-                  <span className="inline-flex gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-600 animate-bounce [animation-delay:0ms]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-600 animate-bounce [animation-delay:150ms]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-600 animate-bounce [animation-delay:300ms]" />
-                  </span>
-                  <span className="text-xs">Thinking</span>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input bar */}
-            <div className="px-4 py-3 border-t border-gray-800">
-              <div className="flex items-end gap-2">
-                <input
-                  ref={inputRef}
-                  data-testid="chat-input"
-                  className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 resize-none disabled:opacity-50"
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      void handleSend()
-                    }
-                  }}
-                  placeholder="Type a message..."
-                  disabled={isLoading}
-                />
-                <Button
-                  data-testid="send-button"
-                  variant="default"
-                  size="icon"
-                  onClick={() => void handleSend()}
-                  disabled={isLoading || !input.trim()}
-                  aria-label="Send message"
-                >
-                  <Send size={14} />
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+      {/* Delete confirm modal */}
+      {deleteConfirm && (
+        <DeleteModal
+          onConfirm={(purge) => void confirmDelete(purge)}
+          onCancel={() => setDeleteConfirm(null)}
+        />
+      )}
+    </AssistantRuntimeProvider>
   )
 }

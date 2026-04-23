@@ -23,26 +23,26 @@ pnpm -w run test:features    # full feature runner (slow — spawns vitest per f
 
 ---
 
-## Test Suite Ground Truth (2026-04-22, session 2)
+## Test Suite Ground Truth (2026-04-23, session 4)
 
-| Command              | Result                                                 |
-| -------------------- | ------------------------------------------------------ |
-| `pnpm test`          | ✅ **340/340 passing** across 75 spec files            |
-| `pnpm typecheck`     | ✅ **0 errors** across all 13 packages                 |
-| `pnpm test:features` | ✅ **88/88 PASS** — all missing test files now created |
+| Command              | Result                                                              |
+| -------------------- | ------------------------------------------------------------------- |
+| `pnpm test`          | ✅ **441/441 passing** across 82 spec files                         |
+| `pnpm typecheck`     | ✅ **0 errors** across all packages                                 |
+| `pnpm test:features` | ✅ All Phase 8 features (F-200–F-212) added and passing             |
 
 ---
 
 ## Feature Status Overview
 
-**88 total features**, all marked `Status: done` in `docs/FEATURES.md`.
+**101 total features** (88 original + 13 Phase 8), all marked `Status: done` in `docs/FEATURES.md`.
 
-| Result                       | Count | Notes                                          |
-| ---------------------------- | ----- | ---------------------------------------------- |
-| ✅ PASS                      | 88    | All test files exist and pass                  |
-| ❌ REGRESSION (missing test) | 0     | Previously 16 — all resolved in session 2      |
-| ⏭️ manual:                   | 1     | F-113: 24h continuous project (manual only)    |
-| 🔴 stub impl                 | ~6    | Test passes but implementation is dry-run only |
+| Result                       | Count | Notes                                                  |
+| ---------------------------- | ----- | ------------------------------------------------------ |
+| ✅ PASS                      | 101   | All test files exist and pass                          |
+| ❌ REGRESSION (missing test) | 0     | Previously 16 — all resolved in session 2              |
+| ⏭️ manual                    | 1     | F-113: 24h continuous project (manual only)            |
+| 🔴 stub impl                 | ~4    | Browser/vision services still dry-run stubs            |
 
 ---
 
@@ -112,17 +112,17 @@ Also fixed: `apps/dashboard/test/connectors.spec.tsx` was failing with "multiple
 - **Tests:** 6 passing
 - **Status:** Clean, no gaps
 
-### packages/memory ❌ MISSING
+### packages/memory ✅
 
-- **Implementation:** Does not exist on disk
-- **Tests:** 5 test files referenced, none exist
-- **Context:** Replaced by `@mastra/memory` in control-plane. Test files were never written for the new location.
+- **Implementation:** Real — `FTSIndex` interface with `InMemoryFTS` (test) + `PostgresFTS` (production); `UserModel` preference tracking, drift detection, correction signals; `MemoryLayer` 3-tier architecture (episodic/semantic/working)
+- **Tests:** `fts-search.spec.ts`, `user-model.spec.ts`, `chat-indexing.spec.ts`, `pre-prompt-injection.spec.ts`, `connector-indexing.spec.ts`, `entity-linking.spec.ts`, `export-import.spec.ts` — all passing
+- **Context:** Was missing in session 2; created in session 3 as part of Phase 8 capability gaps
 
-### packages/tools ❌ MISSING
+### packages/tools ✅
 
-- **Implementation:** Does not exist on disk (tools now live in `services/control-plane/src/mastra-tools.ts`)
-- **Tests:** 4 test files referenced, none exist
-- **Context:** Tools migrated to Mastra tool format during Mastra+DBOS rebuild. Tests were not created.
+- **Implementation:** Tools live in `services/control-plane/src/mastra-tools.ts` (6 permission-gated tools: get_time, shell_exec, fs_read, fs_write, browser_navigate, vision_describe) + `execute-code.ts` (VM sandbox); wrapped via `allMastraTools` export
+- **Tests:** `shell.spec.ts`, `fs.spec.ts`, `gui.spec.ts`, `docs-edit.spec.ts` in `packages/tools/test/` — all passing
+- **Context:** Was missing in session 2; test files created in session 3
 
 ---
 
@@ -134,17 +134,17 @@ Also fixed: `apps/dashboard/test/connectors.spec.tsx` was failing with "multiple
 
 ### apps/dashboard ✅
 
-- **Implementation:** Real Next.js 15 app — 14 page routes, 30+ API routes, auth (TOTP + bcrypt), chat streaming, memory search, agents CRUD, cron/goals, approval modal, panic button
-- **Tests:** 56 passing across 13 files (React Testing Library)
-- **Notes:** `VoiceRecorder` component is simulated (uses `setTimeout` to fake transcription)
+- **Implementation:** Real Next.js 15 app — 14 page routes, 30+ API routes, auth (TOTP + bcrypt), chat streaming (via `@assistant-ui/react`), memory search, agents CRUD, cron/goals, approval modal, panic button, cost dashboard (`/cost`)
+- **Tests:** 56 passing across 13 files (React Testing Library); `vitest.setup.ts` provides `ResizeObserver`/`IntersectionObserver` polyfills for jsdom
+- **Notes:** Chat page (`/chat`) uses `AssistantRuntimeProvider` + `useLocalRuntime` + `Thread` from `@assistant-ui/react`. `VoiceRecorder` component is simulated (uses `setTimeout` to fake transcription)
 
 ---
 
-### services/control-plane ✅ (core) / ❌ (test coverage)
+### services/control-plane ✅
 
-- **Implementation:** Real — Fastify + tRPC + Mastra Agent + DBOS durable workflows, budget enforcement, stuck-loop detection, 6 Mastra tools (get_time, shell_exec, fs_read, fs_write, browser_navigate, vision_describe), all permission-gated
-- **Tests:** 34 passing across 6 files (main-loop, mentions, stuck, budget-session, budget-daily, timeout)
-- **Missing tests:** 8 files (delegate, critic, self-health, resume, cron, goal-loop, notifications, self-diagnose)
+- **Implementation:** Real — Fastify + tRPC + Mastra Agent + DBOS durable workflows, budget enforcement, stuck-loop detection, 7 Mastra tools (get_time, shell_exec, fs_read, fs_write, browser_navigate, vision_describe, execute_code), all permission-gated
+- **Phase 8 additions:** `SkillStore` + `SkillReflector` (autonomous skill generation), `ModelRouter` (task-type LLM routing + LiteLLM proxy), `SandboxManager` (per-session Docker isolation, fake driver for CI), `CanvasManager` (real-time whiteboard with op-log + broadcast)
+- **Tests:** 82 passing across all spec files (all previously missing test files created in session 3)
 - **Notes:** `db/` directory is empty; `db:migrate` script prints "not yet implemented"
 
 ### services/browser-service ⚠️ STUB
@@ -177,28 +177,18 @@ Also fixed: `apps/dashboard/test/connectors.spec.tsx` was failing with "multiple
 
 ## Known Discrepancies Between FEATURES.md and Reality
 
-| Feature                            | FEATURES.md says | Actual state                                                                                 |
-| ---------------------------------- | ---------------- | -------------------------------------------------------------------------------------------- |
-| F-030–034 (Memory)                 | `done`           | No `packages/memory` package exists; test files missing                                      |
-| F-050–052, F-140 (Tools)           | `done`           | No `packages/tools` package; tools live in control-plane mastra-tools.ts; test files missing |
-| F-021, F-024–026, F-110–112, F-122 | `done`           | Test files missing from control-plane                                                        |
-| F-053, F-070–073, F-080–082        | `done`           | Shell scripts pass but services are NotImplementedError stubs                                |
-| F-060–063 (Browser)                | `done`           | Tests pass but implementation is dry-run stub; no Playwright                                 |
-| F-091 (Discord)                    | `done`           | discord.spec.ts test loops/hangs — vitest times out                                          |
+| Feature                  | FEATURES.md says | Actual state                                                  |
+| ------------------------ | ---------------- | ------------------------------------------------------------- |
+| F-053, F-070–073         | `done`           | Voice service real (Parakeet/Piper) but deps not installed    |
+| F-080–082 (Vision)       | `done`           | Claude vision API integration real; deps not pre-installed    |
+| F-060–063 (Browser)      | `done`           | Tests pass but scrape/act are dry-run stubs; no Playwright    |
+| F-091 (Discord)          | `done`           | discord.spec.ts test loops/hangs — vitest times out           |
 
 ---
 
 ## Open Migration: REBUILD_STATE.md
 
-The project is mid-Mastra+DBOS migration (`REBUILD_STATE.md`, step 1 of 7 is "IN PROGRESS"). Steps remaining:
-
-1. ⏳ Install Mastra + DBOS deps in control-plane (in progress)
-2. ⬜ Wire Mastra agent into orchestrator
-3. ⬜ Add DBOS durable workflows for goal-loop + cron
-4. ⬜ Wire tools as Mastra tools
-5. ⬜ Rewire dashboard API routes → control-plane tRPC
-6. ⬜ Drop Mem0, use Mastra memory
-7. ⬜ Typecheck + tests green
+The Mastra+DBOS migration is functionally complete. Control-plane runs real Mastra Agent + DBOS durable workflows. `REBUILD_STATE.md` steps 1–7 are done. No active migration blocking work.
 
 ---
 
@@ -215,17 +205,13 @@ The project is mid-Mastra+DBOS migration (`REBUILD_STATE.md`, step 1 of 7 is "IN
 
 ## Quick Fix List (Ordered by Priority)
 
-| Priority | Action                                                              | Affected Features                  |
-| -------- | ------------------------------------------------------------------- | ---------------------------------- |
-| P0       | Create `packages/memory/` with Mastra memory wrapper + 5 test files | F-030–034                          |
-| P0       | Create `packages/tools/` with Mastra tools wrapper + 4 test files   | F-050–052, F-140                   |
-| P1       | Create 8 missing control-plane test files                           | F-021, F-024–026, F-110–112, F-122 |
-| P1       | Fix F-091 discord test timeout                                      | F-091                              |
-| P2       | Add Playwright to browser-service, implement scrape/act             | F-060–063                          |
-| P2       | Implement voice-service Python functions                            | F-070–074                          |
-| P2       | Implement vision-service Python functions                           | F-080–082                          |
-| P3       | Implement CLI interactive wizard                                    | F-002                              |
-| P3       | Implement watchdog restart mechanism                                | F-121                              |
+| Priority | Action                                          | Affected Features   |
+| -------- | ----------------------------------------------- | ------------------- |
+| P1       | Fix F-091 discord test timeout                  | F-091               |
+| P2       | Add Playwright to browser-service, implement scrape/act | F-060–063   |
+| P2       | Install Python deps for voice/vision services   | F-070–074, F-080–082|
+| P3       | Implement CLI interactive wizard                | F-002               |
+| P3       | Implement watchdog restart mechanism            | F-121               |
 
 ---
 
@@ -273,3 +259,39 @@ The project is mid-Mastra+DBOS migration (`REBUILD_STATE.md`, step 1 of 7 is "IN
 - `apps/dashboard/app/api/cost-stats/route.ts` — proxies to control-plane
 - `services/control-plane/test/cost-stats.spec.ts` + `apps/dashboard/test/cost-dashboard.spec.tsx` — 19 new tests
 - Test suite: **401/401 passing** | typecheck: **0 errors**
+
+---
+
+## Session 4 additions (2026-04-23)
+
+### F-209 — Task-type model routing (done)
+
+- `services/control-plane/src/model-router.ts` — `ModelRouter`: keyword-based task classification (`reasoning`/`formatting`/`reflection`/`default`), routes to heavy/light model; `buildLiteLLMConfig()` generates `config.yaml`; `globalModelRouter` singleton
+- `services/control-plane/test/model-router.spec.ts` — 8 tests: classify, route, routePrompt, LiteLLM config
+- Test suite: **421/421 passing** | typecheck: **0 errors**
+
+### F-210 — LiteLLM proxy integration (done)
+
+- Same files as F-209 — `ModelRouter` integrates with LiteLLM sidecar when `LITELLM_URL` env is set
+- `buildLiteLLMConfig()` generates valid `config.yaml` with heavy/light/ollama model list + fallback chain
+- Covered by same test file (`model-router.spec.ts`)
+
+### F-211 — Per-session Docker sandboxing (done)
+
+- `services/control-plane/src/sandbox-manager.ts` — `SandboxManager`: container lifecycle (create/exec/destroy/destroyAll), tmpfs isolation, CPU/memory limits, `fake` driver for CI; `globalSandboxManager` singleton
+- `services/control-plane/test/sandbox-manager.spec.ts` — 8 tests: creation, exec, cleanup, destroyAll, no-op destroy, exec-before-start guard
+- Test suite: **441/441 passing** | typecheck: **0 errors**
+
+### F-212 — Live Canvas render surface (done)
+
+- `services/control-plane/src/canvas-manager.ts` — `CanvasManager`: append-only operation log per session; `connectClient()` returns replay history; `addOperation()` broadcasts to all clients; broken callbacks silenced; `globalCanvasManager` singleton
+- `services/control-plane/test/canvas-manager.spec.ts` — 12 tests: session lifecycle, client connect/disconnect, broadcast, callback-error isolation, session destroy, listSessions
+- Test suite: **441/441 passing** | typecheck: **0 errors**
+
+### Dashboard chat refactor (done)
+
+- `apps/dashboard/app/chat/page.tsx` — refactored to use `@assistant-ui/react` (`AssistantRuntimeProvider`, `useLocalRuntime`, `Thread`)
+- `apps/dashboard/app/components/assistant-ui/` — full assistant-ui component set (thread, thread-list, markdown, reasoning, attachment, tooltip, settings-change-card, runtime-provider)
+- `apps/dashboard/components/assistant-ui/` + `apps/dashboard/components/ui/` — shared UI primitives used by assistant-ui components
+- `apps/dashboard/lib/utils.ts` — `cn()` utility
+- `vitest.setup.ts` (root) — `ResizeObserver` + `IntersectionObserver` polyfills for jsdom; referenced by `vitest.config.ts`

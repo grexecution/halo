@@ -52,16 +52,20 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
+    const purge = req.nextUrl.searchParams.get('purge') === 'true'
     const db = getDb()
     const chat = db.prepare('SELECT id FROM chats WHERE id = ?').get(id)
     if (!chat) return NextResponse.json({ error: 'Chat not found' }, { status: 404 })
 
+    if (purge) {
+      db.prepare("DELETE FROM memories WHERE source = 'chat' AND source_id = ?").run(id)
+    }
     // chat_messages deleted via ON DELETE CASCADE
     db.prepare('DELETE FROM chats WHERE id = ?').run(id)
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, purged: purge })
   } catch (e) {
     return NextResponse.json(
       { error: `Failed to delete chat: ${e instanceof Error ? e.message : String(e)}` },

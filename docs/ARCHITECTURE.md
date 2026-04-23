@@ -145,6 +145,39 @@ The orchestrator never calls a handler directly — it always goes through `Perm
 
 Every service emits a heartbeat to the watchdog every 30s. If the watchdog doesn't hear from a service for 90s, it restarts the container and emits a `service.restarted` event that the orchestrator picks up. The orchestrator can then surface this to the user: "Hey, the browser container crashed and I restarted it."
 
+### SkillStore + SkillReflector (Phase 8)
+
+After each session the `SkillReflector` analyzes tool-call logs, asks the LLM to derive reusable skills (markdown `SKILL.md` files), and stores them via `SkillStore` keyed by `agentId`. On the next turn, `SkillStore.buildPromptBlock()` injects the relevant skills into the system prompt, enabling the agent to self-improve without manual prompting.
+
+- Source: `services/control-plane/src/skill-store.ts`, `skill-reflector.ts`
+
+### ModelRouter + LiteLLM proxy (Phase 8)
+
+`ModelRouter` classifies each incoming prompt by task type (`reasoning`, `formatting`, `reflection`, `default`) using keyword heuristics and selects a heavy or light model accordingly. When `LITELLM_URL` env var is set, all LLM calls are routed through a LiteLLM sidecar proxy at `${LITELLM_URL}/v1` which handles cost-based fallback, retries, and observability.
+
+- `buildLiteLLMConfig()` generates `litellm-config.yaml` on first run (CLI wizard).
+- Source: `services/control-plane/src/model-router.ts`
+
+### SandboxManager (Phase 8)
+
+`SandboxManager` creates a Docker container per agent sub-session for safe code execution. Each sandbox has:
+
+- Isolated tmpfs filesystem (no host fs access)
+- CPU and memory limits
+- No network by default
+- `fake` driver in test/CI environments (no Docker required)
+
+`globalSandboxManager` singleton tracks all active sandboxes and destroys them on process exit.
+
+- Source: `services/control-plane/src/sandbox-manager.ts`
+
+### CanvasManager (Phase 8)
+
+`CanvasManager` provides a real-time collaborative canvas surface for multi-agent visual output. Each canvas session has an append-only operation log. Clients call `connectClient()` to get the full replay history, then receive live broadcasts via callback on each `addOperation()`. Broken client callbacks are silenced (no throw). `globalCanvasManager` singleton.
+
+- Intended for: agent-generated diagrams, code maps, whiteboard planning
+- Source: `services/control-plane/src/canvas-manager.ts`
+
 ---
 
 ## 5. Permission middleware

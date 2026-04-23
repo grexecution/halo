@@ -6,7 +6,7 @@
 
 # Halo
 
-**Your personal AI agent. Self-hosted. Always on. Actually autonomous.**
+**What OpenClaw should have been.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-white.svg)](LICENSE)
 [![Node 22](https://img.shields.io/badge/Node-22_LTS-white.svg)](https://nodejs.org)
@@ -29,9 +29,9 @@ _One command. Fresh Ubuntu. Public dashboard URL. Login screen. Done._
 
 ## What is Halo?
 
-Halo is a self-hosted AI agent platform you deploy on your own server. It runs 24/7, remembers everything, executes tasks autonomously, and gives you a clean dashboard to manage it all — accessible from anywhere via a public URL.
+OpenClaw was the dream — a self-hosted AI agent that actually works. It crashed. It forgot things. It never shipped.
 
-Think of it as your personal AI employee: it codes, browses, automates workflows, chats on Telegram, and learns your preferences over time. Everything runs on your hardware. Your data never leaves your server.
+Halo is the fix. Self-hosted, always on, real memory, real autonomy. One command on a cheap server and you have a personal AI that codes, browses, automates, chats on Telegram, and learns who you are — running 24/7 on your hardware, not someone else's cloud.
 
 ---
 

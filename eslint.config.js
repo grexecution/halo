@@ -70,11 +70,14 @@ export default [
     },
   },
   {
-    ignores: [
-      '**/node_modules/**',
-      '**/dist/**',
-      '**/.next/**',
-      '**/*.d.ts',
-    ],
+    // Test scripts are CLI tools — console.log is intentional
+    files: ['tests/weekly/**/*.ts'],
+    rules: {
+      'no-console': 'off',
+      '@typescript-eslint/no-unused-vars': 'warn',
+    },
+  },
+  {
+    ignores: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/*.d.ts'],
   },
 ]

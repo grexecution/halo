@@ -1,8 +1,13 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Plus, Trash2, MessageSquare, Bot, PenLine, Check, X } from 'lucide-react'
-import { AssistantRuntimeProvider, useLocalRuntime, type ChatModelAdapter, type ChatModelRunResult } from '@assistant-ui/react'
+import {
+  AssistantRuntimeProvider,
+  useLocalRuntime,
+  type ChatModelAdapter,
+  type ChatModelRunResult,
+} from '@assistant-ui/react'
 import { Thread } from '@/app/components/assistant-ui/thread'
 import { ChatSidebarSkeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/cn'
@@ -77,7 +82,13 @@ function makeAdapter(
             const raw = line.slice(6).trim()
             if (!raw) continue
             try {
-              const evt = JSON.parse(raw) as { type: string; text?: string; name?: string; args?: unknown; message?: string }
+              const evt = JSON.parse(raw) as {
+                type: string
+                text?: string
+                name?: string
+                args?: unknown
+                message?: string
+              }
               if (evt.type === 'chunk' && evt.text) {
                 text += evt.text
                 yield { content: [{ type: 'text' as const, text }] }
@@ -131,8 +142,18 @@ interface SidebarProps {
 }
 
 function Sidebar({
-  sessions, sessionsFetched, activeId, onSelect, onNew, onDelete,
-  editingId, editTitle, onEditStart, onEditSave, onEditCancel, onEditChange,
+  sessions,
+  sessionsFetched,
+  activeId,
+  onSelect,
+  onNew,
+  onDelete,
+  editingId,
+  editTitle,
+  onEditStart,
+  onEditSave,
+  onEditCancel,
+  onEditChange,
 }: SidebarProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -173,11 +194,16 @@ function Sidebar({
               onClick={() => onSelect(s.id)}
               className={cn(
                 'group flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors rounded-lg mx-1',
-                activeId === s.id ? 'bg-gray-800 text-white' : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200',
+                activeId === s.id
+                  ? 'bg-gray-800 text-white'
+                  : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200',
               )}
             >
               {editingId === s.id ? (
-                <div className="flex-1 flex items-center gap-1 min-w-0" onClick={(e) => e.stopPropagation()}>
+                <div
+                  className="flex-1 flex items-center gap-1 min-w-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <input
                     ref={inputRef}
                     value={editTitle}
@@ -188,10 +214,16 @@ function Sidebar({
                     }}
                     className="flex-1 min-w-0 bg-gray-700 rounded px-2 py-0.5 text-xs text-white outline-none border border-gray-600 focus:border-blue-500"
                   />
-                  <button onClick={() => onEditSave(s.id)} className="text-green-400 hover:text-green-300 p-0.5">
+                  <button
+                    onClick={() => onEditSave(s.id)}
+                    className="text-green-400 hover:text-green-300 p-0.5"
+                  >
                     <Check size={11} />
                   </button>
-                  <button onClick={onEditCancel} className="text-gray-500 hover:text-gray-300 p-0.5">
+                  <button
+                    onClick={onEditCancel}
+                    className="text-gray-500 hover:text-gray-300 p-0.5"
+                  >
                     <X size={11} />
                   </button>
                 </div>
@@ -200,7 +232,10 @@ function Sidebar({
                   <span className="flex-1 min-w-0 text-xs truncate">{s.title || 'Untitled'}</span>
                   <div className="hidden group-hover:flex items-center gap-0.5 shrink-0">
                     <button
-                      onClick={(e) => { e.stopPropagation(); onEditStart(s.id, s.title) }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onEditStart(s.id, s.title)
+                      }}
                       className="p-1 rounded hover:bg-gray-700 text-gray-500 hover:text-gray-300 transition-colors"
                     >
                       <PenLine size={10} />
@@ -258,7 +293,9 @@ function DeleteModal({
             className="w-full text-left px-3 py-2.5 rounded-lg bg-red-950/60 hover:bg-red-900/60 border border-red-800/40 text-xs text-white transition-colors"
           >
             <span className="font-medium text-red-300">Remove + purge memory</span>
-            <p className="text-red-400/70 mt-0.5">Also deletes memories tied to this conversation</p>
+            <p className="text-red-400/70 mt-0.5">
+              Also deletes memories tied to this conversation
+            </p>
           </button>
           <button
             onClick={onCancel}
@@ -284,7 +321,9 @@ export default function ChatPage() {
 
   // Ref so the adapter closure can read/write current session id without stale closure
   const sessionIdRef = useRef<string | null>(activeSessionId)
-  useEffect(() => { sessionIdRef.current = activeSessionId }, [activeSessionId])
+  useEffect(() => {
+    sessionIdRef.current = activeSessionId
+  }, [activeSessionId])
 
   // ── Fetch sessions ──────────────────────────────────────────────────────
   const fetchSessions = useCallback(async () => {
@@ -299,7 +338,9 @@ export default function ChatPage() {
     }
   }, [])
 
-  useEffect(() => { void fetchSessions() }, [fetchSessions])
+  useEffect(() => {
+    void fetchSessions()
+  }, [fetchSessions])
 
   // ── Session selection ───────────────────────────────────────────────────
   function selectSession(id: string) {
@@ -346,14 +387,17 @@ export default function ChatPage() {
 
   // ── Edit title ──────────────────────────────────────────────────────────
   async function saveTitle(id: string) {
-    if (!editTitle.trim()) { setEditingId(null); return }
+    if (!editTitle.trim()) {
+      setEditingId(null)
+      return
+    }
     try {
       await fetch(`/api/chats/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: editTitle.trim() }),
       })
-      setSessions((prev) => prev.map((s) => s.id === id ? { ...s, title: editTitle.trim() } : s))
+      setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, title: editTitle.trim() } : s)))
     } finally {
       setEditingId(null)
     }
@@ -377,7 +421,10 @@ export default function ChatPage() {
             onDelete={requestDelete}
             editingId={editingId}
             editTitle={editTitle}
-            onEditStart={(id, title) => { setEditingId(id); setEditTitle(title) }}
+            onEditStart={(id, title) => {
+              setEditingId(id)
+              setEditTitle(title)
+            }}
             onEditSave={saveTitle}
             onEditCancel={() => setEditingId(null)}
             onEditChange={setEditTitle}

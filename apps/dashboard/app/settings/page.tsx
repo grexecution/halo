@@ -1543,6 +1543,165 @@ function AboutTab() {
   )
 }
 
+// ---- Tab: Updates ----
+
+function UpdateTab() {
+  const [status, setStatus] = useState<{
+    upToDate: boolean
+    commitsAvailable: number
+    currentVersion: string
+    latestVersion: string
+    error?: string
+  } | null>(null)
+  const [checking, setChecking] = useState(false)
+  const [updating, setUpdating] = useState(false)
+  const [log, setLog] = useState<string[]>([])
+  const [done, setDone] = useState(false)
+
+  const CONTROL_PLANE = process.env['NEXT_PUBLIC_CONTROL_PLANE_URL'] ?? 'http://localhost:3001'
+
+  async function checkForUpdates() {
+    setChecking(true)
+    setStatus(null)
+    try {
+      const res = await fetch(`${CONTROL_PLANE}/api/update/check`)
+      const data = (await res.json()) as typeof status
+      setStatus(data)
+    } catch {
+      setStatus({
+        upToDate: true,
+        commitsAvailable: 0,
+        currentVersion: 'unknown',
+        latestVersion: 'unknown',
+        error: 'Could not reach control plane',
+      })
+    }
+    setChecking(false)
+  }
+
+  async function applyUpdate() {
+    setUpdating(true)
+    setLog([])
+    setDone(false)
+    try {
+      const res = await fetch(`${CONTROL_PLANE}/api/update/apply`, { method: 'POST' })
+      const reader = res.body?.getReader()
+      if (!reader) return
+      const decoder = new TextDecoder()
+      while (true) {
+        const { done: streamDone, value } = await reader.read()
+        if (streamDone) break
+        const text = decoder.decode(value)
+        const lines = text.split('\n').filter((l) => l.startsWith('data: '))
+        for (const line of lines) {
+          const payload = JSON.parse(line.slice(6)) as { msg: string }
+          if (payload.msg === 'done') {
+            setDone(true)
+          } else {
+            setLog((prev) => [...prev, payload.msg])
+          }
+        }
+      }
+    } catch (err) {
+      setLog((prev) => [...prev, `Error: ${err instanceof Error ? err.message : String(err)}`])
+    }
+    setUpdating(false)
+  }
+
+  return (
+    <div className="space-y-6 pt-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium">Check for Updates</CardTitle>
+          <CardDescription className="text-xs">
+            Pull the latest version from GitHub and restart containers automatically.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void checkForUpdates()}
+              disabled={checking || updating}
+            >
+              <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', checking && 'animate-spin')} />
+              {checking ? 'Checking...' : 'Check for Updates'}
+            </Button>
+            {status && !checking && (
+              <span
+                className={cn('text-xs', status.upToDate ? 'text-green-400' : 'text-amber-400')}
+              >
+                {status.upToDate
+                  ? `Up to date (${status.currentVersion})`
+                  : `${status.commitsAvailable} update${status.commitsAvailable !== 1 ? 's' : ''} available`}
+              </span>
+            )}
+          </div>
+
+          {status && !status.upToDate && (
+            <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-amber-400 font-medium">
+                  {status.commitsAvailable} new commit{status.commitsAvailable !== 1 ? 's' : ''} on
+                  main
+                </div>
+                <div className="text-xs text-gray-500">
+                  {status.currentVersion} → {status.latestVersion}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => void applyUpdate()}
+                disabled={updating}
+                className="bg-amber-600 hover:bg-amber-700 text-white border-0"
+              >
+                <Terminal className="h-3.5 w-3.5 mr-1.5" />
+                {updating ? 'Updating...' : 'Apply Update & Restart'}
+              </Button>
+            </div>
+          )}
+
+          {log.length > 0 && (
+            <div className="rounded-lg border border-border/50 bg-muted/20 p-3 font-mono text-xs space-y-1 max-h-48 overflow-y-auto">
+              {log.map((line, i) => (
+                <div
+                  key={i}
+                  className={cn('text-gray-300', line.startsWith('Error') && 'text-red-400')}
+                >
+                  {'> '}
+                  {line}
+                </div>
+              ))}
+              {done && (
+                <div className="text-green-400 font-medium pt-1">
+                  ✓ Update complete — containers restarting
+                </div>
+              )}
+            </div>
+          )}
+
+          {status?.error && <p className="text-xs text-red-400">{status.error}</p>}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium">Auto-Update</CardTitle>
+          <CardDescription className="text-xs">
+            Automatically apply updates when a new version is available (checks every 24h).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-muted-foreground">
+            Coming soon — for now, use the manual check above.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 // ---- Main Page ----
 
 export default function SettingsPage() {
@@ -1599,6 +1758,7 @@ export default function SettingsPage() {
             <TabsTrigger value="telemetry">Telemetry</TabsTrigger>
             <TabsTrigger value="expose">Expose</TabsTrigger>
             <TabsTrigger value="build-health">Build Health</TabsTrigger>
+            <TabsTrigger value="updates">Updates</TabsTrigger>
             <TabsTrigger value="about">About</TabsTrigger>
           </TabsList>
 
@@ -1652,6 +1812,10 @@ export default function SettingsPage() {
 
           <TabsContent value="build-health">
             <BuildHealthTab />
+          </TabsContent>
+
+          <TabsContent value="updates">
+            <UpdateTab />
           </TabsContent>
 
           <TabsContent value="about">

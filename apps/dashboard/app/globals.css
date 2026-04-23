@@ -5,6 +5,51 @@
 /* ── assistant-ui markdown styles ──────────────────────────────────────── */
 @import "@assistant-ui/react-markdown/styles/dot.css";
 
+/* ── shadcn / assistant-ui CSS variables (dark theme) ──────────────────── */
+@layer base {
+  :root {
+    --background: 224 71% 4%;
+    --foreground: 213 31% 91%;
+
+    --card: 224 71% 4%;
+    --card-foreground: 213 31% 91%;
+
+    --popover: 224 71% 4%;
+    --popover-foreground: 215 20.2% 65.1%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 1.2%;
+
+    --secondary: 222.2 47.4% 11.2%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 223 47% 11%;
+    --muted-foreground: 215.4 16.3% 56.9%;
+
+    --accent: 216 34% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 216 34% 17%;
+    --input: 216 34% 17%;
+    --ring: 216 34% 17%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
 /* ── skeleton shimmer ───────────────────────────────────────────────────── */
 @keyframes pulse {
   0%, 100% { opacity: 1; }
@@ -24,4 +69,11 @@
 /* Apply subtly to every main page body so route transitions don't flicker */
 main {
   animation: fadeIn 0.15s ease-out both;
+}
+
+/* ── syntax highlighting overrides for dark theme ───────────────────────── */
+pre code.hljs,
+pre[class*="language-"] {
+  background: transparent !important;
+  padding: 0 !important;
 }

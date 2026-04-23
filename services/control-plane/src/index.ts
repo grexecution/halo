@@ -592,6 +592,74 @@ app.get<{ Params: { name: string } }>('/api/skills/:name/credentials', async (re
 })
 
 // ----------------------------------------------------------------
+// Update endpoint — git pull + docker compose pull + up
+// ----------------------------------------------------------------
+
+app.get('/api/update/check', async () => {
+  const { exec } = await import('child_process')
+  const { promisify } = await import('util')
+  const execAsync = promisify(exec)
+  try {
+    // Fetch latest commits without merging
+    await execAsync('git fetch origin main', { cwd: process.cwd() })
+    const { stdout: behind } = await execAsync('git rev-list HEAD..origin/main --count', {
+      cwd: process.cwd(),
+    })
+    const { stdout: currentSha } = await execAsync('git rev-parse --short HEAD', {
+      cwd: process.cwd(),
+    })
+    const { stdout: latestSha } = await execAsync('git rev-parse --short origin/main', {
+      cwd: process.cwd(),
+    })
+    const commitsAvailable = parseInt(behind.trim(), 10)
+    return {
+      upToDate: commitsAvailable === 0,
+      commitsAvailable,
+      currentVersion: currentSha.trim(),
+      latestVersion: latestSha.trim(),
+    }
+  } catch {
+    return {
+      upToDate: true,
+      commitsAvailable: 0,
+      currentVersion: 'unknown',
+      latestVersion: 'unknown',
+      error: 'git not available',
+    }
+  }
+})
+
+app.post('/api/update/apply', async (_, reply) => {
+  const { exec } = await import('child_process')
+  const { promisify } = await import('util')
+  const execAsync = promisify(exec)
+
+  reply.header('Content-Type', 'text/event-stream')
+  reply.header('Cache-Control', 'no-cache')
+  reply.header('Connection', 'keep-alive')
+
+  const send = (msg: string) => reply.raw.write(`data: ${JSON.stringify({ msg })}\n\n`)
+
+  try {
+    send('Pulling latest code...')
+    await execAsync('git pull origin main', { cwd: process.cwd() })
+    send('Code updated.')
+
+    send('Pulling new Docker images...')
+    await execAsync('docker compose pull', { cwd: process.cwd() })
+    send('Images updated.')
+
+    send('Restarting containers...')
+    await execAsync('docker compose up -d', { cwd: process.cwd() })
+    send('done')
+  } catch (err) {
+    send(`error: ${err instanceof Error ? err.message : String(err)}`)
+  }
+
+  reply.raw.end()
+})
+
+// ----------------------------------------------------------------
 // Start
 // ----------------------------------------------------------------
 

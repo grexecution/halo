@@ -38,6 +38,7 @@ import {
   TabsContent,
   cn,
 } from '../components/ui/index'
+import { TableSkeleton } from '../components/ui/skeleton'
 
 // ---- Types ----
 
@@ -184,7 +185,18 @@ function MessagingTab() {
       </div>
 
       {loading ? (
-        <p className="text-xs text-gray-500">Checking bot status…</p>
+        <div className="space-y-2">
+          {[0, 1].map((i) => (
+            <div
+              key={i}
+              className="rounded-lg border border-gray-800 p-3 flex items-center gap-3 animate-pulse"
+            >
+              <div className="h-2 w-2 rounded-full bg-gray-700" />
+              <div className="h-3 w-32 rounded bg-gray-800" />
+              <div className="h-3 w-20 rounded bg-gray-700 ml-auto" />
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="space-y-3">
           {bots.map((bot) => {
@@ -1384,7 +1396,7 @@ function BuildHealthTab() {
         <CardContent>
           <div data-testid="regressions-section">
             {loading ? (
-              <p className="text-xs text-gray-600">Loading…</p>
+              <TableSkeleton rows={3} cols={3} />
             ) : regressions.length === 0 ? (
               <p className="text-xs text-green-400" data-testid="no-regressions">
                 No regressions detected
@@ -1414,7 +1426,7 @@ function BuildHealthTab() {
         <CardContent>
           <div data-testid="nightly-section">
             {loading ? (
-              <p className="text-xs text-gray-600">Loading…</p>
+              <TableSkeleton rows={4} cols={3} />
             ) : nightly.length === 0 ? (
               <p className="text-xs text-gray-600">No nightly runs recorded yet</p>
             ) : (

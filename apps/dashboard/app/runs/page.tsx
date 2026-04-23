@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { TableSkeleton, StatBannerSkeleton } from '../components/ui/skeleton'
 
 interface AgentRun {
   id: string
@@ -101,8 +102,10 @@ export default function RunsPage() {
       </div>
 
       {/* Stats banner */}
-      {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      {loading ? (
+        <StatBannerSkeleton count={4} />
+      ) : stats ? (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 animate-fade-in">
           {[
             { label: 'Total runs', value: stats.total },
             { label: 'Completed', value: stats.completed },
@@ -115,7 +118,7 @@ export default function RunsPage() {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
 
       {/* Agent filter */}
       {agentIds.length > 1 && (
@@ -148,7 +151,7 @@ export default function RunsPage() {
 
       {/* Runs list */}
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-gray-600">Loading…</div>
+        <TableSkeleton rows={6} cols={5} />
       ) : runs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-gray-600 gap-3">
           <span className="text-4xl">🏃</span>

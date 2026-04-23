@@ -13,6 +13,7 @@ import {
   Terminal,
 } from 'lucide-react'
 import { Button, EmptyState, cn } from '../components/ui/index'
+import { ChatSidebarSkeleton } from '../components/ui/skeleton'
 
 interface ActiveWorkspace {
   id: string
@@ -171,6 +172,7 @@ interface Model {
 
 export default function ChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [sessionsFetched, setSessionsFetched] = useState(false)
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -226,6 +228,8 @@ export default function ChatPage() {
       setSessions(data.sessions ?? [])
     } catch {
       setSessions([])
+    } finally {
+      setSessionsFetched(true)
     }
   }
 
@@ -467,7 +471,9 @@ export default function ChatPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto py-2">
-          {sessions.length === 0 ? (
+          {!sessionsFetched ? (
+            <ChatSidebarSkeleton />
+          ) : sessions.length === 0 ? (
             <div className="px-3 py-8 text-center">
               <p className="text-xs text-gray-600">No conversations yet</p>
             </div>

@@ -12,3 +12,11 @@ export { Dialog } from './dialog'
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'
 export { EmptyState } from './empty-state'
 export { StatusDot } from './status-dot'
+export {
+  Skeleton,
+  TableSkeleton,
+  CardGridSkeleton,
+  StatBannerSkeleton,
+  ChatSidebarSkeleton,
+  TextSkeleton,
+} from './skeleton'

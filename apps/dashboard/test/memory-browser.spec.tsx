@@ -2,7 +2,7 @@
  * F-014: Memory browser
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import MemoryPage from '../app/memory/page.js'
 
 beforeEach(() => {
@@ -19,10 +19,10 @@ describe('F-014: Memory browser', () => {
     expect(screen.getByTestId('memory-search-button')).toBeDefined()
   })
 
-  it('shows empty results list initially', () => {
+  it('shows empty state after load with no results', async () => {
     render(<MemoryPage />)
-    const list = screen.getByTestId('memory-results')
-    expect(list.children.length).toBe(0)
+    // Wait for initial fetch to complete — empty state replaces skeleton
+    await waitFor(() => expect(screen.getByTestId('no-results')).toBeDefined())
   })
 
   it('updates query state when typing', () => {

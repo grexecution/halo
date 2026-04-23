@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Badge, EmptyState, Input, Label, Select, Switch, cn } from '../components/ui/index'
+import { TableSkeleton } from '../components/ui/skeleton'
 import { RefreshCw } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -197,7 +198,8 @@ export default function LogsPage() {
       </div>
 
       {/* Analytics banner — computed from current log set */}
-      {logs.length > 0 &&
+      {!loading &&
+        logs.length > 0 &&
         (() => {
           const totalTokens = logs.reduce((s, l) => s + (l.tokenCount ?? 0), 0)
           const totalCost = logs.reduce((s, l) => s + (l.costUsd ?? 0), 0)
@@ -228,7 +230,9 @@ export default function LogsPage() {
         })()}
 
       {/* Log table */}
-      {!loading && logs.length === 0 ? (
+      {loading ? (
+        <TableSkeleton rows={8} cols={6} />
+      ) : logs.length === 0 ? (
         <EmptyState
           title="No logs yet"
           description="Logs appear here once the agent processes a message."

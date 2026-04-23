@@ -1639,8 +1639,37 @@ export default function ConnectorsPage() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <p className="text-gray-500 text-sm">Loading…</p>
+      <div className="flex flex-col h-full">
+        {/* Tab bar skeleton */}
+        <div className="flex items-end gap-0 border-b border-gray-800 px-6 bg-gray-950 shrink-0 py-3">
+          {['Models', 'Plugins', 'MCPs', 'Skills'].map((t) => (
+            <div key={t} className="px-5 py-1">
+              <div className="h-3 w-14 rounded bg-gray-800/60 animate-pulse" />
+            </div>
+          ))}
+        </div>
+        {/* Card grid skeleton */}
+        <div className="flex-1 overflow-auto p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-gray-800 p-4 space-y-3 animate-pulse"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-gray-800/60" />
+                  <div className="space-y-1 flex-1">
+                    <div className="h-4 w-1/2 rounded bg-gray-800/60" />
+                    <div className="h-3 w-1/3 rounded bg-gray-700/40" />
+                  </div>
+                </div>
+                <div className="h-3 w-full rounded bg-gray-800/60" />
+                <div className="h-3 w-3/4 rounded bg-gray-700/40" />
+                <div className="h-8 w-24 rounded-lg bg-gray-800/60 mt-2" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }

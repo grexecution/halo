@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { CardGridSkeleton } from '../components/ui/skeleton'
 
 interface KnowledgeDoc {
   id: string
@@ -233,7 +234,7 @@ export default function KnowledgePage() {
 
       {/* Docs list */}
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-gray-600">Loading…</div>
+        <CardGridSkeleton count={6} cols={3} />
       ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-gray-600 gap-3">
           <span className="text-4xl">📚</span>

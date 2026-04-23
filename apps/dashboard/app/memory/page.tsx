@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Brain, Trash2, ChevronDown, ChevronUp, Search, X } from 'lucide-react'
 import { Button, Badge, Input, Select, Card, CardContent, EmptyState } from '../components/ui/index'
+import { TableSkeleton, StatBannerSkeleton } from '../components/ui/skeleton'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -146,6 +147,7 @@ export default function MemoryPage() {
   const [total, setTotal] = useState(0)
   const [stats, setStats] = useState<MemoryStats>({ bySource: {} })
   const [isSearching, setIsSearching] = useState(false)
+  const [initialLoadDone, setInitialLoadDone] = useState(false)
   const [offset, setOffset] = useState(0)
 
   const [query, setQuery] = useState('')
@@ -188,7 +190,7 @@ export default function MemoryPage() {
 
   // Initial load
   useEffect(() => {
-    void fetchMemories('', '', '', 0, false)
+    void fetchMemories('', '', '', 0, false).then(() => setInitialLoadDone(true))
   }, [fetchMemories])
 
   // Debounced refetch when filters change
@@ -236,8 +238,13 @@ export default function MemoryPage() {
         <h1 className="text-2xl font-bold text-white mb-4">Memory</h1>
 
         {/* Stat cards */}
+        {!initialLoadDone ? (
+          <div className="flex gap-3">
+            <StatBannerSkeleton count={3} />
+          </div>
+        ) : null}
         <div className="flex items-center gap-3 flex-wrap">
-          <StatCard label="Total memories" value={total} />
+          {initialLoadDone && <StatCard label="Total memories" value={total} />}
           {topSources.map(([source, count]) => (
             <StatCard key={source} label={source} value={count} />
           ))}
@@ -303,15 +310,14 @@ export default function MemoryPage() {
         </Button>
       </div>
 
-      {/* Searching indicator */}
-      {isSearching && (
-        <p data-testid="searching-indicator" className="text-xs text-gray-600">
-          Searching...
-        </p>
-      )}
-
       {/* Results */}
-      {!isSearching && results.length === 0 ? (
+      {isSearching && !initialLoadDone ? (
+        <TableSkeleton rows={5} cols={4} />
+      ) : isSearching ? (
+        <p data-testid="searching-indicator" className="text-xs text-gray-600 animate-pulse">
+          Searching…
+        </p>
+      ) : results.length === 0 ? (
         <div data-testid="no-results">
           <EmptyState
             icon={<Brain size={36} />}

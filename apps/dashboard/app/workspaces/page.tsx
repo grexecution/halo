@@ -24,6 +24,7 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { Button, Switch, EmptyState, cn } from '../components/ui/index'
+import { Skeleton } from '../components/ui/skeleton'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -765,6 +766,7 @@ function WorkspaceCard({ workspace, active, onClick }: WorkspaceCardProps) {
 
 export default function WorkspacesPage() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  const [workspacesFetched, setWorkspacesFetched] = useState(false)
   const [selected, setSelected] = useState<string | null>(null)
   const [showPicker, setShowPicker] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -774,6 +776,7 @@ export default function WorkspacesPage() {
     const res = await fetch('/api/workspaces')
     const data = (await res.json()) as { workspaces: Workspace[] }
     setWorkspaces(data.workspaces ?? [])
+    setWorkspacesFetched(true)
   }, [])
 
   useEffect(() => {
@@ -864,7 +867,13 @@ export default function WorkspacesPage() {
 
         {/* List */}
         <div className="flex-1 overflow-y-auto">
-          {workspaces.length === 0 && !showPicker ? (
+          {!workspacesFetched ? (
+            <div className="space-y-1 px-2 pt-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded-lg" />
+              ))}
+            </div>
+          ) : workspaces.length === 0 && !showPicker ? (
             <div className="px-4 py-8 text-center">
               <p className="text-xs text-gray-700">No workspaces yet</p>
             </div>

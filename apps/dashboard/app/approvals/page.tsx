@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { TableSkeleton } from '../components/ui/skeleton'
 
 interface Approval {
   id: string
@@ -114,7 +115,7 @@ export default function ApprovalsPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-gray-600">Loading…</div>
+        <TableSkeleton rows={5} cols={5} />
       ) : approvals.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-gray-600 gap-3">
           <span className="text-4xl">{filter === 'pending' ? '✅' : '📋'}</span>
@@ -125,7 +126,7 @@ export default function ApprovalsPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-3 animate-fade-in">
           {approvals.map((a) => (
             <div key={a.id} className={`border rounded-xl p-4 ${STATUS_STYLES[a.status]}`}>
               <div className="flex items-start justify-between gap-4">

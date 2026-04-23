@@ -19,6 +19,7 @@ import {
   EmptyState,
   StatusDot,
 } from '../components/ui/index'
+import { TableSkeleton } from '../components/ui/skeleton'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -392,7 +393,9 @@ function GoalsTab() {
       </div>
 
       {/* List */}
-      {!loading && goals.length === 0 ? (
+      {loading ? (
+        <TableSkeleton rows={4} cols={5} />
+      ) : goals.length === 0 ? (
         <EmptyState
           icon={<Target size={36} />}
           title="No goals yet"
@@ -634,7 +637,9 @@ function CronJobsTab() {
       </div>
 
       {/* List */}
-      {!loading && jobs.length === 0 ? (
+      {loading ? (
+        <TableSkeleton rows={3} cols={4} />
+      ) : jobs.length === 0 ? (
         <EmptyState
           icon={<Clock size={36} />}
           title="No cron jobs yet"

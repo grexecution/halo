@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { CardGridSkeleton } from '../components/ui/skeleton'
 import { Plus, Pencil, Trash2, Bot, ChevronDown, ChevronUp } from 'lucide-react'
 import {
   cn,
@@ -480,6 +481,7 @@ function AgentCard({ agent, isPrimary, availableModels, onEdit, onDelete }: Agen
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([])
+  const [agentsFetched, setAgentsFetched] = useState(false)
   const [availableModels, setAvailableModels] = useState<AvailableModel[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null)
@@ -489,6 +491,7 @@ export default function AgentsPage() {
       .then((r) => r.json())
       .then((data) => setAgents((data as { agents: Agent[] }).agents))
       .catch(() => setAgents(INITIAL_AGENTS))
+      .finally(() => setAgentsFetched(true))
 
     fetch('/api/models')
       .then((r) => r.json())
@@ -593,7 +596,9 @@ export default function AgentsPage() {
         </Button>
       </div>
 
-      {agents.length === 0 ? (
+      {!agentsFetched ? (
+        <CardGridSkeleton count={3} cols={3} />
+      ) : agents.length === 0 ? (
         <EmptyState
           icon={<Bot size={36} />}
           title="No agents yet"

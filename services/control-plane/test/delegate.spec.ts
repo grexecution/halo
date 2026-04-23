@@ -5,7 +5,7 @@
  * via @mention syntax, and that the routing result contains the correct agent handle.
  */
 import { describe, it, expect } from 'vitest'
-import { parseMention } from '../src/sub-agent.js'
+import { parseMention } from '@open-greg/messaging'
 import { AgentOrchestrator } from '../src/orchestrator.js'
 import type { AgentConfig } from '@open-greg/agent-core'
 

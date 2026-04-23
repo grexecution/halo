@@ -35,6 +35,18 @@ export interface RoutedMessage {
   reason: 'mention' | 'direct' | 'default'
 }
 
+export interface MentionResult {
+  handle: string
+  task: string
+}
+
+/** Parse "@handle task" syntax from a raw message string. */
+export function parseMention(text: string): MentionResult | null {
+  const match = text.match(/^@(\w+)\s+(.+)$/)
+  if (!match) return null
+  return { handle: match[1] ?? '', task: match[2]?.trim() ?? '' }
+}
+
 export function routeMessage(msg: IncomingMessage, config: RouterConfig): RoutedMessage | null {
   const { agents, defaultAgentId } = config
 

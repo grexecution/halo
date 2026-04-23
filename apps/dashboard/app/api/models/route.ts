@@ -3,6 +3,7 @@ import { readSettings, writeSettings } from '../settings/store'
 import type { LLMModel } from '../settings/store'
 import { getDb } from '../../lib/db'
 import { ALL_PLUGINS } from '@open-greg/connectors/plugins'
+import { getOllamaModels } from '../../lib/ollama'
 
 export interface ModelEntry {
   id: string
@@ -17,29 +18,13 @@ export interface ModelEntry {
   isDiscovered?: boolean
 }
 
-const OLLAMA_URL = process.env['OLLAMA_URL'] ?? 'http://localhost:11434'
-
 export async function GET() {
   const settings = readSettings()
 
   // ── 1. Discover live Ollama models ──────────────────────────────────────────
-  let liveOllamaNames: string[] = []
-  let ollamaReachable = false
-
-  try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 3000)
-    const res = await fetch(`${OLLAMA_URL}/api/tags`, { signal: controller.signal })
-    clearTimeout(timeout)
-
-    if (res.ok) {
-      ollamaReachable = true
-      const data = (await res.json()) as { models?: Array<{ name: string }> }
-      liveOllamaNames = (data.models ?? []).map((m) => m.name)
-    }
-  } catch {
-    // Ollama unreachable — fall through
-  }
+  const liveOllamaModels = await getOllamaModels()
+  const liveOllamaNames = liveOllamaModels.map((m) => m.name)
+  const ollamaReachable = liveOllamaNames.length > 0
 
   // ── 2. Build result from configured models (single source of truth) ─────────
   const result: ModelEntry[] = settings.llm.models.map((m) => ({

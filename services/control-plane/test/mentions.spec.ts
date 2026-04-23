@@ -2,7 +2,7 @@
  * F-022: Sub-agent mentions in chat
  */
 import { describe, it, expect } from 'vitest'
-import { parseMention } from '../src/sub-agent.js'
+import { parseMention } from '@open-greg/messaging'
 
 describe('F-022: Sub-agent mentions', () => {
   it('parses @handle mention from message text', () => {

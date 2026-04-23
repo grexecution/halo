@@ -1,6 +1,4 @@
 import Fastify from 'fastify'
-import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify'
-import { appRouter } from './trpc-router.js'
 import { AgentOrchestrator } from './orchestrator.js'
 import { resetAgent } from './mastra-instance.js'
 import { initDBOS, shutdownDBOS, GoalWorkflow, CronWorkflow } from './dbos-workflows.js'
@@ -18,15 +16,7 @@ import type { ChannelId } from '@open-greg/messaging'
 const app = Fastify({ logger: true })
 
 // ----------------------------------------------------------------
-// tRPC — all procedures under /trpc
-// ----------------------------------------------------------------
-await app.register(fastifyTRPCPlugin, {
-  prefix: '/trpc',
-  trpcOptions: { router: appRouter },
-})
-
-// ----------------------------------------------------------------
-// REST convenience endpoints (used by dashboard fetch() calls)
+// REST endpoints (consumed by dashboard fetch() calls)
 // ----------------------------------------------------------------
 
 app.get('/health', async () => ({

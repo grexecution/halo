@@ -5,7 +5,7 @@
 import type { Message } from '@open-greg/agent-core'
 import { buildSystemPrompt } from '@open-greg/agent-core'
 import type { AgentConfig } from '@open-greg/agent-core'
-import { getAgent } from './mastra-instance.js'
+import { getAgent, getAgentForConfig } from './mastra-instance.js'
 import { SessionBudget } from './budget.js'
 import { StuckLoopDetector } from './stuck-detector.js'
 import {
@@ -52,7 +52,8 @@ export class AgentOrchestrator {
       return this.dryRunTurn(contextualPrompt, message, history, onChunk)
     }
 
-    const mastraAgent = getAgent()
+    const mastraAgent =
+      agent.model && agent.model !== 'auto' ? getAgentForConfig(agent) : getAgent()
     const budget = new SessionBudget()
     const stuckDetector = new StuckLoopDetector()
     const toolCallLog: Array<{ toolCall: string }> = []
@@ -90,7 +91,7 @@ export class AgentOrchestrator {
       // Check for stuck loops based on tool calls
       const toolCalls = await stream.toolCalls
       if (toolCalls) {
-        for (const tc of toolCalls) {
+        for (const tc of toolCalls as Array<{ payload: { toolName: string; args?: unknown } }>) {
           const toolName = tc.payload.toolName
           const toolArgs = tc.payload.args ?? {}
           toolCallLog.push({ toolCall: toolName })
@@ -113,7 +114,9 @@ export class AgentOrchestrator {
 
       return {
         content: fullText,
-        toolCalls: toolCalls?.map((tc) => ({
+        toolCalls: (
+          toolCalls as Array<{ payload: { toolName: string; args?: unknown } }> | undefined
+        )?.map((tc) => ({
           toolId: tc.payload.toolName,
           args: tc.payload.args ?? {},
           result: {},

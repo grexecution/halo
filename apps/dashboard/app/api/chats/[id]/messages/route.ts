@@ -18,57 +18,17 @@ import { getActiveWorkspaces } from '../../../workspaces/store'
 import { upsertMemory } from '../../../memory/store'
 import { getMemory } from '../../../../lib/memory'
 import { AGENT_ACTIONS_PROMPT, parseAgentActions } from '../../agent-utils'
+import { CONTROL_PLANE_URL, ANTHROPIC_API_KEY, ANTHROPIC_DEFAULT_MODEL } from '../../../../lib/env'
+import { callOllama, callAnthropic } from '../../../../lib/ollama'
+import { generateId } from '../../../../lib/utils'
+
+const LLM_PROVIDER = process.env['LLM_PROVIDER'] ?? (ANTHROPIC_API_KEY ? 'anthropic' : 'ollama')
 
 interface MessageRow {
   id: string
   role: string
   content: string
   created_at: string
-}
-
-const CONTROL_PLANE_URL = process.env['CONTROL_PLANE_URL'] ?? 'http://localhost:3001'
-const OLLAMA_URL = process.env['OLLAMA_URL'] ?? 'http://localhost:11434'
-const OLLAMA_MODEL = process.env['OLLAMA_MODEL'] ?? 'llama3.2'
-const ANTHROPIC_API_KEY = process.env['ANTHROPIC_API_KEY']
-const LLM_PROVIDER = process.env['LLM_PROVIDER'] ?? (ANTHROPIC_API_KEY ? 'anthropic' : 'ollama')
-
-// ---------------------------------------------------------------------------
-// Fallback non-streaming LLM calls (used when control-plane is down)
-// ---------------------------------------------------------------------------
-
-async function callOllama(
-  messages: Array<{ role: string; content: string }>,
-  model = OLLAMA_MODEL,
-): Promise<string> {
-  const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, messages, stream: false }),
-    signal: AbortSignal.timeout(60_000),
-  })
-  if (!res.ok) throw new Error(`Ollama error (${res.status}): ${(await res.text()).slice(0, 200)}`)
-  const data = (await res.json()) as { message?: { content: string } }
-  return data.message?.content ?? '(no response)'
-}
-
-async function callAnthropic(messages: Array<{ role: string; content: string }>): Promise<string> {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_API_KEY!,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: process.env['ANTHROPIC_MODEL'] ?? 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      messages,
-    }),
-    signal: AbortSignal.timeout(60_000),
-  })
-  if (!res.ok) throw new Error(`Anthropic error: ${(await res.text()).slice(0, 200)}`)
-  const data = (await res.json()) as { content?: Array<{ text: string }> }
-  return data.content?.[0]?.text ?? '(no response)'
 }
 
 // ---------------------------------------------------------------------------
@@ -86,7 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!chat) return NextResponse.json({ error: 'Chat not found' }, { status: 404 })
 
   const now = new Date().toISOString()
-  const userMsgId = `msg-${Date.now()}-user`
+  const userMsgId = generateId('msg-user')
 
   db.prepare(
     'INSERT INTO chat_messages (id, chat_id, role, content, created_at) VALUES (?, ?, ?, ?, ?)',
@@ -139,7 +99,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }
 
       let assistantContent = ''
-      const assistantMsgId = `msg-${Date.now()}-assistant`
+      const assistantMsgId = generateId('msg-assistant')
 
       try {
         // --- Try control-plane streaming ---
@@ -201,9 +161,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const msgs = [...historyForLLM, { role: 'user', content: body.message }]
         try {
           if (LLM_PROVIDER === 'anthropic' && ANTHROPIC_API_KEY) {
-            assistantContent = await callAnthropic(msgs)
+            assistantContent = await callAnthropic(msgs, ANTHROPIC_API_KEY, ANTHROPIC_DEFAULT_MODEL)
           } else {
-            assistantContent = await callOllama(msgs, body.model ?? OLLAMA_MODEL)
+            assistantContent = await callOllama(msgs, body.model)
           }
           // Emit full content as a single chunk so the UI gets something
           send({ type: 'chunk', text: assistantContent })

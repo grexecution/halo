@@ -12,6 +12,7 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { mkdirSync, existsSync, readFileSync } from 'node:fs'
 import { allMastraTools } from './mastra-tools.js'
+import type { AgentConfig } from '@open-greg/agent-core'
 
 const DIR = join(homedir(), '.open-greg')
 const MEMORY_DB_URL = `file:${join(DIR, 'memory.db')}`
@@ -143,4 +144,59 @@ export function getAgent(): Agent {
 export function resetAgent() {
   _agent = null
   _memory = null
+  _agentCache.clear()
+}
+
+// ---------------------------------------------------------------------------
+// Per-agent cache — keyed by agentId so each DB agent gets its own instance
+// ---------------------------------------------------------------------------
+
+const _agentCache = new Map<string, Agent>()
+
+/**
+ * Return (or build) an Agent whose model + instructions match the DB config.
+ * Falls back to the default model resolution if `cfg.model` is not recognised.
+ */
+export function getAgentForConfig(cfg: AgentConfig): Agent {
+  const cached = _agentCache.get(cfg.id)
+  if (cached) return cached
+
+  // Resolve the model — cfg.model is the raw modelId string from the DB
+  // (e.g. "claude-haiku-4-5-20251001", "llama3.2", "kimi-k2.5")
+  let model: ReturnType<typeof resolveModel>
+  try {
+    const anthropicKey = process.env['ANTHROPIC_API_KEY']
+    const ollamaUrl = process.env['OLLAMA_URL'] ?? 'http://localhost:11434'
+
+    if (cfg.model.startsWith('claude-')) {
+      model = createAnthropic({ apiKey: anthropicKey! })(
+        cfg.model as Parameters<ReturnType<typeof createAnthropic>>[0],
+      )
+    } else if (
+      cfg.model.startsWith('gpt-') ||
+      cfg.model.startsWith('o1') ||
+      cfg.model.startsWith('o3')
+    ) {
+      const openaiKey = process.env['OPENAI_API_KEY'] ?? ''
+      model = createOpenAI({ apiKey: openaiKey }).chat(cfg.model)
+    } else {
+      // Ollama or custom OpenAI-compatible
+      model = createOpenAI({ baseURL: `${ollamaUrl}/v1`, apiKey: 'ollama' }).chat(cfg.model)
+    }
+  } catch {
+    // Fall back to the default model if resolution fails
+    model = resolveModel()
+  }
+
+  const agent = new Agent({
+    id: cfg.id,
+    name: cfg.handle,
+    instructions: cfg.systemPrompt || SYSTEM_PROMPT,
+    model,
+    tools: allMastraTools,
+    memory: getMemory(),
+  })
+
+  _agentCache.set(cfg.id, agent)
+  return agent
 }

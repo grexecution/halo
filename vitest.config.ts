@@ -1,9 +1,17 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      // Maps @/ to the dashboard app root so imports like @/app/... resolve correctly
+      '@': path.resolve(__dirname, 'apps/dashboard'),
+    },
+  },
   test: {
+    setupFiles: ['./vitest.setup.ts'],
     include: [
       'packages/**/test/**/*.{spec,test,e2e}.ts',
       'packages/**/*.{spec,test}.ts',

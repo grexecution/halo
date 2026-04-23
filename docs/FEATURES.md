@@ -773,6 +773,34 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 **Acceptance:** Simple expression, console.log, multi-line, syntax error, runtime error, timeout, and isolation tests all pass. Tool is registered in `allMastraTools`.
 **Test:** `services/control-plane/test/execute-code.spec.ts`
 
+### F-209 — Task-type model routing
+
+**Status:** done · **Phase:** 8
+**Spec:** `ModelRouter` classifies a prompt by task type (`reasoning`, `formatting`, `reflection`, `default`) using keyword heuristics and returns the appropriate model ID (heavy or light). No LLM call required for routing.
+**Acceptance:** All four task types classify correctly. `route()` returns the right model and `useLiteLLM` flag. `routePrompt()` combines both steps. `globalModelRouter` singleton is exported.
+**Test:** `services/control-plane/test/model-router.spec.ts`
+
+### F-210 — LiteLLM proxy integration
+
+**Status:** done · **Phase:** 8
+**Spec:** When `LITELLM_URL` env var is set, `ModelRouter` routes all calls through a LiteLLM sidecar proxy at `${LITELLM_URL}/v1`. `buildLiteLLMConfig()` generates a valid `config.yaml` with heavy/light/ollama model list and fallback chain.
+**Acceptance:** `useLiteLLM=true` and `baseUrl` set when `litellmUrl` provided. Generated YAML contains all three model entries and fallback chain.
+**Test:** `services/control-plane/test/model-router.spec.ts`
+
+### F-211 — Per-session Docker sandboxing
+
+**Status:** done · **Phase:** 8
+**Spec:** `SandboxManager` creates isolated containers per agent sub-session. Each sandbox has its own tmpfs filesystem, CPU/memory limits, and no network access by default. In test/CI environments, a `fake` driver skips Docker. `globalSandboxManager` singleton tracks all active sandboxes and cleans up on exit.
+**Acceptance:** Sandbox creation, exec, cleanup, and `destroyAll` work in fake driver. `exec()` throws before `start()`. Destroy of unknown ID is a no-op. Singleton exported.
+**Test:** `services/control-plane/test/sandbox-manager.spec.ts`
+
+### F-212 — Live Canvas render surface
+
+**Status:** done · **Phase:** 8
+**Spec:** `CanvasManager` manages real-time collaborative canvas sessions. Sessions have an append-only operation log. `connectClient()` returns full history for replay. `addOperation()` persists the op and broadcasts to all connected clients. Broken client callbacks are silenced. `globalCanvasManager` singleton.
+**Acceptance:** Session creation, client connection/disconnection, operation broadcast, callback-error isolation, session destroy, and `listSessions()` snapshot counts all tested.
+**Test:** `services/control-plane/test/canvas-manager.spec.ts`
+
 ---
 
 ## Feature-test runner

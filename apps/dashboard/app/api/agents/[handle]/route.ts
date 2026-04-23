@@ -10,6 +10,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ hand
   return NextResponse.json({ agent })
 }
 
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ handle: string }> }) {
+  const { handle } = await params
+  const body = (await req.json()) as Partial<Agent>
+  const agent = upsertAgent({ handle, ...body } as Agent)
+  return NextResponse.json({ agent })
+}
+
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ handle: string }> },

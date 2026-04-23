@@ -1,4 +1,12 @@
 import type { NextConfig } from 'next'
+import withSerwistInit from '@serwist/next'
+
+const withSerwist = withSerwistInit({
+  swSrc: 'app/sw.ts',
+  swDest: 'public/sw.js',
+  // Don't fail the build if the SW source doesn't exist yet in CI
+  disable: process.env['NODE_ENV'] === 'test',
+})
 
 const nextConfig: NextConfig = {
   output: 'standalone',
@@ -15,4 +23,4 @@ const nextConfig: NextConfig = {
   ],
 }
 
-export default nextConfig
+export default withSerwist(nextConfig)

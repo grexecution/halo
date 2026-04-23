@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# When run via `curl | bash`, stdin is the pipe — not a TTY.
+# Detect this and re-exec ourselves from a real TTY so interactive
+# prompts (arrow keys etc.) work correctly.
+if [ ! -t 0 ]; then
+  # Download to a temp file and exec it directly so stdin is the terminal
+  TMP=$(mktemp /tmp/halo-install-XXXXXX.sh)
+  curl -fsSL "https://raw.githubusercontent.com/grexecution/halo/main/install.sh" -o "$TMP"
+  chmod +x "$TMP"
+  exec bash "$TMP" "$@"
+fi
+
 REPO="https://github.com/grexecution/halo"
 INSTALL_DIR="$HOME/halo"
 

@@ -133,10 +133,12 @@ Real-time collaborative whiteboard. Sessions persist to Postgres. Broadcast upda
 ### One command
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/grexecution/halo/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/grexecution/halo/main/install.sh -o install.sh && bash install.sh
 ```
 
 That's it. The script installs Node 22 and Docker if missing, clones the repo, and launches the setup wizard. Total time on a fresh Hetzner CX32: under 3 minutes.
+
+> **Note:** Download first, then run — don't pipe directly to bash. The wizard needs an interactive terminal for arrow-key selection, which doesn't work through a pipe.
 
 The wizard then asks 4 questions:
 

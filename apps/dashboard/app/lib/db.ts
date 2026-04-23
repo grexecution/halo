@@ -41,8 +41,8 @@ function bootstrapAuth(db: Database.Database): void {
   const hash = bcrypt.hashSync(password, 12)
   const secret = randomBytes(32).toString('hex')
   db.prepare(
-    `INSERT INTO auth (id, enabled, username, password_hash, totp_enabled, totp_secret, session_secret)
-     VALUES (1, 1, 'admin', ?, 0, '', ?)`,
+    `INSERT INTO auth (id, enabled, username, password_hash, totp_enabled, totp_secret, session_secret, must_change_password)
+     VALUES (1, 1, 'admin', ?, 0, '', ?, 1)`,
   ).run(hash, secret)
 }
 
@@ -198,7 +198,8 @@ function initSchema(db: Database.Database) {
       password_hash TEXT NOT NULL DEFAULT '',
       totp_enabled INTEGER NOT NULL DEFAULT 0,
       totp_secret TEXT NOT NULL DEFAULT '',
-      session_secret TEXT NOT NULL DEFAULT ''
+      session_secret TEXT NOT NULL DEFAULT '',
+      must_change_password INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS tunnel (
       id INTEGER PRIMARY KEY CHECK (id = 1),

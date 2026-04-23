@@ -53,9 +53,20 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Invalid TOTP code' }, { status: 401 })
     }
     const token = signSession(cfg.username, cfg.sessionSecret)
-    const res = NextResponse.json({ ok: true })
+    const res = NextResponse.json({ ok: true, mustChangePassword: cfg.mustChangePassword })
     res.cookies.set(SESSION_COOKIE, token, COOKIE_OPTS)
     return res
+  }
+
+  if (action === 'change-password') {
+    if (!requireSession(req, cfg))
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const newPassword = String(body.newPassword ?? '')
+    if (newPassword.length < 8)
+      return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
+    const hash = await hashPassword(newPassword)
+    writeAuthConfig({ ...cfg, passwordHash: hash, mustChangePassword: false })
+    return NextResponse.json({ ok: true })
   }
 
   if (action === 'logout') {

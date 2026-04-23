@@ -9,6 +9,7 @@ export interface AuthConfig {
   totpEnabled: boolean
   totpSecret: string
   sessionSecret: string
+  mustChangePassword: boolean
 }
 
 const DEFAULT: AuthConfig = {
@@ -18,13 +19,14 @@ const DEFAULT: AuthConfig = {
   totpEnabled: false,
   totpSecret: '',
   sessionSecret: generateSessionSecret(),
+  mustChangePassword: false,
 }
 
 export function readAuthConfig(): AuthConfig {
   const db = getDb()
   const row = db
     .prepare(
-      'SELECT enabled, username, password_hash, totp_enabled, totp_secret, session_secret FROM auth WHERE id = 1',
+      'SELECT enabled, username, password_hash, totp_enabled, totp_secret, session_secret, must_change_password FROM auth WHERE id = 1',
     )
     .get() as
     | {
@@ -34,6 +36,7 @@ export function readAuthConfig(): AuthConfig {
         totp_enabled: number
         totp_secret: string
         session_secret: string
+        must_change_password: number
       }
     | undefined
 
@@ -46,21 +49,23 @@ export function readAuthConfig(): AuthConfig {
     totpEnabled: row.totp_enabled === 1,
     totpSecret: row.totp_secret,
     sessionSecret: row.session_secret || DEFAULT.sessionSecret,
+    mustChangePassword: row.must_change_password === 1,
   }
 }
 
 export function writeAuthConfig(config: AuthConfig): void {
   const db = getDb()
   db.prepare(
-    `INSERT INTO auth (id, enabled, username, password_hash, totp_enabled, totp_secret, session_secret)
-     VALUES (1, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO auth (id, enabled, username, password_hash, totp_enabled, totp_secret, session_secret, must_change_password)
+     VALUES (1, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        enabled = excluded.enabled,
        username = excluded.username,
        password_hash = excluded.password_hash,
        totp_enabled = excluded.totp_enabled,
        totp_secret = excluded.totp_secret,
-       session_secret = excluded.session_secret`,
+       session_secret = excluded.session_secret,
+       must_change_password = excluded.must_change_password`,
   ).run(
     config.enabled ? 1 : 0,
     config.username,
@@ -68,6 +73,7 @@ export function writeAuthConfig(config: AuthConfig): void {
     config.totpEnabled ? 1 : 0,
     config.totpSecret,
     config.sessionSecret,
+    config.mustChangePassword ? 1 : 0,
   )
 }
 

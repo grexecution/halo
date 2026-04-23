@@ -265,3 +265,11 @@ The project is mid-Mastra+DBOS migration (`REBUILD_STATE.md`, step 1 of 7 is "IN
 - `services/voice-service/test/test_stt.py` — 12 STT tests; `test_tts.py` — 8 TTS tests; all 20 passing via Python unittest
 - Previous `NotImplementedError` stubs replaced with real subprocess + HTTP calls
 - JS test suite: **382/382 passing** unchanged
+
+### F-208 — Token cost dashboard (done)
+
+- `services/control-plane/src/cost-stats.ts` — CostTracker: session/tool/daily aggregation, globalCostTracker singleton
+- `apps/dashboard/app/cost/page.tsx` — cost dashboard page: summary cards, trend chart, tool table, session table
+- `apps/dashboard/app/api/cost-stats/route.ts` — proxies to control-plane
+- `services/control-plane/test/cost-stats.spec.ts` + `apps/dashboard/test/cost-dashboard.spec.tsx` — 19 new tests
+- Test suite: **401/401 passing** | typecheck: **0 errors**

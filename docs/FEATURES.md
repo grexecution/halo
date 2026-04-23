@@ -752,6 +752,13 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 **Acceptance:** Mistake recording, recurrence increment, drift threshold filtering, and prompt block drift section tests all pass.
 **Test:** `packages/memory/test/user-model.spec.ts`
 
+### F-208 — Real-time token cost dashboard
+
+**Status:** done · **Phase:** 8
+**Spec:** A `/cost` dashboard page showing 7-day spend trend (bar chart), cost by tool (table sorted by spend), recent sessions (table sorted by cost), and summary stats (total cost, total tokens, session count, tool count). Data fetched from `/api/cost-stats` backed by `CostTracker` in the control-plane.
+**Acceptance:** `CostTracker.getStats()` correctly aggregates sessions, tools, daily trend, filters by days window, sorts sessions/tools by cost. Dashboard renders summary cards, trend chart, tool table, session table, and empty states. All 19 new tests pass.
+**Test:** `services/control-plane/test/cost-stats.spec.ts` · `apps/dashboard/test/cost-dashboard.spec.tsx`
+
 ### F-207 — Voice pipeline real implementation
 
 **Status:** done · **Phase:** 8

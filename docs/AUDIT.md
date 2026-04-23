@@ -1,6 +1,6 @@
 # Architecture & Feature Audit
 
-_Last updated: 2026-04-22 (session 2). Auto-maintained by agents — update this file whenever feature status changes._
+_Last updated: 2026-04-23 (session 3). Auto-maintained by agents — update this file whenever feature status changes._
 
 ---
 
@@ -226,3 +226,15 @@ The project is mid-Mastra+DBOS migration (`REBUILD_STATE.md`, step 1 of 7 is "IN
 | P2       | Implement vision-service Python functions                           | F-080–082                          |
 | P3       | Implement CLI interactive wizard                                    | F-002                              |
 | P3       | Implement watchdog restart mechanism                                | F-121                              |
+
+---
+
+## Session 3 additions (2026-04-23)
+
+### F-200 / F-201 — Self-improving skills loop (done)
+
+- `services/control-plane/src/skill-store.ts` — SkillStore: writes/reads SKILL.md files per agent
+- `services/control-plane/src/skill-reflector.ts` — SkillReflector: LLM-backed tool-call reflection
+- `services/control-plane/test/skill-loop.spec.ts` — 11 tests, all passing
+- `SkillStore.buildPromptBlock()` used by orchestrator to inject skills into system prompt
+- Test suite: **347/347 passing** | typecheck: **0 errors**

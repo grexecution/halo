@@ -708,6 +708,24 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 
 ---
 
+## Category: Self-improvement & advanced memory
+
+### F-200 — Autonomous skill generation
+
+**Status:** done · **Phase:** 8
+**Spec:** After a session, the orchestrator reflects on the tool-call log and extracts a reusable procedure, persisting it as a SKILL.md file under `~/.open-greg/skills/<agentId>/`.
+**Acceptance:** `SkillReflector.reflect()` calls the generate function with the tool-call log and writes the result to `SkillStore`. Empty logs are ignored. LLM failures are swallowed (best-effort).
+**Test:** `services/control-plane/test/skill-loop.spec.ts`
+
+### F-201 — Skill injection into system prompt
+
+**Status:** done · **Phase:** 8
+**Spec:** On each new agent turn, skills stored for the agent are loaded and appended to the system prompt as a "Learned skills" block.
+**Acceptance:** `SkillStore.buildPromptBlock()` returns a well-formed markdown block when skills exist, empty string otherwise. When injected alongside a base prompt, the full prompt contains both the base and the skills block.
+**Test:** `services/control-plane/test/skill-loop.spec.ts`
+
+---
+
 ## Feature-test runner
 
 `pnpm test:features` does the following:

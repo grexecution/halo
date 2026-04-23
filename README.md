@@ -6,7 +6,7 @@
 
 # Halo
 
-**What OpenClaw should have been.**
+**What OpenClaw should have been. What Hermes still isn't.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-white.svg)](LICENSE)
 [![Node 22](https://img.shields.io/badge/Node-22_LTS-white.svg)](https://nodejs.org)
@@ -27,53 +27,95 @@ _One command. Fresh Ubuntu. Public dashboard URL. Login screen. Done._
 
 ---
 
-## What is Halo?
+## The problem with the alternatives
 
-OpenClaw was the dream — a self-hosted AI agent that actually works. It crashed. It forgot things. It never shipped.
+**OpenClaw** crashed under load, lost memory between sessions, had no real tool execution pipeline, and was never actually self-hosted — it called home. It was abandoned.
 
-Halo is the fix. Self-hosted, always on, real memory, real autonomy. One command on a cheap server and you have a personal AI that codes, browses, automates, chats on Telegram, and learns who you are — running 24/7 on your hardware, not someone else's cloud.
+**Hermes** (95k stars) is impressive research but it's a Python monorepo with no install story. No Docker Compose. No dashboard. No Telegram. No memory persistence across restarts. You clone it, edit configs, pray it works. It's a demo, not a product.
+
+**Halo** is neither. It's a production-ready, self-hosted AI agent that installs in one command, runs on a €7/month server, and works the first time.
 
 ---
 
-## Features
+## What Halo actually ships
 
-**Autonomous agent**
+### 3-layer persistent memory — not a flat log
 
-- Multi-turn chat with 20+ turn memory coherence
-- Persistent memory across sessions and server restarts
-- 3-layer memory: episodic (raw), semantic (vector search), working (context)
-- Learns your preferences and adapts tone, format, and behaviour
-- Proactively asks clarifying questions — never just says "ok"
+OpenClaw stored chat history in a file. Hermes keeps a short in-context window. Halo has three real memory layers backed by Postgres + pgvector:
 
-**Tool use**
+- **Episodic** — every message, timestamped, queryable. Survives restarts.
+- **Semantic** — vector embeddings of every interaction. Full similarity search via pgvector. Ask "what did I say about my server last week" and get a real answer.
+- **Working** — context window managed automatically. Relevant memories are injected into every prompt, not just the last N messages.
 
-- Shell execution (permission-gated)
-- File read/write
-- Browser navigation (Playwright)
-- Vision analysis (Claude vision API + Tesseract OCR)
-- Code execution in isolated Docker sandboxes
-- Sub-agent delegation for complex multi-step tasks
+### Honcho user modeling — it learns who you are
 
-**Automations**
+Neither OpenClaw nor Hermes had this. Halo builds a profile of you across sessions: your preferences, your goals, your constraints. It adapts its tone, its format, and its assumptions based on what it's learned. This isn't a system prompt — it's a live model that updates after every interaction.
 
-- Cron-scheduled goals that fire on a timer
-- Goal loop with stuck-loop detection
-- Agent self-repair: detects failures and retries with adjusted approach
+### Autonomous skill generation — it teaches itself
 
-**Integrations**
+When Halo completes a complex task, it reflects on what it did and stores a reusable skill: a structured description of the tool sequence that worked. Next time a similar task comes up, it pulls the skill instead of figuring it out from scratch. Hermes has a skill concept but no generation loop. OpenClaw had nothing.
 
-- Telegram ↔ dashboard unified chat (send from either, see in both)
-- LiteLLM model routing — route tasks to the best model automatically
-- Ollama support for fully local, free AI
+### Per-session Docker sandboxing — real isolation
 
-**Infrastructure**
+Code execution runs in a fresh Docker container per session. No shared filesystem. No shared process space. The container is torn down after the task. Hermes runs code in the host process. OpenClaw didn't run code at all.
 
-- One-command install via `npx create-halo`
-- Cloudflare Tunnel for instant public HTTPS URL (no DNS setup, no port forwarding)
-- Docker Compose — Postgres, Redis, all services managed automatically
-- Login-protected dashboard with session cookies + optional TOTP
-- PWA — installable on your phone like a native app
-- OpenTelemetry observability built in
+### LiteLLM model routing — use the right model for the job
+
+One API endpoint that routes to Anthropic Claude, OpenAI GPT, or local Ollama based on task type, cost, and availability. If your API key hits a rate limit, it falls back automatically. Hermes hard-codes a single provider. OpenClaw was Claude-only with no fallback.
+
+### Sub-agent orchestration — real parallelism
+
+Complex tasks are decomposed into sub-tasks, each run by a dedicated sub-agent. A critic agent reviews results before they're merged. Halo shows each sub-agent's work in a separate tab in the dashboard. Hermes has sub-agents in theory; in practice it's sequential. OpenClaw had none.
+
+### Live Canvas — real-time collaborative whiteboard
+
+A shared canvas (WebSocket-backed, persisted to Postgres) you can use to plan, diagram, and annotate alongside the agent. Neither OpenClaw nor Hermes has anything like this.
+
+### Telegram ↔ Dashboard unified chat
+
+Send a message from Telegram, see it in the dashboard. Reply in the dashboard, it shows up in Telegram. Full bidirectional sync via SSE. Hermes has no messaging. OpenClaw had a broken Telegram integration that dropped messages.
+
+### OpenTelemetry observability built in
+
+Every agent run emits structured spans. Every tool call is traced. You can see exactly what the agent did, how long each step took, and what it cost — without adding any config. Neither alternative has this.
+
+### One-command install with public URL
+
+```bash
+npx create-halo
+```
+
+Wizard asks 4 questions, pulls Docker images, starts all services, opens a Cloudflare Tunnel, and prints your login URL. Total time: under 3 minutes. No DNS. No port forwarding. Works on a headless server.
+
+Hermes: clone the repo, edit 3 config files, install Python deps, run it manually, figure out networking yourself.
+OpenClaw: abandoned, no install story.
+
+---
+
+## Feature comparison
+
+| Feature | Halo | Hermes | OpenClaw |
+|---|---|---|---|
+| One-command install | ✅ `npx create-halo` | ❌ manual | ❌ abandoned |
+| Public HTTPS URL out of box | ✅ Cloudflare Tunnel | ❌ | ❌ |
+| Login-protected dashboard | ✅ + TOTP | ❌ no UI | ❌ |
+| Persistent memory (survives restart) | ✅ Postgres + pgvector | ❌ in-memory | ❌ file |
+| 3-layer memory (episodic/semantic/working) | ✅ | ❌ | ❌ |
+| User preference modeling | ✅ Honcho | ❌ | ❌ |
+| Autonomous skill generation | ✅ | partial | ❌ |
+| Per-session Docker sandboxing | ✅ | ❌ host process | ❌ |
+| LiteLLM model routing + fallback | ✅ | ❌ single provider | ❌ |
+| Sub-agent orchestration + critic | ✅ | partial | ❌ |
+| Telegram ↔ dashboard sync | ✅ bidirectional | ❌ | broken |
+| Browser automation (Playwright) | ✅ | ❌ | ❌ |
+| Code execution (isolated) | ✅ Docker sandbox | ❌ | ❌ |
+| Vision analysis | ✅ Claude + OCR | ❌ | ❌ |
+| Cron goals + stuck-loop detection | ✅ | ❌ | ❌ |
+| Live Canvas (collaborative whiteboard) | ✅ | ❌ | ❌ |
+| OpenTelemetry observability | ✅ | ❌ | ❌ |
+| PWA (installable on phone) | ✅ | ❌ | ❌ |
+| Local Ollama fallback | ✅ | partial | ❌ |
+| 441 passing tests | ✅ | ❌ | ❌ |
 
 ---
 
@@ -81,7 +123,7 @@ Halo is the fix. Self-hosted, always on, real memory, real autonomy. One command
 
 ### Requirements
 
-- A Linux server (Ubuntu 22.04+ recommended) — **Hetzner CX32, €6.80/mo works great**
+- A Linux server (Ubuntu 22.04+ recommended) — **Hetzner CX32, €6.80/mo is the sweet spot**
 - OR your local Mac/Linux machine
 - Node.js 22+ (only needed to run the installer — everything else runs in Docker)
 
@@ -131,12 +173,10 @@ And prints:
 │  Username:  admin                                   │
 │  Password:  a3f9-d2c1-88ba                         │
 │                                                     │
-│  Open the URL and start chatting.                   │
+│  Open the URL on any device. You're in.             │
 │  Keep this terminal open to maintain the public URL.│
 └─────────────────────────────────────────────────────┘
 ```
-
-Open the URL on any device. You're in.
 
 ---
 
@@ -145,120 +185,106 @@ Open the URL on any device. You're in.
 ```
 ┌──────────────────────────────────────────────────────┐
 │                    Dashboard (Next.js 15)             │
-│  Chat · Agents · Memory · Goals · Cost · Settings    │
+│  Chat · Agents · Memory · Canvas · Goals · Cost      │
 └────────────────────┬─────────────────────────────────┘
-                     │ HTTP / SSE
+                     │ HTTP / SSE / WebSocket
 ┌────────────────────▼─────────────────────────────────┐
-│                 Control Plane (Fastify)               │
-│  Mastra agent · Tool execution · Memory · Budget      │
+│                 Control Plane (Fastify + Mastra)      │
+│  Agent · Tools · Memory · Budget · Sub-agents · DBOS │
 └──┬──────────┬──────────┬──────────┬──────────────────┘
    │          │          │          │
    ▼          ▼          ▼          ▼
-Postgres   Redis     Browser    Vision
-+ pgvector  BullMQ   (Playwright) (Claude API)
+Postgres   Redis      Browser    LiteLLM
++ pgvector  BullMQ   (Playwright)  proxy
 ```
 
-**Stack:** Node 22 · Next.js 15 · Fastify · Mastra · Vercel AI SDK v6 · Postgres 16 + pgvector · Redis · BullMQ · Playwright · Docker Compose · Cloudflare Tunnel
-
-Full architecture docs: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+**Stack:** Node 22 · Next.js 15 · Fastify · Mastra · Vercel AI SDK v6 · Postgres 16 + pgvector · Redis · BullMQ · LiteLLM · Playwright · Docker Compose · Cloudflare Tunnel
 
 ---
 
-## What it can do — live examples
+## Live examples
 
-**Chat and remember**
+**Memory that persists**
 
 ```
-You: My server's IP is 192.168.1.100 and I'm running Ubuntu 22.04
+You: My server's IP is 192.168.1.100 — it's running Ubuntu 22.04
 
-Halo: Got it. I'll remember that for whenever you need server commands.
+Halo: Got it. Stored.
 
 [3 days later, new session]
 
 You: What's my server IP again?
-Halo: 192.168.1.100, running Ubuntu 22.04.
+Halo: 192.168.1.100 — Ubuntu 22.04. Want me to SSH in?
 ```
 
-**Execute code**
+**Execute code, safely**
 
 ```
 You: Write and run a Python script that fetches my public IP
 
-Halo: Running it now...
+Halo: Running in sandbox...
       Your public IP is 85.12.44.201
+      [container destroyed]
 ```
 
-**Automate things**
+**Autonomous goals**
 
 ```
-You: Every morning at 8am, check if my website is up and message me on Telegram if it's down
+You: Every morning at 8am, check if my site is up. Telegram me if it's down.
 
-Halo: Done. I've set up a goal that runs at 08:00 daily. I'll ping you if anything's wrong.
+Halo: Done. Goal set — runs daily at 08:00.
+      I'll ping you on Telegram if anything's wrong.
 ```
 
-**Browse and summarise**
+**Model routing in action**
 
 ```
-You: Summarise the top 3 stories on Hacker News right now
+You: Analyse this 200-page PDF and summarise it
 
-Halo: [navigates to news.ycombinator.com]
-      Here's what's trending...
+Halo: Routing to claude-3-5-sonnet (long context, cost-efficient for this task)...
+      [summary]
 ```
 
 ---
 
 ## Hetzner recommended spec
 
-| Server | Price    | RAM   | Use case                        |
-| ------ | -------- | ----- | ------------------------------- |
-| CX32   | €6.80/mo | 8 GB  | Standard — Anthropic/OpenAI API |
-| CX42   | €16/mo   | 16 GB | Local Ollama (llama3.1:8b)      |
+| Server | Price | RAM | Use case |
+|---|---|---|---|
+| CX32 | €6.80/mo | 8 GB | Standard — Anthropic/OpenAI API |
+| CX42 | €16/mo | 16 GB | Local Ollama (llama3.1:8b, no API key needed) |
 
-> CX32 + Anthropic API is the sweet spot. You get full capability at under €10/month total.
+> CX32 + Anthropic API is the sweet spot. Full capability for under €10/month.
 
 ---
 
 ## Development
 
 ```bash
-# Clone
 git clone https://github.com/grexecution/halo
 cd halo
-
-# Install dependencies (pnpm workspaces)
 pnpm install
-
-# Start infrastructure
-pnpm -w run docker:up
-
-# Run everything in dev mode
-pnpm -w run dev
-
-# Run tests
-pnpm test                  # 441 tests
-pnpm -w run typecheck      # 0 errors
-
-# Run the live daily test suite against a deployed instance
-HALO_BASE_URL=http://your-server:3000 \
-HALO_CP_URL=http://your-server:3001 \
-npx tsx tests/weekly/runner.ts
+pnpm -w run docker:up   # start Postgres, Redis, LiteLLM
+pnpm -w run dev         # dashboard + control plane in watch mode
+pnpm test               # 441 tests
+pnpm -w run typecheck   # 0 errors
 ```
 
 ```
 apps/
-  cli/          # npx create-halo installer
-  dashboard/    # Next.js frontend
+  cli/            # npx create-halo installer
+  dashboard/      # Next.js 15 frontend
 
 services/
-  control-plane/  # Fastify API + Mastra agent
+  control-plane/  # Fastify API + Mastra agent + DBOS
   browser-service/
   voice-service/
   vision-service/
 
 packages/
-  shared/       # Types, OTel, utilities
-  memory/
-  messaging/    # Telegram (grammY)
+  shared/         # Types, OTel, utilities
+  messaging/      # Telegram (grammY)
+  memory/         # 3-layer memory abstraction
   ...
 ```
 
@@ -266,11 +292,10 @@ packages/
 
 ## Roadmap
 
-- [ ] Named Cloudflare tunnels with custom domain (e.g. `halo.yourdomain.com`)
-- [ ] Mobile push notifications
+- [ ] Named Cloudflare tunnels with custom domain (`halo.yourdomain.com`)
+- [ ] Voice mode — Parakeet STT + Piper TTS, fully local
+- [ ] Multi-user mode with per-user agents and permission scopes
 - [ ] Plugin marketplace
-- [ ] Voice mode (Parakeet STT + Piper TTS — local, no API key)
-- [ ] Multi-user mode with per-user agents
 
 ---
 
@@ -282,7 +307,7 @@ MIT — do whatever you want with it.
 
 <div align="center">
 
-Built with too much coffee and a genuine belief that AI agents should run on your hardware, not someone else's.
+Built because OpenClaw crashed one too many times.
 
 **[Star on GitHub](https://github.com/grexecution/halo)** if this is useful to you.
 

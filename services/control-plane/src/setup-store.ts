@@ -12,6 +12,18 @@ import { homedir } from 'node:os'
 const DIR = join(homedir(), '.open-greg')
 const SETTINGS_PATH = join(DIR, 'settings.json')
 
+export interface UserProfile {
+  name?: string
+  occupation?: string
+  timezone?: string
+  connectedServices?: string[]
+  anthropicKey?: string
+  openaiKey?: string
+  telegramToken?: string
+  githubToken?: string
+  customNotes?: string
+}
+
 export interface AppSettings {
   llm: {
     provider: 'anthropic' | 'openai' | 'ollama'
@@ -25,11 +37,15 @@ export interface AppSettings {
     allowedChatIds?: number[] | undefined
   }
   setupComplete: boolean
+  onboardingComplete: boolean
+  userProfile: UserProfile
 }
 
 const DEFAULTS: AppSettings = {
   llm: { provider: 'ollama' },
   setupComplete: false,
+  onboardingComplete: false,
+  userProfile: {},
 }
 
 export function loadSettings(): AppSettings {
@@ -40,6 +56,8 @@ export function loadSettings(): AppSettings {
     const s: AppSettings = {
       llm: parsed.llm ?? DEFAULTS.llm,
       setupComplete: parsed.setupComplete ?? false,
+      onboardingComplete: parsed.onboardingComplete ?? false,
+      userProfile: parsed.userProfile ?? {},
     }
     if (parsed.telegram) s.telegram = parsed.telegram
     return s
@@ -55,6 +73,29 @@ export function saveSettings(settings: AppSettings): void {
 
 export function isSetupComplete(): boolean {
   return loadSettings().setupComplete
+}
+
+export function isOnboardingComplete(): boolean {
+  return loadSettings().onboardingComplete
+}
+
+export function saveUserProfile(profile: Partial<UserProfile>, complete = false): void {
+  const s = loadSettings()
+  s.userProfile = { ...s.userProfile, ...profile }
+  if (complete) s.onboardingComplete = true
+  // Apply any API keys to env vars immediately
+  if (profile.anthropicKey) {
+    s.llm.anthropicKey = profile.anthropicKey
+    process.env['ANTHROPIC_API_KEY'] = profile.anthropicKey
+  }
+  if (profile.openaiKey) {
+    s.llm.openaiKey = profile.openaiKey
+    process.env['OPENAI_API_KEY'] = profile.openaiKey
+  }
+  if (profile.telegramToken && !s.telegram) {
+    s.telegram = { botToken: profile.telegramToken }
+  }
+  saveSettings(s)
 }
 
 export function applyEnvFromSettings(): void {

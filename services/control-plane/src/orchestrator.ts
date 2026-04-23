@@ -6,6 +6,7 @@ import type { Message } from '@open-greg/agent-core'
 import { buildSystemPrompt } from '@open-greg/agent-core'
 import type { AgentConfig } from '@open-greg/agent-core'
 import { getAgent, getAgentForConfig } from './mastra-instance.js'
+import { loadSettings } from './setup-store.js'
 import { SessionBudget } from './budget.js'
 import { StuckLoopDetector } from './stuck-detector.js'
 import {
@@ -46,7 +47,22 @@ export class AgentOrchestrator {
     const { agent, message, history = [], onChunk, onToolCall, threadId, resourceId } = opts
 
     // Inject timezone + date into system context
-    const contextualPrompt = buildSystemPrompt(agent.systemPrompt, agent.timezone)
+    const basePrompt = buildSystemPrompt(agent.systemPrompt, agent.timezone)
+
+    // Inject user profile if available
+    const profile = loadSettings().userProfile ?? {}
+    const profileLines: string[] = []
+    if (profile.name) profileLines.push(`The user's name is ${profile.name}.`)
+    if (profile.occupation) profileLines.push(`They work as: ${profile.occupation}.`)
+    if (profile.timezone) profileLines.push(`Their timezone is ${profile.timezone}.`)
+    if (profile.customNotes) profileLines.push(`Notes about this user: ${profile.customNotes}`)
+    if (profile.connectedServices?.length)
+      profileLines.push(`Connected services: ${profile.connectedServices.join(', ')}.`)
+
+    const contextualPrompt =
+      profileLines.length > 0
+        ? `${basePrompt}\n\n--- User profile ---\n${profileLines.join('\n')}`
+        : basePrompt
 
     if (this.dryRun) {
       return this.dryRunTurn(contextualPrompt, message, history, onChunk)

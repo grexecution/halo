@@ -5,8 +5,11 @@ import {
   loadSettings,
   saveSettings,
   isSetupComplete,
+  isOnboardingComplete,
+  saveUserProfile,
   applyEnvFromSettings,
   type AppSettings,
+  type UserProfile,
 } from './setup-store.js'
 import { chatBus } from './chat-bus.js'
 import { initDBOS, shutdownDBOS, GoalWorkflow, CronWorkflow } from './dbos-workflows.js'
@@ -405,7 +408,13 @@ app.post<{
   if (trimmedOpenai) llmConfig.openaiKey = trimmedOpenai
   if (trimmedOllama) llmConfig.ollamaModel = trimmedOllama
 
-  const settings: AppSettings = { llm: llmConfig, setupComplete: true }
+  const existing = loadSettings()
+  const settings: AppSettings = {
+    llm: llmConfig,
+    setupComplete: true,
+    onboardingComplete: existing.onboardingComplete,
+    userProfile: existing.userProfile,
+  }
   const trimmedToken = telegramBotToken?.trim()
   if (trimmedToken) settings.telegram = { botToken: trimmedToken }
 
@@ -447,6 +456,29 @@ app.post<{
   } catch (err) {
     return reply.code(500).send({ error: String(err) })
   }
+})
+
+// ----------------------------------------------------------------
+// Onboarding — first-run chat profile collection
+// ----------------------------------------------------------------
+
+/** GET /api/onboarding — returns onboarding status + current profile */
+app.get('/api/onboarding', async () => {
+  const s = loadSettings()
+  return {
+    complete: s.onboardingComplete,
+    profile: s.userProfile,
+  }
+})
+
+/** POST /api/onboarding — save partial or complete profile */
+app.post<{
+  Body: Partial<UserProfile> & { complete?: boolean }
+}>('/api/onboarding', async (req) => {
+  const { complete, ...profile } = req.body
+  saveUserProfile(profile, complete === true)
+  resetAgent() // reload agent with new user profile in system prompt
+  return { ok: true, complete: isOnboardingComplete() }
 })
 
 // ----------------------------------------------------------------

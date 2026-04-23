@@ -10,13 +10,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-white.svg)](LICENSE)
 [![Node 22](https://img.shields.io/badge/Node-22_LTS-white.svg)](https://nodejs.org)
-[![Tests](https://img.shields.io/badge/Tests-441_passing-white.svg)](#)
+[![Tests](https://img.shields.io/badge/Tests-482_passing-white.svg)](#)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-white.svg)](#)
 
 <br />
 
 ```
-npx create-halo
+curl -fsSL https://raw.githubusercontent.com/grexecution/halo/main/install.sh -o install.sh && bash install.sh
 ```
 
 _One command. Fresh Ubuntu. Public dashboard URL. Login screen. Done._
@@ -39,24 +39,25 @@ Halo is the fix. One command on a cheap server. Real 3-layer memory that survive
 
 ## How Halo compares
 
-| Capability | OpenClaw | Hermes | **Halo** |
-|---|---|---|---|
-| Install | Manual Docker setup | pip + config files | `npx create-halo` — wizard, done |
-| Public URL | None | None | Cloudflare Tunnel auto-provisioned |
-| Dashboard | Basic, crashes | None (CLI only) | Full Next.js 15 app, PWA, login |
-| Memory | Session-only, lost on restart | Persistent (single-layer) | **3-layer: episodic + semantic (pgvector) + working context** |
-| Self-improvement | None | ✓ learning loop | **SkillStore + SkillReflector — generates and rates its own tools** |
-| User modeling | None | None | **Honcho-style: learns preferences, goals, constraints per user** |
-| Model routing | Single model hardcoded | Single model | **LiteLLM proxy — routes by cost/capability, fallback chain** |
-| Code execution | None | Subprocess (no isolation) | **Isolated Docker sandbox per session — no shared state** |
-| Sub-agents | None | None | **Delegate + Critic pattern — decomposes tasks, reviews output** |
-| Telegram | None | None | **Bidirectional — send from Telegram, see in dashboard (and vice versa)** |
-| Cron goals | None | None | **Cron-scheduled goal loop with stuck-detection + self-repair** |
-| Token budgets | None | None | **Hard stop per session — enforced in orchestrator, not just warned** |
-| Canvas | None | None | **Real-time collaborative whiteboard with DB persistence** |
-| Observability | None | Basic logs | **OpenTelemetry spans on every agent run** |
-| Auth | None | None | **Session cookies + optional TOTP, force-change on first login** |
-| Local LLM | None | Ollama optional | **Ollama built in — llama3.2:3b runs on CX32 (€6.80/mo)** |
+| Capability       | OpenClaw                      | Hermes                    | **Halo**                                                                  |
+| ---------------- | ----------------------------- | ------------------------- | ------------------------------------------------------------------------- |
+| Install          | Manual Docker setup           | pip + config files        | One curl command — wizard, done                                           |
+| Public URL       | None                          | None                      | Cloudflare Tunnel auto-provisioned                                        |
+| Dashboard        | Basic, crashes                | None (CLI only)           | Full Next.js 15 app, PWA, login                                           |
+| Memory           | Session-only, lost on restart | Persistent (single-layer) | **3-layer: episodic + semantic (pgvector) + working context**             |
+| Self-improvement | None                          | ✓ learning loop           | **SkillStore + SkillReflector — generates and rates its own tools**       |
+| User modeling    | None                          | None                      | **Honcho-style: learns preferences, goals, constraints per user**         |
+| Model routing    | Single model hardcoded        | Single model              | **LiteLLM proxy — routes by cost/capability, fallback chain**             |
+| Code execution   | None                          | Subprocess (no isolation) | **Isolated Docker sandbox per session — no shared state**                 |
+| Sub-agents       | None                          | None                      | **Delegate + Critic pattern — decomposes tasks, reviews output**          |
+| Telegram         | None                          | None                      | **Bidirectional — send from Telegram, see in dashboard (and vice versa)** |
+| Cron goals       | None                          | None                      | **Cron-scheduled goal loop with stuck-detection + self-repair**           |
+| Token budgets    | None                          | None                      | **Hard stop per session — enforced in orchestrator, not just warned**     |
+| Canvas           | None                          | None                      | **Real-time collaborative whiteboard with DB persistence**                |
+| Observability    | None                          | Basic logs                | **OpenTelemetry spans on every agent run**                                |
+| Auth             | None                          | None                      | **Session cookies + optional TOTP, force-change on first login**          |
+| Local LLM        | None                          | Ollama optional           | **Ollama built in — llama3.2:3b runs on CX32 (€6.80/mo)**                 |
+| **OTA updates**  | None                          | None                      | **One-click update from dashboard — git pull + docker restart**           |
 
 ---
 
@@ -76,7 +77,11 @@ Export to vault (markdown files) anytime as an escape hatch. OpenClaw had none o
 
 The `SkillReflector` watches every agent run. When a tool sequence succeeds (≥1 tool call, configurable), it scores the approach and writes a new skill to `SkillStore`. Next time a similar task comes in, Halo reuses the winning pattern instead of rediscovering it.
 
-Hermes has a learning loop but it's black-box. Halo's is inspectable — every skill is a named record you can read, edit, or delete from the dashboard. OpenClaw had no skill system at all.
+Every skill is a named YAML-frontmatter markdown file in `~/.open-greg/skills/`. You can read, edit, or delete them from the dashboard Skills page. The agent's system prompt is automatically updated when skills change — no restart needed.
+
+### Personality + onboarding
+
+Halo has a character: direct, curious, dry humour. On first run, it asks you five questions — your name, what you do, your goals, your constraints, your contact info. These get stored as your user profile and injected into every system prompt. The agent remembers who you are across restarts.
 
 ### Model routing via LiteLLM
 
@@ -105,7 +110,7 @@ Neither OpenClaw nor Hermes have a critic/review pass. Halo catches its own mist
 
 ### Telegram ↔ Dashboard unified chat
 
-Send a message on Telegram — it appears in the dashboard. Reply in the dashboard — it sends on Telegram. Same agent, same memory, same session. The chat event bus syncs in real time via SSE. OpenClaw and Hermes have no Telegram integration.
+Send a message on Telegram — it appears in the dashboard. Reply in the dashboard — it sends on Telegram. Same agent, same memory, same session. The chat event bus syncs in real time via SSE.
 
 ### Cron goals with self-repair
 
@@ -115,11 +120,27 @@ Halo fires on schedule (BullMQ + cron), executes with full tool access, detects 
 
 ### Token + cost budgets (hard stop)
 
-Every session has a `maxTokens` and `maxCost` setting. When hit, the orchestrator aborts — not a warning, a hard stop. Enforced in the agent loop, not after the fact. Useful for autonomous overnight runs or Telegram bots you don't want racking up surprise bills.
+Every session has a `maxTokens` and `maxCost` setting. When hit, the orchestrator aborts — not a warning, a hard stop. Enforced in the agent loop, not after the fact. Daily spend cap with soft warning at 40% and hard stop at 100%. Real-time cost dashboard at `/cost`.
+
+### Permission system with panic button
+
+YAML-based permission config, hot-reloaded. Every tool call routes through middleware — no bypass possible (enforced by ESLint rule in CI). URL whitelist mode. Sudo toggle. And a panic button that kills all in-flight tool calls instantly.
+
+### Auth
+
+Session cookies with bcrypt password hashing. Optional TOTP (Google Authenticator). Force password change on first login. Single-user by design — this runs on your server.
 
 ### Live Canvas
 
 Real-time collaborative whiteboard. Sessions persist to Postgres. Broadcast updates via WebSocket. Share a canvas link with anyone on your dashboard.
+
+### Over-the-air updates
+
+**Settings → Updates → Check for Updates.** The dashboard checks `git fetch` against `origin/main`, shows how many commits are available, and lets you apply them with one click. The control-plane runs `git pull + docker compose pull + docker compose up -d` and streams progress live. No SSH required after initial install.
+
+### Beautiful chat UI
+
+The chat page uses [assistant-ui](https://github.com/assistant-ui/assistant-ui) with a fully-wired shadcn dark theme — proper CSS variables, token-aware semantic colors. Code blocks render with Prism syntax highlighting (oneDark theme). Every message has copy, regenerate, and edit actions. Reasoning steps collapse. Tool calls show status icons and expandable JSON.
 
 ---
 
@@ -140,7 +161,7 @@ That's it. The script installs Node 22 and Docker if missing, clones the repo, a
 
 > **Note:** Download first, then run — don't pipe directly to bash. The wizard needs an interactive terminal for arrow-key selection, which doesn't work through a pipe.
 
-The wizard then asks 4 questions:
+The wizard asks 4 questions:
 
 ```
 ◆  Halo — self-hosted AI agent
@@ -183,25 +204,34 @@ Open the URL on any device. You're in.
 
 ---
 
+## Updating
+
+After install, you never need to SSH in again. Go to **Settings → Updates → Check for Updates**. If commits are available, click **Apply Update & Restart**. The dashboard streams progress as it pulls code, updates images, and restarts containers.
+
+---
+
 ## Architecture
 
 ```
 ┌──────────────────────────────────────────────────────┐
 │                    Dashboard (Next.js 15)             │
-│  Chat · Agents · Memory · Goals · Cost · Settings    │
+│  Chat · Agents · Skills · Memory · Goals · Cost      │
+│  Settings · Updates · Canvas · Logs · Connectors     │
 └────────────────────┬─────────────────────────────────┘
                      │ HTTP / SSE
 ┌────────────────────▼─────────────────────────────────┐
 │                 Control Plane (Fastify)               │
 │  Mastra agent · Tool execution · Memory · Budget      │
+│  SkillStore · SkillReflector · Heartbeat scheduler    │
+│  UserModel · Journal · Cron/Goals · Canvas            │
 └──┬──────────┬──────────┬──────────┬──────────────────┘
    │          │          │          │
    ▼          ▼          ▼          ▼
-Postgres   Redis     Browser    Vision
-+ pgvector  BullMQ   (Playwright) (Claude API)
+Postgres   Redis     Browser    LiteLLM
++ pgvector  BullMQ   (Playwright) (model proxy)
 ```
 
-**Stack:** Node 22 · Next.js 15 · Fastify · Mastra · Vercel AI SDK v6 · Postgres 16 + pgvector · Redis · BullMQ · LiteLLM · Playwright · Docker Compose · Cloudflare Tunnel
+**Stack:** Node 22 · Next.js 15 · Fastify · Mastra · Vercel AI SDK v6 · Postgres 16 + pgvector · Redis · BullMQ · LiteLLM · assistant-ui · Playwright · Docker Compose · Cloudflare Tunnel
 
 Full architecture docs: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
@@ -209,10 +239,10 @@ Full architecture docs: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 
 ## Hetzner recommended spec
 
-| Server | Price | RAM | Use case |
-|---|---|---|---|
-| CX32 | €6.80/mo | 8 GB | Standard — Anthropic/OpenAI API |
-| CX42 | €16/mo | 16 GB | Local Ollama (llama3.1:8b, no API key needed) |
+| Server | Price    | RAM   | Use case                                      |
+| ------ | -------- | ----- | --------------------------------------------- |
+| CX32   | €6.80/mo | 8 GB  | Standard — Anthropic/OpenAI API               |
+| CX42   | €16/mo   | 16 GB | Local Ollama (llama3.1:8b, no API key needed) |
 
 > CX32 + Anthropic API is the sweet spot. Full capability for under €10/month total.
 
@@ -227,7 +257,7 @@ pnpm install
 pnpm -w run docker:up
 pnpm -w run dev
 
-pnpm test                  # 441 tests
+pnpm test                  # 482 tests
 pnpm -w run typecheck      # 0 errors
 
 # Run the live daily test suite against a deployed instance
@@ -238,7 +268,7 @@ npx tsx tests/weekly/runner.ts
 
 ```
 apps/
-  cli/            # npx create-halo installer
+  cli/            # curl | bash installer + wizard
   dashboard/      # Next.js frontend
 
 services/
@@ -249,7 +279,7 @@ services/
 
 packages/
   shared/         # Types, OTel, utilities
-  memory/
+  memory/         # 3-layer memory (episodic/semantic/working)
   messaging/      # Telegram (grammY)
 ```
 
@@ -262,6 +292,7 @@ packages/
 - [ ] Mobile push notifications
 - [ ] Multi-user mode with per-user agents
 - [ ] Plugin marketplace
+- [ ] Auto-update on schedule (currently manual one-click)
 
 ---
 

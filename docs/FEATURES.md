@@ -817,4 +817,64 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 
 ---
 
+## Phase 11 — Proactive agent, OTA updates, UI polish
+
+### F-213 — OTA update mechanism
+
+**Status:** done · **Phase:** 11
+**Spec:** Dashboard Settings → Updates tab. "Check for Updates" calls `/api/update/check` (git fetch + commit count). "Apply Update & Restart" calls `/api/update/apply` (SSE stream: git pull + docker compose pull + docker compose up -d). Progress streamed live as terminal output.
+**Acceptance:** `GET /api/update/check` returns `{ upToDate, commitsAvailable, currentVersion, latestVersion }`. `POST /api/update/apply` streams `data: {"msg":"..."}` lines ending with `data: {"msg":"done"}`. Settings page renders Updates tab with check button, commit count badge, and apply button with live log.
+**Test:** `apps/dashboard/test/settings.spec.tsx`
+
+### F-214 — assistant-ui dark theme + syntax highlighting
+
+**Status:** done · **Phase:** 11
+**Spec:** Full shadcn dark theme CSS variables in `globals.css` so all semantic tokens (`bg-background`, `text-foreground`, `bg-muted`, etc.) resolve correctly. Prism `oneDark` syntax highlighting for code blocks in markdown via `react-syntax-highlighter`. Language label shown in code header.
+**Acceptance:** All assistant-ui components render with correct dark colors. Code blocks in chat responses show highlighted tokens with `oneDark` palette. Inline code uses `bg-muted/50` pill styling. Language detection auto-detects from markdown fence language hint.
+**Test:** `apps/dashboard/test/chat.spec.tsx`
+
+### F-215 — Proactive Telegram notifications (notify_user tool)
+
+**Status:** done · **Phase:** 11
+**Spec:** Agent can proactively send Telegram messages via the `notify_user` tool. Reads token + `defaultChatId` from persisted settings. No-op (silent) if Telegram not configured.
+**Acceptance:** `notify_user` tool exists in `allMastraTools`. `notifier.ts` reads settings, calls grammy Bot API, returns `{ sent: true }`. Silent no-op when token/chatId missing.
+**Test:** `services/control-plane/test/notifications.spec.ts`
+
+### F-216 — Heartbeat scheduler
+
+**Status:** done · **Phase:** 11
+**Spec:** Background scheduler fires every configurable interval (default 60s). Checks crons table (active=1, next_run overdue), fires and updates `next_run`. Checks goals table. Sends Telegram notification if configured. Never crashes the agent on error.
+**Acceptance:** `startHeartbeat(minutes)` begins polling. `stopHeartbeat()` clears interval. Errors swallowed (logged, not thrown). Wired into control-plane startup/shutdown.
+**Test:** `services/control-plane/test/cron.spec.ts`
+
+### F-217 — Daily journal + self-reflection
+
+**Status:** done · **Phase:** 11
+**Spec:** Agent writes append-only session summaries to `~/.open-greg/journal.md` after each turn. Journal injected into system prompt as "## Daily journal" section for self-reflection across sessions.
+**Acceptance:** `journal.ts` `write(agentId, summary)` appends ISO timestamp + text. `buildPromptBlock()` returns markdown section. Entries are immutable (never deleted). Wired into orchestrator post-turn.
+**Test:** `services/control-plane/test/main-loop.spec.ts`
+
+### F-218 — User corrections detector + preference learning
+
+**Status:** done · **Phase:** 11
+**Spec:** Agent detects correction signals in user messages ("no", "actually", "that's wrong", "I prefer", "don't do that"). Learns preferences and recurring mistakes. Persists to SQLite `user_preferences` + `user_mistakes` tables. Injects "## User preferences" + "## Recurring mistakes" into system prompt.
+**Acceptance:** `user-model-store.ts` detects corrections via regex. `applyCorrection()` upserts preference. `recordMistake()` increments recurrence. `buildPromptBlock()` generates both sections. State persists across restarts.
+**Test:** `packages/memory/test/user-model.spec.ts`
+
+---
+
+## Feature-test runner
+
+`pnpm test:features` does the following:
+
+1. Reads this file, extracts every row with `Status: done` and `Test: <path>`.
+2. Runs each test file. Compares results against `artifacts/feature-history.jsonl` to detect regressions.
+3. Prints a summary: `N/M features passing`, separated into: passes, new failures, regressions.
+4. Fails CI if any done feature's test fails.
+5. Appends this run's results to `artifacts/feature-history.jsonl` (append-only log).
+
+The runner lives at `scripts/test-features.ts` and parses this markdown with a simple regex — no fancy schema. Keep the format consistent.
+
+---
+
 _End of FEATURES.md._

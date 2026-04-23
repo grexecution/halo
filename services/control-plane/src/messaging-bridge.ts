@@ -16,6 +16,7 @@ import { BotManager } from '@open-greg/messaging'
 import type { ChannelId } from '@open-greg/messaging'
 import { AgentOrchestrator } from './orchestrator.js'
 import { emitLog } from './log-store.js'
+import { chatBus } from './chat-bus.js'
 
 interface AgentRow {
   handle: string
@@ -53,15 +54,27 @@ function buildDispatcher(orchestrator: AgentOrchestrator) {
     chatId: string
     channel: ChannelId
     threadId: string
+    senderName?: string
   }) => {
+    const source = params.channel as 'telegram' | 'discord'
+
     emitLog({
       level: 'info',
       agentId: params.agentId,
       message: `[${params.channel}] incoming from chat ${params.chatId}: ${params.message.slice(0, 80)}`,
     })
 
+    // Publish the incoming user message to the dashboard
+    chatBus.publish({
+      threadId: params.threadId,
+      role: 'user',
+      content: params.message,
+      source,
+      senderName: params.senderName ?? params.chatId,
+      timestamp: new Date().toISOString(),
+    })
+
     // Look up the agent's config from DB so the right system prompt + model is used.
-    // Falls back to defaults if agentId not found (e.g. hardcoded 'greg').
     const agentConfig = readAgentConfig(params.agentId)
 
     const result = await orchestrator.runTurn({
@@ -75,6 +88,16 @@ function buildDispatcher(orchestrator: AgentOrchestrator) {
       message: params.message,
       threadId: params.threadId,
       resourceId: params.channel,
+    })
+
+    // Publish the agent reply back to the dashboard
+    chatBus.publish({
+      threadId: params.threadId,
+      role: 'assistant',
+      content: result.content,
+      source: 'system',
+      senderName: params.agentId,
+      timestamp: new Date().toISOString(),
     })
 
     return result.content

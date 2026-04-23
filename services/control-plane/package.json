@@ -19,6 +19,7 @@
     "@mastra/fastembed": "^1.0.1",
     "@mastra/libsql": "^1.9.0",
     "@mastra/memory": "^1.16.0",
+    "@mastra/pg": "^1.9.2",
     "@open-greg/agent-core": "workspace:*",
     "@open-greg/permissions": "workspace:*",
     "@trpc/server": "^11.0.0",

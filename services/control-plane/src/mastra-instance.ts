@@ -5,6 +5,7 @@
 import { Agent } from '@mastra/core/agent'
 import { Memory } from '@mastra/memory'
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql'
+import { PostgresStore, PgVector } from '@mastra/pg'
 import { fastembed } from '@mastra/fastembed'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
@@ -16,6 +17,7 @@ import type { AgentConfig } from '@open-greg/agent-core'
 
 const DIR = join(homedir(), '.open-greg')
 const MEMORY_DB_URL = `file:${join(DIR, 'memory.db')}`
+const PG_URL = process.env['DATABASE_URL']
 
 function ensureDir() {
   if (!existsSync(DIR)) mkdirSync(DIR, { recursive: true })
@@ -70,8 +72,15 @@ function resolveModel() {
 
 function buildMemory(): Memory {
   ensureDir()
-  const storage = new LibSQLStore({ id: 'og-memory-store', url: MEMORY_DB_URL })
-  const vector = new LibSQLVector({ id: 'og-memory-vector', url: MEMORY_DB_URL })
+
+  // Use Postgres when DATABASE_URL is set (server deploy), LibSQL otherwise (local dev/test)
+  const storage = PG_URL
+    ? new PostgresStore({ id: 'og-memory-store', connectionString: PG_URL })
+    : new LibSQLStore({ id: 'og-memory-store', url: MEMORY_DB_URL })
+
+  const vector = PG_URL
+    ? new PgVector({ id: 'og-memory-vector', connectionString: PG_URL })
+    : new LibSQLVector({ id: 'og-memory-vector', url: MEMORY_DB_URL })
 
   const anthropicKey = process.env['ANTHROPIC_API_KEY']
   const ollamaUrl = process.env['OLLAMA_URL'] ?? 'http://localhost:11434'

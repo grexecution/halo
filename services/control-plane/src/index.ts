@@ -1,6 +1,14 @@
 import Fastify from 'fastify'
 import { AgentOrchestrator } from './orchestrator.js'
 import { resetAgent } from './mastra-instance.js'
+import {
+  loadSettings,
+  saveSettings,
+  isSetupComplete,
+  applyEnvFromSettings,
+  type AppSettings,
+} from './setup-store.js'
+import { chatBus } from './chat-bus.js'
 import { initDBOS, shutdownDBOS, GoalWorkflow, CronWorkflow } from './dbos-workflows.js'
 import type { GoalWorkflowInput, CronWorkflowInput } from './dbos-workflows.js'
 import { emitLog, queryLogs, knownAgents, knownTools } from './log-store.js'
@@ -94,6 +102,24 @@ app.post<{
       message: `chat turn complete (${result.toolCalls?.length ?? 0} tool calls)`,
       durationMs: Date.now() - t0,
     })
+
+    const tid = body.threadId ?? 'default'
+    chatBus.publish({
+      threadId: tid,
+      role: 'user',
+      content: body.message,
+      source: 'dashboard',
+      timestamp: new Date().toISOString(),
+    })
+    chatBus.publish({
+      threadId: tid,
+      role: 'assistant',
+      content: result.content,
+      source: 'system',
+      senderName: 'greg',
+      timestamp: new Date().toISOString(),
+    })
+
     return { content: result.content, toolCalls: result.toolCalls }
   } catch (err) {
     emitLog({
@@ -289,6 +315,118 @@ app.post<{ Body: CronWorkflowInput }>('/api/crons/run', async (req, reply) => {
 })
 
 // ----------------------------------------------------------------
+// Chat bus — SSE stream for unified conversation view
+// ----------------------------------------------------------------
+
+/**
+ * GET /api/chat/events?threadId=<id>
+ * SSE stream: fires whenever a message (from any source) lands on the given thread.
+ * If threadId is omitted, all messages are streamed.
+ */
+app.get<{ Querystring: { threadId?: string } }>('/api/chat/events', async (req, reply) => {
+  const { threadId } = req.query
+
+  reply.raw.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'Access-Control-Allow-Origin': '*',
+  })
+
+  const send = (data: object) => {
+    reply.raw.write(`data: ${JSON.stringify(data)}\n\n`)
+  }
+
+  const unsubscribe = threadId ? chatBus.subscribeThread(threadId, send) : chatBus.subscribe(send)
+
+  // Keepalive ping every 25 s
+  const ping = setInterval(() => reply.raw.write(': ping\n\n'), 25_000)
+
+  req.raw.on('close', () => {
+    clearInterval(ping)
+    unsubscribe()
+  })
+
+  // Never resolve — connection stays open
+  await new Promise<void>((resolve) => req.raw.on('close', resolve))
+})
+
+// ----------------------------------------------------------------
+// Setup — first-run wizard API
+// ----------------------------------------------------------------
+
+/** GET /api/setup/status — is setup done? */
+app.get('/api/setup/status', async () => ({
+  setupComplete: isSetupComplete(),
+  settings: (() => {
+    const s = loadSettings()
+    // Redact secrets — only send provider + whether keys exist
+    return {
+      llmProvider: s.llm.provider,
+      hasAnthropicKey: Boolean(s.llm.anthropicKey),
+      hasOpenaiKey: Boolean(s.llm.openaiKey),
+      hasTelegramToken: Boolean(s.telegram?.botToken),
+    }
+  })(),
+}))
+
+/** POST /api/setup — save settings + restart agent */
+app.post<{
+  Body: {
+    llmProvider?: string
+    anthropicKey?: string
+    openaiKey?: string
+    ollamaModel?: string
+    telegramBotToken?: string
+  }
+}>('/api/setup', async (req, reply) => {
+  const { llmProvider, anthropicKey, openaiKey, ollamaModel, telegramBotToken } = req.body
+
+  const provider = (llmProvider ?? 'ollama') as AppSettings['llm']['provider']
+  const validProviders = ['anthropic', 'openai', 'ollama']
+  if (!validProviders.includes(provider)) {
+    return reply
+      .code(400)
+      .send({ error: `Invalid llmProvider. Must be one of: ${validProviders.join(', ')}` })
+  }
+
+  if (provider === 'anthropic' && !anthropicKey) {
+    return reply.code(400).send({ error: 'anthropicKey is required when llmProvider is anthropic' })
+  }
+  if (provider === 'openai' && !openaiKey) {
+    return reply.code(400).send({ error: 'openaiKey is required when llmProvider is openai' })
+  }
+
+  const llmConfig: AppSettings['llm'] = { provider }
+  const trimmedAnthropic = anthropicKey?.trim()
+  const trimmedOpenai = openaiKey?.trim()
+  const trimmedOllama = ollamaModel?.trim()
+  if (trimmedAnthropic) llmConfig.anthropicKey = trimmedAnthropic
+  if (trimmedOpenai) llmConfig.openaiKey = trimmedOpenai
+  if (trimmedOllama) llmConfig.ollamaModel = trimmedOllama
+
+  const settings: AppSettings = { llm: llmConfig, setupComplete: true }
+  const trimmedToken = telegramBotToken?.trim()
+  if (trimmedToken) settings.telegram = { botToken: trimmedToken }
+
+  saveSettings(settings)
+  applyEnvFromSettings()
+  resetAgent() // pick up new model/keys immediately
+
+  // Hot-reload Telegram if token was provided
+  if (settings.telegram?.botToken) {
+    try {
+      await reloadChannel('telegram', { token: settings.telegram.botToken })
+    } catch (err) {
+      // Non-fatal — token may be invalid, user can retry
+      app.log.warn(`Telegram reload failed: ${String(err)}`)
+    }
+  }
+
+  return { ok: true }
+})
+
+// ----------------------------------------------------------------
 // Messaging — bot status + hot-reload
 // ----------------------------------------------------------------
 
@@ -316,6 +454,9 @@ app.post<{
 // ----------------------------------------------------------------
 
 const PORT = Number(process.env['CONTROL_PLANE_PORT'] ?? 3001)
+
+// Apply persisted LLM keys before agent init
+applyEnvFromSettings()
 
 // Best-effort DBOS init — gracefully degrades if Postgres not available
 await initDBOS()

@@ -1,25 +1,45 @@
 FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
+# ── Install deps ─────────────────────────────────────────────────────────────
 FROM base AS deps
 WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* .npmrc ./
+
+# Copy workspace manifests first for layer caching
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* .npmrc* ./
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/agent-core/package.json ./packages/agent-core/
+COPY packages/memory/package.json ./packages/memory/
+COPY packages/permissions/package.json ./packages/permissions/
+COPY packages/telemetry/package.json ./packages/telemetry/
 COPY services/control-plane/package.json ./services/control-plane/
+
 RUN pnpm install --frozen-lockfile --filter @open-greg/control-plane...
 
+# ── Run ──────────────────────────────────────────────────────────────────────
 FROM base AS runner
 WORKDIR /app
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=deps /app/packages/agent-core/node_modules ./packages/agent-core/node_modules
+COPY --from=deps /app/packages/memory/node_modules ./packages/memory/node_modules
+COPY --from=deps /app/packages/permissions/node_modules ./packages/permissions/node_modules
+COPY --from=deps /app/packages/telemetry/node_modules ./packages/telemetry/node_modules
 COPY --from=deps /app/services/control-plane/node_modules ./services/control-plane/node_modules
+
 COPY packages/shared ./packages/shared
+COPY packages/agent-core ./packages/agent-core
+COPY packages/memory ./packages/memory
+COPY packages/permissions ./packages/permissions
+COPY packages/telemetry ./packages/telemetry
 COPY services/control-plane ./services/control-plane
 COPY tsconfig.json ./
 
 ENV NODE_ENV=production
 EXPOSE 3001
-HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=30s \
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=60s \
   CMD wget -qO- http://localhost:3001/health || exit 1
 
 CMD ["node", "--import", "tsx/esm", "services/control-plane/src/index.ts"]

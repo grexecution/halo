@@ -236,18 +236,36 @@ async function cmdInit(args: string[]): Promise<void> {
   if (dockerAvailable && composeAvailable) {
     // ── docker compose up ───────────────────────────────────────────────────
     const up = spinner()
-    up.start('Starting services (pulling images on first run — this may take a few minutes)...')
+    up.start('Building and starting services (first run takes 3–5 min)...')
 
     try {
       await composeUp(REPO_DIR, (line) => {
-        // Only surface lines that look meaningful
-        if (line.includes('Pulling') || line.includes('Started') || line.includes('Error')) {
-          up.message(line.slice(0, 80))
+        // Surface progress + errors — strip ANSI escape codes for cleaner display
+        // eslint-disable-next-line no-control-regex
+        const clean = line.replace(/\x1b\[[0-9;]*m/g, '')
+        if (
+          clean.includes('Step ') ||
+          clean.includes('Building') ||
+          clean.includes('Pulling') ||
+          clean.includes('Started') ||
+          clean.includes('ERROR') ||
+          clean.includes('Error') ||
+          clean.includes('error') ||
+          clean.includes('failed') ||
+          clean.includes('FAILED')
+        ) {
+          up.message(clean.slice(0, 100))
         }
       })
     } catch (err) {
       up.stop('docker compose failed.')
-      bail(String(err))
+      // Show the last N lines of logs for each service to help diagnose
+      log.error('--- docker compose output (last 30 lines) ---')
+      log.message(String(err))
+      log.error('')
+      log.info('To see full logs, run:')
+      log.info(`  docker compose -f ${REPO_DIR}/docker/compose.yml logs --tail=80`)
+      process.exit(1)
     }
 
     up.stop('Containers started.')

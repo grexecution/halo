@@ -107,13 +107,19 @@ export function composeUp(repoDir: string, onOutput: (line: string) => void): Pr
     const composeFile = getComposeFile(repoDir)
     const proc = spawn(
       'docker',
-      ['compose', '-f', composeFile, 'up', '-d', '--pull', 'always', '--remove-orphans'],
+      ['compose', '-f', composeFile, 'up', '-d', '--build', '--remove-orphans'],
       { cwd: repoDir, env: { ...process.env } },
     )
 
+    const errorLines: string[] = []
+
     const handleLine = (data: Buffer) => {
       for (const line of data.toString().split('\n')) {
-        if (line.trim()) onOutput(line.trim())
+        const trimmed = line.trim()
+        if (!trimmed) continue
+        onOutput(trimmed)
+        // Collect all output so we can include it in the error message
+        errorLines.push(trimmed)
       }
     }
 
@@ -121,11 +127,35 @@ export function composeUp(repoDir: string, onOutput: (line: string) => void): Pr
     proc.stderr.on('data', handleLine)
 
     proc.on('close', (code) => {
-      if (code === 0) resolve()
-      else reject(new Error(`docker compose up exited with code ${code}`))
+      if (code === 0) {
+        resolve()
+      } else {
+        // Include the last 30 lines of output in the error so the user sees what went wrong
+        const tail = errorLines.slice(-30).join('\n')
+        reject(new Error(`docker compose up exited with code ${code}\n\n${tail}`))
+      }
     })
 
     proc.on('error', reject)
+  })
+}
+
+export function composeLogs(repoDir: string, service: string, lines = 50): Promise<string> {
+  return new Promise((resolve) => {
+    const composeFile = getComposeFile(repoDir)
+    const proc = spawn(
+      'docker',
+      ['compose', '-f', composeFile, 'logs', '--no-color', `--tail=${lines}`, service],
+      { cwd: repoDir, env: { ...process.env } },
+    )
+    const out: string[] = []
+    const handleLine = (data: Buffer) => {
+      out.push(data.toString())
+    }
+    proc.stdout.on('data', handleLine)
+    proc.stderr.on('data', handleLine)
+    proc.on('close', () => resolve(out.join('')))
+    proc.on('error', () => resolve('(could not fetch logs)'))
   })
 }
 

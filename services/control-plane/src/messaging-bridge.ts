@@ -17,23 +17,37 @@ import type { ChannelId } from '@open-greg/messaging'
 import { AgentOrchestrator } from './orchestrator.js'
 import { emitLog } from './log-store.js'
 
+interface AgentRow {
+  handle: string
+  model: string
+  system_prompt: string
+}
+
+/** Read a single agent config from the DB by handle. Returns null if not found. */
+function readAgentConfig(agentId: string): { model: string; systemPrompt: string } | null {
+  try {
+    const db = new Database(DB_PATH, { readonly: true })
+    const row = db
+      .prepare('SELECT handle, model, system_prompt FROM agents WHERE handle = ?')
+      .get(agentId) as AgentRow | undefined
+    db.close()
+    if (!row) return null
+    return { model: row.model, systemPrompt: row.system_prompt ?? '' }
+  } catch {
+    return null
+  }
+}
+
 const DB_PATH = join(homedir(), '.open-greg', 'app.db')
 
 let manager: BotManager | null = null
 
-/** Called once from index.ts at startup */
-export async function initMessaging() {
-  let db: InstanceType<typeof Database>
-  try {
-    db = new Database(DB_PATH, { readonly: true })
-  } catch {
-    // DB not created yet (fresh install) — skip quietly
-    return
-  }
+function buildOrchestrator() {
+  return new AgentOrchestrator()
+}
 
-  const orchestrator = new AgentOrchestrator()
-
-  const dispatcher = async (params: {
+function buildDispatcher(orchestrator: AgentOrchestrator) {
+  return async (params: {
     agentId: string
     message: string
     chatId: string
@@ -46,12 +60,16 @@ export async function initMessaging() {
       message: `[${params.channel}] incoming from chat ${params.chatId}: ${params.message.slice(0, 80)}`,
     })
 
+    // Look up the agent's config from DB so the right system prompt + model is used.
+    // Falls back to defaults if agentId not found (e.g. hardcoded 'greg').
+    const agentConfig = readAgentConfig(params.agentId)
+
     const result = await orchestrator.runTurn({
       agent: {
         id: params.agentId,
         handle: params.agentId,
-        systemPrompt: '',
-        model: 'auto',
+        systemPrompt: agentConfig?.systemPrompt ?? '',
+        model: agentConfig?.model ?? 'auto',
         timezone: process.env['TZ'] ?? 'UTC',
       },
       message: params.message,
@@ -61,12 +79,33 @@ export async function initMessaging() {
 
     return result.content
   }
+}
 
-  manager = new BotManager(dispatcher)
+/** Lazily create the manager singleton (safe to call multiple times) */
+function ensureManager(): BotManager {
+  if (!manager) {
+    const orchestrator = buildOrchestrator()
+    manager = new BotManager(buildDispatcher(orchestrator))
+  }
+  return manager
+}
+
+/** Called once from index.ts at startup */
+export async function initMessaging() {
+  let db: InstanceType<typeof Database>
+  try {
+    db = new Database(DB_PATH, { readonly: true })
+  } catch {
+    // DB not created yet (fresh install) — skip quietly; manager stays null
+    // until first hot-reload via reloadChannel()
+    return
+  }
+
+  const m = ensureManager()
 
   try {
-    await manager.startAll(db)
-    const running = manager.status().filter((s) => s.running)
+    await m.startAll(db)
+    const running = m.status().filter((s) => s.running)
     if (running.length > 0) {
       emitLog({
         level: 'info',
@@ -89,6 +128,7 @@ export async function shutdownMessaging() {
 }
 
 export function getMessagingStatus() {
+  // If manager was never initialised (no DB yet), return "not connected" for all channels
   return manager?.status() ?? []
 }
 
@@ -97,6 +137,7 @@ export function getMessagingStatus() {
  * Called by the /api/messaging/reload endpoint.
  */
 export async function reloadChannel(channelId: ChannelId, fields: Record<string, string>) {
-  if (!manager) return
-  await manager.startChannel(channelId, fields)
+  // ensureManager() works even on first-time connect (manager was null)
+  const m = ensureManager()
+  await m.startChannel(channelId, fields)
 }

@@ -54,10 +54,16 @@ export function createTelegramAdapter(opts: TelegramAdapterOptions): BotAdapter 
     },
 
     async start() {
-      // long-polling — works behind NAT, no public URL needed
-      void bot.start({
-        onStart: () => {},
-        drop_pending_updates: false,
+      // Validate the token before kicking off the polling loop.
+      // bot.api.getMe() throws immediately on a bad token (401).
+      await bot.api.getMe()
+
+      // long-polling — works behind NAT, no public URL needed.
+      // bot.start() resolves only when the bot stops, so we fire-and-forget.
+      // Unhandled errors (network drops etc.) are caught below and logged.
+      bot.start({ drop_pending_updates: false }).catch((err: unknown) => {
+        // Re-throw so the caller's catch block can capture it
+        throw err
       })
     },
 

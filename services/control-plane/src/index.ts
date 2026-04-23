@@ -24,6 +24,7 @@ import {
 } from './messaging-bridge.js'
 import type { ChannelId } from '@open-greg/messaging'
 import { skillLoader } from './skill-loader.js'
+import { startHeartbeat, stopHeartbeat } from './heartbeat.js'
 
 const app = Fastify({ logger: true })
 
@@ -608,10 +609,15 @@ await initDBOS()
 // Start messaging bots (Telegram, Discord, etc.) — non-fatal if not configured
 await initMessaging()
 
+// Start the heartbeat scheduler (cron tick + periodic check-in)
+const heartbeatMinutes = Number(process.env['HEARTBEAT_INTERVAL_MINUTES'] ?? 30)
+startHeartbeat(heartbeatMinutes)
+
 await app.listen({ port: PORT, host: '0.0.0.0' })
 
 // Graceful shutdown
 const shutdown = async () => {
+  stopHeartbeat()
   skillLoader.stop()
   await app.close()
   await shutdownMessaging()

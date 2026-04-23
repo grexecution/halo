@@ -199,6 +199,14 @@ export interface MemoryExport {
   entities: MemoryEntity[]
 }
 
+export {
+  UserModel,
+  type UserModelState,
+  type UserPreference,
+  type UserMistake,
+  type CorrectionSource,
+} from './user-model.js'
+
 export class ExportImport {
   constructor(
     private chatIndex: ChatIndexing,

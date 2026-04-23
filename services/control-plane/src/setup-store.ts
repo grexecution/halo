@@ -35,6 +35,8 @@ export interface AppSettings {
   telegram?: {
     botToken: string
     allowedChatIds?: number[] | undefined
+    /** The chat ID Halo uses for proactive outbound notifications */
+    defaultChatId?: string | undefined
   }
   setupComplete: boolean
   onboardingComplete: boolean

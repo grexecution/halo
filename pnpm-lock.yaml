@@ -425,6 +425,9 @@ importers:
       '@open-greg/agent-core':
         specifier: workspace:*
         version: link:../../packages/agent-core
+      '@open-greg/memory':
+        specifier: workspace:*
+        version: link:../../packages/memory
       '@open-greg/permissions':
         specifier: workspace:*
         version: link:../../packages/permissions

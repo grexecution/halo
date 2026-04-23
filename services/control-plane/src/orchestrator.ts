@@ -10,6 +10,11 @@ import { loadSettings } from './setup-store.js'
 import { SessionBudget } from './budget.js'
 import { StuckLoopDetector } from './stuck-detector.js'
 import { skillLoader } from './skill-loader.js'
+import { SkillReflector, buildLLMGenerateFn } from './skill-reflector.js'
+import { SkillStore } from './skill-store.js'
+import { journalAppend, readRecentJournal } from './journal.js'
+import { userModelStore, detectCorrection } from './user-model-store.js'
+import { SKILLS_DIR } from './skill-loader.js'
 import {
   RequestContext,
   MASTRA_THREAD_ID_KEY,
@@ -63,12 +68,24 @@ export class AgentOrchestrator {
     const userProfileSection =
       profileLines.length > 0 ? `\n\n--- User profile ---\n${profileLines.join('\n')}` : ''
 
+    // Inject journal (last 3 days of conversation history — the "long memory" layer)
+    const journalContent = readRecentJournal(3)
+    const journalSection = journalContent
+      ? `\n\n--- Recent conversation history (journal) ---\n${journalContent}`
+      : ''
+
     // Inject skills block (credential-aware, built fresh each turn)
     await skillLoader.injectCredentials()
     const skillsBlock = await skillLoader.buildPromptBlock()
     const skillsSection = skillsBlock ? `\n\n--- Skills ---\n${skillsBlock}` : ''
 
-    const contextualPrompt = `${basePrompt}${userProfileSection}${skillsSection}`
+    // Inject learned user preferences from UserModel
+    const userModelBlock = userModelStore.buildPromptBlock({ includeDrift: true })
+    const userModelSection = userModelBlock
+      ? `\n\n--- Learned user preferences ---\n${userModelBlock}`
+      : ''
+
+    const contextualPrompt = `${basePrompt}${userProfileSection}${journalSection}${userModelSection}${skillsSection}`
 
     if (this.dryRun) {
       return this.dryRunTurn(contextualPrompt, message, history, onChunk)
@@ -134,7 +151,7 @@ export class AgentOrchestrator {
         budget.checkAndConsume({ tokens: usage.totalTokens ?? 0 })
       }
 
-      return {
+      const turnResult: TurnResult = {
         content: fullText,
         toolCalls: (
           toolCalls as Array<{ payload: { toolName: string; args?: unknown } }> | undefined
@@ -144,6 +161,10 @@ export class AgentOrchestrator {
           result: {},
         })),
       }
+
+      // Post-turn side effects (all best-effort, never throw)
+      await this.postTurn(opts.agent.id, message, fullText, toolCallLog)
+      return turnResult
     } else {
       // Non-streaming path
       const result = await mastraAgent.generate(messages, mastraOpts)
@@ -152,7 +173,48 @@ export class AgentOrchestrator {
         budget.checkAndConsume({ tokens: result.usage.totalTokens ?? 0 })
       }
 
-      return { content: result.text ?? '' }
+      const text = result.text ?? ''
+      await this.postTurn(opts.agent.id, message, text, [])
+      return { content: text }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Post-turn side effects
+  // -------------------------------------------------------------------------
+
+  private async postTurn(
+    agentId: string,
+    userMessage: string,
+    agentReply: string,
+    toolCallLog: Array<{ toolCall: string }>,
+  ): Promise<void> {
+    // 1. Append to daily journal
+    journalAppend(agentId, userMessage, agentReply).catch(() => {})
+
+    // 2. Detect user corrections and update UserModel
+    detectCorrection(userMessage, agentReply).catch(() => {})
+
+    // 3. Auto-reflect into a skill if enough tool calls happened
+    if (toolCallLog.length >= 3) {
+      try {
+        const store = new SkillStore(SKILLS_DIR)
+        const callLLM = async (prompt: string): Promise<string> => {
+          const agent = getAgent()
+          const r = await agent.generate([{ role: 'user', content: prompt }], {})
+          return r.text ?? ''
+        }
+        const reflector = new SkillReflector(store, {
+          generate: buildLLMGenerateFn(callLLM),
+          minToolCalls: 3,
+        })
+        const entries = toolCallLog.map((t) => ({ toolId: t.toolCall, args: {}, result: {} }))
+        await reflector.reflect(agentId, entries)
+        // Reload skills so new skill appears in next turn
+        await skillLoader.reload()
+      } catch {
+        // best-effort
+      }
     }
   }
 

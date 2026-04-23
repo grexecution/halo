@@ -15,6 +15,7 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { withTimeout } from './timeout.js'
 import { executeCodeTool } from './execute-code.js'
+import { sendTelegramNotification } from './notifier.js'
 
 // ---------------------------------------------------------------------------
 // Permissions middleware — loaded lazily, cached
@@ -545,6 +546,33 @@ export const connectSkillTool = createTool({
 })
 
 // ---------------------------------------------------------------------------
+// notify_user — proactive Telegram send
+// ---------------------------------------------------------------------------
+
+export const notifyUserTool = createTool({
+  id: 'notify_user',
+  description:
+    'Send a proactive notification to the user via Telegram. Use this when a background task completes, something important happens, or you want to check in. Do not use for routine replies — only for unsolicited outbound messages.',
+  inputSchema: z.object({
+    message: z.string().describe('The message to send to the user'),
+    priority: z
+      .enum(['normal', 'urgent'])
+      .optional()
+      .default('normal')
+      .describe('urgent prepends 🚨 to the message'),
+  }),
+  execute: async (inputData) => {
+    try {
+      const text = inputData.priority === 'urgent' ? `🚨 ${inputData.message}` : inputData.message
+      await sendTelegramNotification(text)
+      return { ok: true, sent: text }
+    } catch (err) {
+      return { ok: false, error: String(err) }
+    }
+  },
+})
+
+// ---------------------------------------------------------------------------
 // Export all tools keyed by ID (Mastra expects a record)
 // ---------------------------------------------------------------------------
 
@@ -563,4 +591,5 @@ export const allMastraTools = {
   create_skill: createSkillTool,
   edit_skill: editSkillTool,
   connect_skill: connectSkillTool,
+  notify_user: notifyUserTool,
 }

@@ -127,17 +127,18 @@ Real-time collaborative whiteboard. Sessions persist to Postgres. Broadcast upda
 
 ### Requirements
 
-- A Linux server (Ubuntu 22.04+ recommended) — **Hetzner CX32, €6.80/mo works great**
-- OR your local Mac/Linux machine
-- Node.js 22+ (only needed to run the installer — everything else runs in Docker)
+- Ubuntu 22.04+ (or any modern Linux / macOS)
+- Nothing else — the installer handles Node, Docker, and everything
 
 ### One command
 
 ```bash
-npx create-halo
+curl -fsSL https://raw.githubusercontent.com/grexecution/halo/main/install.sh | bash
 ```
 
-The wizard asks 4 questions:
+That's it. The script installs Node 22 and Docker if missing, clones the repo, and launches the setup wizard. Total time on a fresh Hetzner CX32: under 3 minutes.
+
+The wizard then asks 4 questions:
 
 ```
 ◆  Halo — self-hosted AI agent

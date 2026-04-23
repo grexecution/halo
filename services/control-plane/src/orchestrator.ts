@@ -9,6 +9,7 @@ import { getAgent, getAgentForConfig } from './mastra-instance.js'
 import { loadSettings } from './setup-store.js'
 import { SessionBudget } from './budget.js'
 import { StuckLoopDetector } from './stuck-detector.js'
+import { skillLoader } from './skill-loader.js'
 import {
   RequestContext,
   MASTRA_THREAD_ID_KEY,
@@ -59,10 +60,15 @@ export class AgentOrchestrator {
     if (profile.connectedServices?.length)
       profileLines.push(`Connected services: ${profile.connectedServices.join(', ')}.`)
 
-    const contextualPrompt =
-      profileLines.length > 0
-        ? `${basePrompt}\n\n--- User profile ---\n${profileLines.join('\n')}`
-        : basePrompt
+    const userProfileSection =
+      profileLines.length > 0 ? `\n\n--- User profile ---\n${profileLines.join('\n')}` : ''
+
+    // Inject skills block (credential-aware, built fresh each turn)
+    await skillLoader.injectCredentials()
+    const skillsBlock = await skillLoader.buildPromptBlock()
+    const skillsSection = skillsBlock ? `\n\n--- Skills ---\n${skillsBlock}` : ''
+
+    const contextualPrompt = `${basePrompt}${userProfileSection}${skillsSection}`
 
     if (this.dryRun) {
       return this.dryRunTurn(contextualPrompt, message, history, onChunk)

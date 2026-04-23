@@ -17,12 +17,14 @@ import {
   ClipboardCheck,
   Play,
   BookOpen,
+  Sparkles,
 } from 'lucide-react'
 import { cn } from './ui/cn'
 
 const CORE_NAV = [
   { href: '/chat', label: 'Chat', icon: MessageSquare },
   { href: '/agents', label: 'Agents', icon: Bot },
+  { href: '/skills', label: 'Skills', icon: Sparkles },
   { href: '/cron-goals', label: 'Goals & Cron', icon: Target },
   { href: '/runs', label: 'Runs', icon: Play },
   { href: '/approvals', label: 'Approvals', icon: ClipboardCheck, badge: true },

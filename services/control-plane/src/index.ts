@@ -23,6 +23,7 @@ import {
   reloadChannel,
 } from './messaging-bridge.js'
 import type { ChannelId } from '@open-greg/messaging'
+import { skillLoader } from './skill-loader.js'
 
 const app = Fastify({ logger: true })
 
@@ -482,6 +483,114 @@ app.post<{
 })
 
 // ----------------------------------------------------------------
+// Skills API
+// ----------------------------------------------------------------
+
+// GET /api/skills — list all skills with credential status
+app.get('/api/skills', async () => {
+  const skills = skillLoader.list()
+  const result = await Promise.all(
+    skills.map(async (s) => {
+      const missing = await skillLoader.missingCredentials(s.name)
+      return {
+        name: s.name,
+        description: s.description,
+        version: s.version,
+        requiresEnv: s.requiresEnv,
+        enabled: s.enabled,
+        credentialStatus: s.requiresEnv.map((key) => ({
+          key,
+          set: !missing.includes(key),
+        })),
+      }
+    }),
+  )
+  return { skills: result }
+})
+
+// GET /api/skills/:name — get a single skill including its body
+app.get<{ Params: { name: string } }>('/api/skills/:name', async (req, reply) => {
+  const skill = skillLoader.get(req.params.name)
+  if (!skill) return reply.status(404).send({ error: 'Skill not found' })
+  const missing = await skillLoader.missingCredentials(skill.name)
+  return {
+    ...skill,
+    credentialStatus: skill.requiresEnv.map((key) => ({
+      key,
+      set: !missing.includes(key),
+    })),
+  }
+})
+
+// POST /api/skills/:name — create or update a skill
+app.post<{
+  Params: { name: string }
+  Body: {
+    description?: string
+    body?: string
+    requiresEnv?: string[]
+    enabled?: boolean
+  }
+}>('/api/skills/:name', async (req, reply) => {
+  const { name } = req.params
+  const existing = skillLoader.get(name)
+  if (!req.body.description && !req.body.body && !existing) {
+    return reply.status(400).send({ error: 'description and body are required for new skills' })
+  }
+  const skill = skillLoader.createOrUpdate({
+    name,
+    description: req.body.description ?? existing?.description ?? '',
+    body: req.body.body ?? existing?.body ?? '',
+    requiresEnv: req.body.requiresEnv ?? existing?.requiresEnv ?? [],
+    enabled: req.body.enabled ?? existing?.enabled ?? true,
+    ...(existing?.version ? { version: existing.version } : {}),
+  })
+  return { ok: true, skill }
+})
+
+// DELETE /api/skills/:name — delete a skill
+app.delete<{ Params: { name: string } }>('/api/skills/:name', async (req, reply) => {
+  const deleted = skillLoader.delete(req.params.name)
+  if (!deleted) return reply.status(404).send({ error: 'Skill not found' })
+  return { ok: true }
+})
+
+// POST /api/skills/:name/toggle — enable or disable a skill
+app.post<{ Params: { name: string }; Body: { enabled: boolean } }>(
+  '/api/skills/:name/toggle',
+  async (req, reply) => {
+    const ok = skillLoader.toggle(req.params.name, req.body.enabled)
+    if (!ok) return reply.status(404).send({ error: 'Skill not found' })
+    return { ok: true, enabled: req.body.enabled }
+  },
+)
+
+// POST /api/skills/:name/credentials — store a credential for a skill
+app.post<{
+  Params: { name: string }
+  Body: { envKey: string; value: string }
+}>('/api/skills/:name/credentials', async (req, reply) => {
+  const { envKey, value } = req.body
+  if (!envKey || !value) return reply.status(400).send({ error: 'envKey and value are required' })
+  await skillLoader.storeCredential(envKey, value)
+  const missing = await skillLoader.missingCredentials(req.params.name)
+  return { ok: true, missingCredentials: missing }
+})
+
+// GET /api/skills/:name/credentials — list credential status (no values returned)
+app.get<{ Params: { name: string } }>('/api/skills/:name/credentials', async (req, reply) => {
+  const skill = skillLoader.get(req.params.name)
+  if (!skill) return reply.status(404).send({ error: 'Skill not found' })
+  const missing = await skillLoader.missingCredentials(skill.name)
+  return {
+    credentials: skill.requiresEnv.map((key) => ({
+      key,
+      set: !missing.includes(key),
+    })),
+  }
+})
+
+// ----------------------------------------------------------------
 // Start
 // ----------------------------------------------------------------
 
@@ -489,6 +598,9 @@ const PORT = Number(process.env['CONTROL_PLANE_PORT'] ?? 3001)
 
 // Apply persisted LLM keys before agent init
 applyEnvFromSettings()
+
+// Bootstrap bundled skills + start file watcher
+skillLoader.init()
 
 // Best-effort DBOS init — gracefully degrades if Postgres not available
 await initDBOS()
@@ -500,6 +612,7 @@ await app.listen({ port: PORT, host: '0.0.0.0' })
 
 // Graceful shutdown
 const shutdown = async () => {
+  skillLoader.stop()
   await app.close()
   await shutdownMessaging()
   await shutdownDBOS()

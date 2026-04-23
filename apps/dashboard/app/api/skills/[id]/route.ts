@@ -1,65 +1,78 @@
+/**
+ * Dashboard skills/[id] API — proxy to control-plane /api/skills/:name
+ */
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { getDb } from '../../../lib/db'
-import { randomUUID } from 'node:crypto'
 
-interface SkillBody {
-  name: string
-  description?: string
-  category?: string
-  tags?: string[]
-  systemPrompt: string
-  steps?: { title: string; prompt: string }[]
-  exampleTrigger?: string
-  docsUrl?: string
+const CP = process.env['NEXT_PUBLIC_CONTROL_PLANE_URL'] ?? 'http://localhost:3001'
+
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  try {
+    const res = await fetch(`${CP}/api/skills/${id}`, { signal: AbortSignal.timeout(10_000) })
+    const data = await res.json()
+    return NextResponse.json(data, { status: res.status })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 502 })
+  }
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const body = (await req.json()) as SkillBody
-  if (!body.name || !body.systemPrompt) {
-    return NextResponse.json({ error: 'name and systemPrompt required' }, { status: 400 })
+  try {
+    const body = await req.json()
+    const res = await fetch(`${CP}/api/skills/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10_000),
+    })
+    const data = await res.json()
+    return NextResponse.json(data, { status: res.status })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 502 })
   }
-
-  const db = getDb()
-  const now = new Date().toISOString()
-  const rowId = id === 'new' ? randomUUID() : id
-
-  db.prepare(
-    `
-    INSERT INTO skills (id, name, description, category, tags, system_prompt, steps, example_trigger, docs_url, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET
-      name = excluded.name,
-      description = excluded.description,
-      category = excluded.category,
-      tags = excluded.tags,
-      system_prompt = excluded.system_prompt,
-      steps = excluded.steps,
-      example_trigger = excluded.example_trigger,
-      docs_url = excluded.docs_url,
-      updated_at = excluded.updated_at
-  `,
-  ).run(
-    rowId,
-    body.name,
-    body.description ?? '',
-    body.category ?? 'productivity',
-    JSON.stringify(body.tags ?? []),
-    body.systemPrompt,
-    JSON.stringify(body.steps ?? []),
-    body.exampleTrigger ?? '',
-    body.docsUrl ?? '',
-    now,
-    now,
-  )
-
-  return NextResponse.json({ ok: true, id: rowId })
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const db = getDb()
-  db.prepare('DELETE FROM skills WHERE id = ?').run(id)
-  return NextResponse.json({ ok: true })
+  try {
+    const res = await fetch(`${CP}/api/skills/${id}`, {
+      method: 'DELETE',
+      signal: AbortSignal.timeout(10_000),
+    })
+    const data = await res.json()
+    return NextResponse.json(data, { status: res.status })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 502 })
+  }
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  try {
+    const body = await req.json()
+    // Toggle
+    if ('enabled' in body && Object.keys(body).length === 1) {
+      const res = await fetch(`${CP}/api/skills/${id}/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(10_000),
+      })
+      const data = await res.json()
+      return NextResponse.json(data, { status: res.status })
+    }
+    // Full update
+    const res = await fetch(`${CP}/api/skills/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(10_000),
+    })
+    const data = await res.json()
+    return NextResponse.json(data, { status: res.status })
+  } catch (err) {
+    return NextResponse.json({ error: String(err) }, { status: 502 })
+  }
 }

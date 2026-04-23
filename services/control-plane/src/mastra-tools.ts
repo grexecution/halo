@@ -410,6 +410,141 @@ export const editAgentTool = createTool({
 })
 
 // ---------------------------------------------------------------------------
+// create_skill — write a new skill to disk
+// ---------------------------------------------------------------------------
+
+export const createSkillTool = createTool({
+  id: 'create_skill',
+  description:
+    'Create a new skill and save it to disk. Skills teach Halo how to use a specific tool or service. After creation, the skill is immediately available.',
+  inputSchema: z.object({
+    name: z
+      .string()
+      .regex(/^[a-z0-9-]+$/)
+      .describe('Kebab-case skill name, e.g. "github" or "notion-search"'),
+    description: z
+      .string()
+      .describe(
+        'One or two sentences: what the skill does AND when to use it. This is what Halo sees in the system prompt.',
+      ),
+    body: z.string().describe('Full skill body in markdown — workflow steps, rules, examples'),
+    requiresEnv: z
+      .array(z.string())
+      .optional()
+      .describe('Environment variable names this skill needs, e.g. ["GITHUB_TOKEN"]'),
+  }),
+  execute: async (inputData) => {
+    const middleware = await getMiddleware()
+    const check = await middleware.check('create_skill', inputData, { sessionId: 'agent' })
+    if (check.decision === 'deny') return denied(check.reason)
+
+    try {
+      const { skillLoader } = await import('./skill-loader.js')
+      const skill = skillLoader.createOrUpdate({
+        name: inputData.name,
+        description: inputData.description,
+        body: inputData.body,
+        requiresEnv: inputData.requiresEnv ?? [],
+      })
+      return {
+        ok: true,
+        name: skill.name,
+        path: skill.path,
+        message: `Skill "${skill.name}" created. ${
+          (inputData.requiresEnv ?? []).length > 0
+            ? `It needs these credentials to work: ${(inputData.requiresEnv ?? []).join(', ')}. Use connect_skill to store them.`
+            : 'No credentials needed — it is ready to use.'
+        }`,
+      }
+    } catch (err) {
+      return { ok: false, error: String(err) }
+    }
+  },
+})
+
+// ---------------------------------------------------------------------------
+// edit_skill — update an existing skill
+// ---------------------------------------------------------------------------
+
+export const editSkillTool = createTool({
+  id: 'edit_skill',
+  description:
+    'Update an existing skill — change its description, body, required credentials, or enabled state.',
+  inputSchema: z.object({
+    name: z.string().describe('Skill name to edit'),
+    description: z.string().optional().describe('New description (replaces existing)'),
+    body: z.string().optional().describe('New body (replaces existing)'),
+    requiresEnv: z
+      .array(z.string())
+      .optional()
+      .describe('New required env vars list (replaces existing)'),
+    enabled: z.boolean().optional().describe('Enable or disable the skill'),
+  }),
+  execute: async (inputData) => {
+    const middleware = await getMiddleware()
+    const check = await middleware.check('edit_skill', inputData, { sessionId: 'agent' })
+    if (check.decision === 'deny') return denied(check.reason)
+
+    try {
+      const { skillLoader } = await import('./skill-loader.js')
+      const existing = skillLoader.get(inputData.name)
+      if (!existing) return { ok: false, error: `Skill "${inputData.name}" not found` }
+
+      skillLoader.createOrUpdate({
+        name: inputData.name,
+        description: inputData.description ?? existing.description,
+        body: inputData.body ?? existing.body,
+        requiresEnv: inputData.requiresEnv ?? existing.requiresEnv,
+        enabled: inputData.enabled ?? existing.enabled,
+        version: existing.version,
+      })
+      return { ok: true, message: `Skill "${inputData.name}" updated.` }
+    } catch (err) {
+      return { ok: false, error: String(err) }
+    }
+  },
+})
+
+// ---------------------------------------------------------------------------
+// connect_skill — securely store a credential for a skill
+// ---------------------------------------------------------------------------
+
+export const connectSkillTool = createTool({
+  id: 'connect_skill',
+  description:
+    'Securely store a credential (API key, token, etc.) that a skill needs. The value is encrypted and stored via keytar. Use this after the user provides an API key.',
+  inputSchema: z.object({
+    skillName: z.string().describe('The skill this credential belongs to'),
+    envKey: z.string().describe('The environment variable name, e.g. "GITHUB_TOKEN"'),
+    value: z.string().describe('The credential value provided by the user'),
+  }),
+  execute: async (inputData) => {
+    const middleware = await getMiddleware()
+    const check = await middleware.check('connect_skill', inputData, { sessionId: 'agent' })
+    if (check.decision === 'deny') return denied(check.reason)
+
+    try {
+      const { skillLoader } = await import('./skill-loader.js')
+      await skillLoader.storeCredential(inputData.envKey, inputData.value)
+
+      const stillMissing = await skillLoader.missingCredentials(inputData.skillName)
+      if (stillMissing.length > 0) {
+        return {
+          ok: true,
+          message: `${inputData.envKey} saved. The "${inputData.skillName}" skill still needs: ${stillMissing.join(', ')}.`,
+        }
+      }
+      return {
+        ok: true,
+        message: `${inputData.envKey} saved. The "${inputData.skillName}" skill is now fully connected and ready to use.`,
+      }
+    } catch (err) {
+      return { ok: false, error: String(err) }
+    }
+  },
+})
+
+// ---------------------------------------------------------------------------
 // Export all tools keyed by ID (Mastra expects a record)
 // ---------------------------------------------------------------------------
 
@@ -425,4 +560,7 @@ export const allMastraTools = {
   suggest_settings_change: suggestSettingsChangeTool,
   create_agent: createAgentTool,
   edit_agent: editAgentTool,
+  create_skill: createSkillTool,
+  edit_skill: editSkillTool,
+  connect_skill: connectSkillTool,
 }

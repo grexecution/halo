@@ -128,8 +128,7 @@ interface RuntimeProviderProps {
 export function ChatRuntimeProvider({ children, sessionId, onSessionCreated }: RuntimeProviderProps) {
   const adapter = useMemo(
     () => makeAdapter(sessionId, onSessionCreated),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sessionId],
+    [sessionId, onSessionCreated],
   )
 
   const runtime = useLocalRuntime(adapter)

@@ -738,6 +738,20 @@ The runner lives at `scripts/test-features.ts` and parses this markdown with a s
 **Acceptance:** Three procedural memory tests pass: skill indexing, metadata filtering, and session linkage via `sessionId` metadata.
 **Test:** `packages/memory/test/fts-search.spec.ts`
 
+### F-204 — User preference modeling
+
+**Status:** done · **Phase:** 8
+**Spec:** `UserModel` tracks explicit and inferred user preferences from correction signals. Preferences are keyed, upserted on repeat, and included in the agent's system prompt as a "User preferences" block.
+**Acceptance:** Preference tracking, upsert, multi-preference, correction count, prompt block, and empty-state tests all pass. Export/import round-trip is correct.
+**Test:** `packages/memory/test/user-model.spec.ts`
+
+### F-205 — Drift detection
+
+**Status:** done · **Phase:** 8
+**Spec:** `UserModel.recordMistake()` tracks patterns the agent repeats. `detectDrift({ minRecurrences })` returns mistakes that have recurred at or above the threshold. Drift patterns are included in the prompt block via `buildPromptBlock({ includeDrift: true })`.
+**Acceptance:** Mistake recording, recurrence increment, drift threshold filtering, and prompt block drift section tests all pass.
+**Test:** `packages/memory/test/user-model.spec.ts`
+
 ---
 
 ## Feature-test runner

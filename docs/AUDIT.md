@@ -244,3 +244,9 @@ The project is mid-Mastra+DBOS migration (`REBUILD_STATE.md`, step 1 of 7 is "IN
 - `packages/memory/src/fts.ts` — `FTSIndex` interface, `InMemoryFTS` (test/fallback), `PostgresFTS` (production pg adapter)
 - `packages/memory/test/fts-search.spec.ts` — 12 tests: FTS search, case-insensitive, prefix, limit, delete, clear, metadata filtering, session linkage
 - Test suite: **359/359 passing** | typecheck: **0 errors**
+
+### F-204 / F-205 — User preference modeling + drift detection (done)
+
+- `packages/memory/src/user-model.ts` — UserModel: preference tracking, correction signals, drift detection, export/import
+- `packages/memory/test/user-model.spec.ts` — 14 tests: preferences, upsert, correction count, drift threshold, prompt block, round-trip
+- Test suite: **373/373 passing** | typecheck: **0 errors**

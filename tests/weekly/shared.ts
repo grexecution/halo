@@ -92,18 +92,18 @@ export function contains(haystack: string, needle: string): boolean {
 }
 
 /** Print summary and return markdown block for FINDINGS.md */
-export function summarize(day: number, date: string): string {
+export function summarize(run: number, date: string): string {
   const passed = results.filter((r) => r.passed).length
   const total = results.length
   const failed = results.filter((r) => !r.passed)
   const suggestions = results.filter((r) => r.suggestion)
 
   console.log('\n' + '='.repeat(60))
-  console.log(`Day ${day} Summary: ${passed}/${total} passed`)
+  console.log(`Run ${run} (${date}): ${passed}/${total} passed`)
   console.log('='.repeat(60))
 
   const lines: string[] = [
-    `## Day ${day} — ${date}`,
+    `## Run ${run} — ${date}`,
     ``,
     `### Passed: ${passed}/${total} features`,
     ``,

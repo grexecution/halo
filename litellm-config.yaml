@@ -1,0 +1,41 @@
+# LiteLLM proxy config for open-greg
+# Auto-loaded by the Docker Compose litellm service.
+# Update model names and add provider keys as needed.
+# See: https://docs.litellm.ai/docs/proxy/configs
+
+model_list:
+  # ─── Heavy model ───────────────────────────────────────────────────────────
+  # Used for reasoning, planning, complex coding tasks.
+  - model_name: claude-sonnet-4-5
+    litellm_params:
+      model: anthropic/claude-sonnet-4-5
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # ─── Light model ───────────────────────────────────────────────────────────
+  # Used for formatting, reflection, summarization, skill generation.
+  - model_name: claude-haiku-4-5-20251001
+    litellm_params:
+      model: anthropic/claude-haiku-4-5-20251001
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # ─── Local fallback (Ollama) ────────────────────────────────────────────────
+  # Activated when cloud models are unavailable or budget is exhausted.
+  - model_name: ollama-fallback
+    litellm_params:
+      model: ollama/llama3.2
+      api_base: http://ollama:11434
+
+router_settings:
+  retry_policy:
+    AuthenticationErrorRetries: 0
+    RateLimitErrorRetries: 3
+    ContentPolicyViolationErrorRetries: 0
+    TimeoutErrorRetries: 2
+  # On heavy-model failure, fall back to light then local
+  fallbacks:
+    - claude-sonnet-4-5: [claude-haiku-4-5-20251001, ollama-fallback]
+    - claude-haiku-4-5-20251001: [ollama-fallback]
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  port: 4000

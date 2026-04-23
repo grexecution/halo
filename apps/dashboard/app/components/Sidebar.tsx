@@ -79,7 +79,7 @@ export function Sidebar() {
           <div className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center flex-shrink-0">
             <Circle size={10} className="text-white fill-white" />
           </div>
-          <span className="text-sm font-semibold text-white tracking-tight">open-greg</span>
+          <span className="text-sm font-semibold text-white tracking-tight">Halo</span>
         </Link>
       </div>
 

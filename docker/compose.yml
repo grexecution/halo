@@ -98,6 +98,7 @@ services:
       - '3000:3000'
     environment:
       NEXT_PUBLIC_CONTROL_PLANE_URL: http://localhost:3001
+      GREG_ADMIN_PASSWORD: ${GREG_ADMIN_PASSWORD}
     depends_on:
       control-plane:
         condition: service_healthy

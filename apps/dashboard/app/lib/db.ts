@@ -55,6 +55,14 @@ function migrateSchema(db: Database.Database) {
     db.exec("ALTER TABLE agents ADD COLUMN fallback_models TEXT NOT NULL DEFAULT '[]'")
   }
 
+  // Add must_change_password column to auth if not present
+  const authCols = (db.prepare('PRAGMA table_info(auth)').all() as { name: string }[]).map(
+    (c) => c.name,
+  )
+  if (!authCols.includes('must_change_password')) {
+    db.exec('ALTER TABLE auth ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0')
+  }
+
   // New tables added after initial schema
   db.exec(`
     CREATE TABLE IF NOT EXISTS approvals (

@@ -72,7 +72,7 @@ async function cmdInit(args: string[]): Promise<void> {
     return
   }
 
-  intro('  create-open-greg  ')
+  intro('  Halo — self-hosted AI agent  ')
 
   // ── Step 0: Docker check ──────────────────────────────────────────────────
   const sp = spinner()
@@ -104,7 +104,7 @@ async function cmdInit(args: string[]): Promise<void> {
   const hasExisting = existsSync(CONFIG_PATH)
   if (hasExisting && !nonInteractive) {
     const overwrite = await confirm({
-      message: 'Existing open-greg install found. Reconfigure it?',
+      message: 'Existing Halo install found. Reconfigure it?',
       initialValue: false,
     })
     if (isCancel(overwrite) || !overwrite)
@@ -308,7 +308,7 @@ async function cmdInit(args: string[]): Promise<void> {
         ? 'Keep this terminal open to maintain the public URL.'
         : 'Close this terminal any time — services run in Docker.',
     ].join('\n'),
-    'open-greg is running',
+    'Halo is running',
   )
 
   if (!enableTunnel) {

@@ -3,13 +3,13 @@ import './globals.css'
 import { AppShell } from './components/AppShell'
 
 export const metadata: Metadata = {
-  title: 'open-greg',
+  title: 'Halo',
   description: 'Self-hosted autonomous AI agent platform',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'open-greg',
+    title: 'Halo',
   },
   icons: {
     icon: [

@@ -147,6 +147,104 @@ function ModelsTab() {
   )
 }
 
+// ── MessagingTab ──────────────────────────────────────────────────────────────
+
+interface BotStatus {
+  channel: 'telegram' | 'discord'
+  running: boolean
+  startedAt?: string
+  error?: string
+}
+
+const CHANNEL_META: Record<string, { label: string; icon: string; pluginId: string }> = {
+  telegram: { label: 'Telegram', icon: '✈️', pluginId: 'telegram' },
+  discord: { label: 'Discord', icon: '🎮', pluginId: 'discord' },
+}
+
+function MessagingTab() {
+  const [bots, setBots] = useState<BotStatus[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('http://localhost:3001/api/messaging/status')
+      .then((r) => r.json())
+      .then((d: { bots?: BotStatus[] }) => setBots(d.bots ?? []))
+      .catch(() => setBots([]))
+      .finally(() => setLoading(false))
+  }, [])
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-sm font-semibold text-white">Messaging Bots</h2>
+        <p className="text-xs text-gray-500 mt-0.5">
+          Talk to your agents via Telegram (and Discord later). Connect a bot in Connectors, then
+          check its live status here.
+        </p>
+      </div>
+
+      {loading ? (
+        <p className="text-xs text-gray-500">Checking bot status…</p>
+      ) : (
+        <div className="space-y-3">
+          {bots.map((bot) => {
+            const meta = CHANNEL_META[bot.channel]
+            return (
+              <Card key={bot.channel}>
+                <CardContent className="py-4 px-5 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{meta?.icon}</span>
+                    <div>
+                      <p className="text-sm font-medium text-white">{meta?.label ?? bot.channel}</p>
+                      {bot.running ? (
+                        <p className="text-xs text-green-400 mt-0.5">
+                          Running · started{' '}
+                          {bot.startedAt ? new Date(bot.startedAt).toLocaleTimeString() : 'unknown'}
+                        </p>
+                      ) : bot.error ? (
+                        <p className="text-xs text-red-400 mt-0.5">Error: {bot.error}</p>
+                      ) : (
+                        <p className="text-xs text-gray-500 mt-0.5">Not connected</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {bot.running && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-900/40 border border-green-800 text-green-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                        Live
+                      </span>
+                    )}
+                    <a
+                      href={`/connectors?tab=plugins&plugin=${meta?.pluginId ?? bot.channel}`}
+                      className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium transition-colors"
+                    >
+                      Configure →
+                    </a>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
+
+      <Card>
+        <CardContent className="py-5 px-5">
+          <p className="text-xs text-gray-400">
+            To connect Telegram: go to{' '}
+            <a href="/connectors?tab=plugins" className="text-blue-400 underline">
+              Connectors → Plugins
+            </a>
+            , find <strong className="text-white">Telegram</strong>, and enter your BotFather token.
+            The bot starts automatically after saving.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 // ---- Tab: Vision & Voice ----
 
 function VisionVoiceTab({
@@ -1482,6 +1580,7 @@ export default function SettingsPage() {
         <Tabs defaultValue="models">
           <TabsList>
             <TabsTrigger value="models">Models</TabsTrigger>
+            <TabsTrigger value="messaging">Messaging</TabsTrigger>
             <TabsTrigger value="memory">Memory</TabsTrigger>
             <TabsTrigger value="vision-voice">Vision and Voice</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
@@ -1493,6 +1592,10 @@ export default function SettingsPage() {
 
           <TabsContent value="models">
             <ModelsTab />
+          </TabsContent>
+
+          <TabsContent value="messaging">
+            <MessagingTab />
           </TabsContent>
 
           <TabsContent value="memory">

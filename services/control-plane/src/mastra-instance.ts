@@ -10,7 +10,7 @@ import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
-import { mkdirSync, existsSync } from 'node:fs'
+import { mkdirSync, existsSync, readFileSync } from 'node:fs'
 import { allMastraTools } from './mastra-tools.js'
 
 const DIR = join(homedir(), '.open-greg')
@@ -21,24 +21,45 @@ function ensureDir() {
 }
 
 // ---------------------------------------------------------------------------
+// Read settings.json for model config (falls back to env / hardcoded defaults)
+// ---------------------------------------------------------------------------
+
+function readSettings(): { ollamaModel?: string; anthropicModel?: string } {
+  try {
+    const raw = readFileSync(join(DIR, 'settings.json'), 'utf-8')
+    const s = JSON.parse(raw) as { llm?: { models?: Array<{ provider: string; modelId: string }> } }
+    const models = s?.llm?.models ?? []
+    const ollamaEntry = models.find((m) => m.provider === 'ollama')
+    const anthropicEntry = models.find((m) => m.provider === 'anthropic')
+    const result: { ollamaModel?: string; anthropicModel?: string } = {}
+    if (ollamaEntry?.modelId) result.ollamaModel = ollamaEntry.modelId
+    if (anthropicEntry?.modelId) result.anthropicModel = anthropicEntry.modelId
+    return result
+  } catch {
+    return {}
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Model resolution
 // ---------------------------------------------------------------------------
 
 function resolveModel() {
   const provider = process.env['LLM_PROVIDER'] ?? 'auto'
   const anthropicKey = process.env['ANTHROPIC_API_KEY']
+  const settings = readSettings()
 
   if (provider === 'anthropic' || (provider === 'auto' && anthropicKey)) {
+    const model =
+      process.env['ANTHROPIC_MODEL'] ?? settings.anthropicModel ?? 'claude-haiku-4-5-20251001'
     return createAnthropic({ apiKey: anthropicKey! })(
-      (process.env['ANTHROPIC_MODEL'] ?? 'claude-haiku-4-5-20251001') as Parameters<
-        ReturnType<typeof createAnthropic>
-      >[0],
+      model as Parameters<ReturnType<typeof createAnthropic>>[0],
     )
   }
 
   // Ollama / OpenAI-compatible
   const ollamaUrl = process.env['OLLAMA_URL'] ?? 'http://localhost:11434'
-  const ollamaModel = process.env['OLLAMA_MODEL'] ?? 'llama3.2'
+  const ollamaModel = process.env['OLLAMA_MODEL'] ?? settings.ollamaModel ?? 'llama3.2'
   return createOpenAI({ baseURL: `${ollamaUrl}/v1`, apiKey: 'ollama' }).chat(ollamaModel)
 }
 
@@ -53,10 +74,15 @@ function buildMemory(): Memory {
 
   const anthropicKey = process.env['ANTHROPIC_API_KEY']
   const ollamaUrl = process.env['OLLAMA_URL'] ?? 'http://localhost:11434'
-  const ollamaModel = process.env['OLLAMA_MODEL'] ?? 'llama3.2'
+  const settings = readSettings()
+  const ollamaModel = process.env['OLLAMA_MODEL'] ?? settings.ollamaModel ?? 'llama3.2'
 
   const omModel = anthropicKey
-    ? createAnthropic({ apiKey: anthropicKey })('claude-haiku-4-5-20251001')
+    ? createAnthropic({ apiKey: anthropicKey })(
+        (process.env['ANTHROPIC_MODEL'] ??
+          settings.anthropicModel ??
+          'claude-haiku-4-5-20251001') as Parameters<ReturnType<typeof createAnthropic>>[0],
+      )
     : createOpenAI({ baseURL: `${ollamaUrl}/v1`, apiKey: 'ollama' }).chat(ollamaModel)
 
   return new Memory({

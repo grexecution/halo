@@ -8,6 +8,11 @@ import type { AgentConfig } from '@open-greg/agent-core'
 import { getAgent } from './mastra-instance.js'
 import { SessionBudget } from './budget.js'
 import { StuckLoopDetector } from './stuck-detector.js'
+import {
+  RequestContext,
+  MASTRA_THREAD_ID_KEY,
+  MASTRA_RESOURCE_ID_KEY,
+} from '@mastra/core/request-context'
 
 export interface RunTurnOptions {
   agent: AgentConfig
@@ -61,9 +66,14 @@ export class AgentOrchestrator {
       { role: 'user', content: message },
     ]
 
+    const requestContext = new RequestContext()
+    if (threadId) requestContext.set(MASTRA_THREAD_ID_KEY, threadId)
+    if (resourceId) requestContext.set(MASTRA_RESOURCE_ID_KEY, resourceId)
+
     const mastraOpts = {
       ...(threadId ? { threadId } : {}),
       ...(resourceId ? { resourceId } : {}),
+      requestContext,
       instructions: contextualPrompt,
     }
 

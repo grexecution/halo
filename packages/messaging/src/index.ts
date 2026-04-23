@@ -1,3 +1,10 @@
+export type { TelegramAdapterOptions } from './telegram.js'
+export { createTelegramAdapter } from './telegram.js'
+export type { DiscordAdapterOptions } from './discord.js'
+export { createDiscordAdapter } from './discord.js'
+export type { BotStatus, ChannelId, SqliteDb, MessageDispatcher } from './bot-manager.js'
+export { BotManager } from './bot-manager.js'
+
 export type MessageChannel = 'telegram' | 'discord' | 'slack'
 
 export interface IncomingMessage {

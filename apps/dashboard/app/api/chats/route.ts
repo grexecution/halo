@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       thread: {
         id,
         title,
-        resourceId: 'default',
+        resourceId: 'user',
         createdAt: new Date(now),
         updatedAt: new Date(now),
       },

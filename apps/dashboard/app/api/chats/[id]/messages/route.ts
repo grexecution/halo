@@ -117,7 +117,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const ctx = await getMemory()
-    .getContext({ threadId: id, resourceId: 'default' })
+    .getContext({ threadId: id, resourceId: 'user' })
     .catch(() => null)
   if (ctx?.systemMessage) systemParts.push(`### Memory & Working Context\n\n${ctx.systemMessage}`)
   if (ctx?.otherThreadsContext)
@@ -242,7 +242,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
               role: 'user',
               createdAt: new Date(now),
               threadId: id,
-              resourceId: 'default',
+              resourceId: 'user',
               content: { format: 2, parts: [{ type: 'text', text: body.message }] },
             },
             {
@@ -250,7 +250,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
               role: 'assistant',
               createdAt: new Date(assistantAt),
               threadId: id,
-              resourceId: 'default',
+              resourceId: 'user',
               content: { format: 2, parts: [{ type: 'text', text: assistantContent }] },
             },
           ],

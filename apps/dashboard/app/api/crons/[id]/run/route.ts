@@ -41,7 +41,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
         schedule: row.schedule,
         command: row.command ?? row.goal ?? row.name,
       }),
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(60_000),
     })
 
     if (!resp.ok) {

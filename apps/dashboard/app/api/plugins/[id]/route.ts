@@ -27,6 +27,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
        fields = excluded.fields,
        connected_at = excluded.connected_at`,
   ).run(id, JSON.stringify(body.fields), connectedAt)
+
+  // Hot-reload messaging bots when a messaging plugin is (re)connected
+  const MESSAGING_PLUGINS = new Set(['telegram', 'discord'])
+  if (MESSAGING_PLUGINS.has(id)) {
+    try {
+      await fetch('http://localhost:3001/api/messaging/reload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelId: id, fields: body.fields }),
+        signal: AbortSignal.timeout(5000),
+      })
+    } catch {
+      // Control-plane may not be running — that's fine, it'll load on next start
+    }
+  }
+
   return NextResponse.json({ ok: true, connectedAt })
 }
 

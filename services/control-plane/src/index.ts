@@ -7,6 +7,13 @@ import { initDBOS, shutdownDBOS, GoalWorkflow, CronWorkflow } from './dbos-workf
 import type { GoalWorkflowInput, CronWorkflowInput } from './dbos-workflows.js'
 import { emitLog, queryLogs, knownAgents, knownTools } from './log-store.js'
 import type { LogQuery } from './log-store.js'
+import {
+  initMessaging,
+  shutdownMessaging,
+  getMessagingStatus,
+  reloadChannel,
+} from './messaging-bridge.js'
+import type { ChannelId } from '@open-greg/messaging'
 
 const app = Fastify({ logger: true })
 
@@ -276,6 +283,29 @@ app.post<{ Body: CronWorkflowInput }>('/api/crons/run', async (req, reply) => {
 })
 
 // ----------------------------------------------------------------
+// Messaging — bot status + hot-reload
+// ----------------------------------------------------------------
+
+app.get('/api/messaging/status', async () => ({
+  bots: getMessagingStatus(),
+}))
+
+app.post<{
+  Body: { channelId: ChannelId; fields: Record<string, string> }
+}>('/api/messaging/reload', async (req, reply) => {
+  const { channelId, fields } = req.body
+  if (!channelId || !fields) {
+    return reply.code(400).send({ error: 'channelId and fields are required' })
+  }
+  try {
+    await reloadChannel(channelId, fields)
+    return { ok: true, status: getMessagingStatus() }
+  } catch (err) {
+    return reply.code(500).send({ error: String(err) })
+  }
+})
+
+// ----------------------------------------------------------------
 // Start
 // ----------------------------------------------------------------
 
@@ -284,11 +314,15 @@ const PORT = Number(process.env['CONTROL_PLANE_PORT'] ?? 3001)
 // Best-effort DBOS init — gracefully degrades if Postgres not available
 await initDBOS()
 
+// Start messaging bots (Telegram, Discord, etc.) — non-fatal if not configured
+await initMessaging()
+
 await app.listen({ port: PORT, host: '0.0.0.0' })
 
 // Graceful shutdown
 const shutdown = async () => {
   await app.close()
+  await shutdownMessaging()
   await shutdownDBOS()
   process.exit(0)
 }

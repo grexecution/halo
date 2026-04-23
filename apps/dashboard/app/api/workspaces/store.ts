@@ -233,7 +233,7 @@ export async function indexWorkspaceToMemory(ws: Workspace): Promise<void> {
       thread: {
         id: threadId,
         title: `Workspace: ${ws.name}`,
-        resourceId: 'default',
+        resourceId: 'user',
         createdAt: new Date(ws.createdAt),
         updatedAt: new Date(now),
         metadata: { workspaceType: ws.type, workspaceName: ws.name },
@@ -247,7 +247,7 @@ export async function indexWorkspaceToMemory(ws: Workspace): Promise<void> {
             role: 'system',
             createdAt: new Date(now),
             threadId,
-            resourceId: 'default',
+            resourceId: 'user',
             content: { format: 2, parts: [{ type: 'text', text: content }] },
           },
         ],

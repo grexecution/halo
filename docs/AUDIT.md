@@ -238,3 +238,9 @@ The project is mid-Mastra+DBOS migration (`REBUILD_STATE.md`, step 1 of 7 is "IN
 - `services/control-plane/test/skill-loop.spec.ts` — 11 tests, all passing
 - `SkillStore.buildPromptBlock()` used by orchestrator to inject skills into system prompt
 - Test suite: **347/347 passing** | typecheck: **0 errors**
+
+### F-202 / F-203 — FTS layer + procedural memory (done)
+
+- `packages/memory/src/fts.ts` — `FTSIndex` interface, `InMemoryFTS` (test/fallback), `PostgresFTS` (production pg adapter)
+- `packages/memory/test/fts-search.spec.ts` — 12 tests: FTS search, case-insensitive, prefix, limit, delete, clear, metadata filtering, session linkage
+- Test suite: **359/359 passing** | typecheck: **0 errors**

@@ -10,6 +10,8 @@ COPY packages/shared/package.json ./packages/shared/
 COPY packages/connectors/package.json ./packages/connectors/
 COPY apps/dashboard/package.json ./apps/dashboard/
 
+# pnpm v10: approve all build scripts in Docker (non-interactive environment)
+ENV PNPM_CONFIG_APPROVE_BUILD_SCRIPTS=true
 RUN pnpm install --frozen-lockfile --filter @open-greg/dashboard...
 
 # ── Build ─────────────────────────────────────────────────────────────────────

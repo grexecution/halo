@@ -14,6 +14,10 @@ COPY packages/permissions/package.json ./packages/permissions/
 COPY packages/telemetry/package.json ./packages/telemetry/
 COPY services/control-plane/package.json ./services/control-plane/
 
+# pnpm v10 requires approval for packages with install scripts.
+# In a Docker build we trust all deps — use PNPM_CONFIG_APPROVE_BUILD_SCRIPTS=true
+# so the interactive prompt is never shown.
+ENV PNPM_CONFIG_APPROVE_BUILD_SCRIPTS=true
 RUN pnpm install --frozen-lockfile --filter @open-greg/control-plane...
 
 # ── Run ──────────────────────────────────────────────────────────────────────
@@ -25,7 +29,6 @@ COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_module
 COPY --from=deps /app/packages/agent-core/node_modules ./packages/agent-core/node_modules
 COPY --from=deps /app/packages/memory/node_modules ./packages/memory/node_modules
 COPY --from=deps /app/packages/permissions/node_modules ./packages/permissions/node_modules
-COPY --from=deps /app/packages/telemetry/node_modules ./packages/telemetry/node_modules
 COPY --from=deps /app/services/control-plane/node_modules ./services/control-plane/node_modules
 
 COPY packages/shared ./packages/shared

@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { readFileSync, existsSync } from 'node:fs'
 import { resolve } from 'node:path'

@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
+export const dynamic = 'force-dynamic'
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 
 const CP = process.env['NEXT_PUBLIC_CONTROL_PLANE_URL'] ?? 'http://localhost:3001'
 

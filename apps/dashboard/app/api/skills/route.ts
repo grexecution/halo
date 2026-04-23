@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 /**
  * Dashboard skills API — proxy to control-plane /api/skills
  */

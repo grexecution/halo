@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { getDb } from '../../lib/db'
@@ -55,16 +56,18 @@ export async function POST(req: NextRequest) {
       'INSERT INTO chats (id, title, agent_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
     ).run(id, title, agentId, now, now)
 
-    // Register thread in Mastra memory for semantic recall
-    void getMemory().saveThread({
-      thread: {
-        id,
-        title,
-        resourceId: 'user',
-        createdAt: new Date(now),
-        updatedAt: new Date(now),
-      },
-    })
+    // Register thread in Mastra memory for semantic recall (fire-and-forget)
+    void getMemory()
+      .saveThread({
+        thread: {
+          id,
+          title,
+          resourceId: 'user',
+          createdAt: new Date(now),
+          updatedAt: new Date(now),
+        },
+      })
+      .catch(() => null)
 
     return NextResponse.json({ id, title, agentId, createdAt: now }, { status: 201 })
   } catch (e) {

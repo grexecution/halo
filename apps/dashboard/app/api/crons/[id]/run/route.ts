@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 /**
  * POST /api/crons/[id]/run
  * Manually triggers a cron job as a DBOS durable workflow via the control-plane.

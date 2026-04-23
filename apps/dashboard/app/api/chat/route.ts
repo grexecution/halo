@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 /**
  * POST /api/chat
  * Routes chat messages through the control-plane. Falls back to Ollama if unavailable.

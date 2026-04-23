@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 import { NextResponse } from 'next/server'
 import { readSettings, writeSettings } from '../settings/store'
 import type { LLMModel } from '../settings/store'

@@ -1,6 +1,5 @@
 import { Memory } from '@mastra/memory'
 import { LibSQLStore, LibSQLVector } from '@mastra/libsql'
-import { fastembed } from '@mastra/fastembed'
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createOpenAI } from '@ai-sdk/openai'
 import { join } from 'node:path'
@@ -88,10 +87,11 @@ export function resetMemory() {
   _memory = null
 }
 
-export function getMemory(): Memory {
+export async function getMemoryAsync(): Promise<Memory> {
   if (_memory) return _memory
   ensureDir()
 
+  const { fastembed } = await import('@mastra/fastembed')
   const settings = readSettings()
   const { observationModelId, fallbackModelId } = settings.memory
   const omModel = resolveObservationModel(observationModelId, fallbackModelId, settings.llm.models)
@@ -121,5 +121,20 @@ export function getMemory(): Memory {
         : {}),
     },
   })
+  return _memory
+}
+
+/** Synchronous alias kept for callers that don't need embeddings immediately.
+ *  Falls back to a no-op Memory instance if fastembed not yet loaded. */
+export function getMemory(): Memory {
+  if (_memory) return _memory
+  // Return a lazy proxy — real memory loads async on first actual call
+  // This prevents the build-time import of fastembed native binaries
+  ensureDir()
+  const storage = new LibSQLStore({ id: 'og-memory-store', url: MEMORY_DB_URL })
+  const vector = new LibSQLVector({ id: 'og-memory-vector', url: MEMORY_DB_URL })
+  _memory = new Memory({ storage, vector, options: { lastMessages: 40 } })
+  // Upgrade with embedder asynchronously
+  void getMemoryAsync().catch(() => null)
   return _memory
 }

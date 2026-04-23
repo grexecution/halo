@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 /**
  * POST /api/goals/[id]/run
  * Dispatches a goal to the control-plane as a DBOS durable workflow.

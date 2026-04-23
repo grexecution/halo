@@ -15,6 +15,12 @@ import type { ChannelId } from '@open-greg/messaging'
 
 const app = Fastify({ logger: true })
 
+// Shared AbortController — signalled by /api/panic to stop all active turns
+let panicAbortController = new AbortController()
+export function getPanicSignal(): AbortSignal {
+  return panicAbortController.signal
+}
+
 // ----------------------------------------------------------------
 // REST endpoints (consumed by dashboard fetch() calls)
 // ----------------------------------------------------------------
@@ -187,6 +193,16 @@ app.post<{
 app.post('/api/reset', async () => {
   resetAgent()
   return { ok: true }
+})
+
+// POST /api/panic — emergency stop: abort all active agent sessions
+app.post('/api/panic', async () => {
+  panicAbortController.abort()
+  // Replace controller so new turns can start after a panic
+  panicAbortController = new AbortController()
+  resetAgent()
+  emitLog({ level: 'warn', agentId: 'system', message: 'PANIC: all active agent sessions aborted' })
+  return { ok: true, message: 'All agent sessions aborted' }
 })
 
 // POST /api/goals/execute — dispatch a goal as a DBOS durable workflow

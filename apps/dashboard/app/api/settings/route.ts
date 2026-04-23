@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { readSettings, writeSettings } from './store'
 import type { Settings } from './store'
 import { resetMemory } from '../../lib/memory'
+import { CONTROL_PLANE_URL } from '../../lib/env'
 
 export async function GET() {
   try {
@@ -22,8 +23,7 @@ export async function POST(req: NextRequest) {
     // Invalidate the Memory singleton so it rebuilds with the new model config
     resetMemory()
     // Also reset the control-plane agent (best-effort, fire-and-forget)
-    const cpUrl = process.env['CONTROL_PLANE_URL'] ?? 'http://localhost:3001'
-    void fetch(`${cpUrl}/api/reset`, {
+    void fetch(`${CONTROL_PLANE_URL}/api/reset`, {
       method: 'POST',
       signal: AbortSignal.timeout(5_000),
     }).catch(() => {

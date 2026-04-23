@@ -1,7 +1,6 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-
-const CONTROL_PLANE = process.env['CONTROL_PLANE_URL'] ?? 'http://localhost:3001'
+import { CONTROL_PLANE_URL as CONTROL_PLANE } from '../../lib/env'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl

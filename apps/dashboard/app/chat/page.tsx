@@ -410,10 +410,16 @@ export default function ChatPage() {
             : s,
         ),
       )
-    } catch {
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : 'Failed to reach the server.'
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === placeholderId ? { ...m, content: 'Error: failed to reach the server.' } : m,
+          m.id === placeholderId
+            ? {
+                ...m,
+                content: `⚠️ ${errMsg}\n\nMake sure the control-plane is running (\`pnpm dev:control-plane\`).`,
+              }
+            : m,
         ),
       )
     } finally {

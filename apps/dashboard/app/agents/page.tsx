@@ -61,7 +61,7 @@ const INITIAL_AGENTS: Agent[] = [
   {
     handle: 'main',
     name: 'Main Agent',
-    model: 'claude-sonnet-4-6',
+    model: 'llama3.2',
     fallbackModels: [],
     systemPrompt: 'You are a helpful AI assistant.',
     tools: DEFAULT_TOOLS,

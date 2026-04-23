@@ -166,7 +166,7 @@ function MessagingTab() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/messaging/status')
+    fetch('/api/messaging/status')
       .then((r) => r.json())
       .then((d: { bots?: BotStatus[] }) => setBots(d.bots ?? []))
       .catch(() => setBots([]))

@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { getDb } from '../../../lib/db'
+import { CONTROL_PLANE_URL } from '../../../lib/env'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const MESSAGING_PLUGINS = new Set(['telegram', 'discord'])
   if (MESSAGING_PLUGINS.has(id)) {
     try {
-      await fetch('http://localhost:3001/api/messaging/reload', {
+      await fetch(`${CONTROL_PLANE_URL}/api/messaging/reload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channelId: id, fields: body.fields }),

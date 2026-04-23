@@ -121,6 +121,6 @@ describe('F-010: Chat page', () => {
     // Should show the user message and then an error message — no TypeError crash
     await waitFor(() => screen.getByTestId('message-user'), { timeout: 3000 })
     await waitFor(() => screen.getByTestId('message-assistant'), { timeout: 3000 })
-    expect(screen.getByTestId('message-assistant').textContent).toContain('Error')
+    expect(screen.getByTestId('message-assistant').textContent).toContain('LLM call failed')
   })
 })

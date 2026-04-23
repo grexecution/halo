@@ -33,6 +33,56 @@ function migrateSchema(db: Database.Database) {
   if (!cols.includes('fallback_models')) {
     db.exec("ALTER TABLE agents ADD COLUMN fallback_models TEXT NOT NULL DEFAULT '[]'")
   }
+
+  // New tables added after initial schema
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS approvals (
+      id TEXT PRIMARY KEY,
+      chat_id TEXT,
+      agent_id TEXT NOT NULL DEFAULT 'greg',
+      action_type TEXT NOT NULL,
+      description TEXT NOT NULL,
+      payload TEXT NOT NULL DEFAULT '{}',
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      resolved_at TEXT,
+      resolved_by TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_approvals_status ON approvals(status);
+
+    CREATE TABLE IF NOT EXISTS agent_runs (
+      id TEXT PRIMARY KEY,
+      agent_id TEXT NOT NULL DEFAULT 'greg',
+      chat_id TEXT,
+      goal_id TEXT,
+      trigger TEXT NOT NULL DEFAULT 'chat',
+      status TEXT NOT NULL DEFAULT 'running',
+      input TEXT NOT NULL DEFAULT '',
+      output TEXT,
+      tool_calls TEXT NOT NULL DEFAULT '[]',
+      token_count INTEGER NOT NULL DEFAULT 0,
+      cost_usd REAL NOT NULL DEFAULT 0,
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      finished_at TEXT,
+      error TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_runs_agent_id ON agent_runs(agent_id);
+    CREATE INDEX IF NOT EXISTS idx_agent_runs_started_at ON agent_runs(started_at DESC);
+
+    CREATE TABLE IF NOT EXISTS knowledge_docs (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      source_type TEXT NOT NULL DEFAULT 'upload',
+      source_url TEXT,
+      content TEXT NOT NULL DEFAULT '',
+      chunk_count INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'pending',
+      workspace_id TEXT,
+      tags TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `)
 }
 
 function initSchema(db: Database.Database) {

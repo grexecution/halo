@@ -196,6 +196,37 @@ export default function LogsPage() {
         </div>
       </div>
 
+      {/* Analytics banner — computed from current log set */}
+      {logs.length > 0 &&
+        (() => {
+          const totalTokens = logs.reduce((s, l) => s + (l.tokenCount ?? 0), 0)
+          const totalCost = logs.reduce((s, l) => s + (l.costUsd ?? 0), 0)
+          const errors = logs.filter((l) => l.level === 'error').length
+          const toolUses = logs.filter((l) => l.toolId).length
+          return (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: 'Log entries', value: logs.length },
+                { label: 'Tool uses', value: toolUses },
+                {
+                  label: 'Total tokens',
+                  value: totalTokens > 0 ? totalTokens.toLocaleString() : '—',
+                },
+                { label: 'Est. cost', value: totalCost > 0 ? `$${totalCost.toFixed(4)}` : '—' },
+              ].map((s) => (
+                <div key={s.label} className="bg-gray-900 rounded-xl p-3 border border-gray-800">
+                  <div className="text-xs text-gray-500 mb-0.5">{s.label}</div>
+                  <div
+                    className={`text-lg font-semibold ${s.label === 'Errors' && errors > 0 ? 'text-red-400' : 'text-white'}`}
+                  >
+                    {s.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        })()}
+
       {/* Log table */}
       {!loading && logs.length === 0 ? (
         <EmptyState

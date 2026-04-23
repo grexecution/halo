@@ -57,17 +57,17 @@ export default function LoginPage() {
           <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center">
             <div className="w-2.5 h-2.5 rounded-full bg-black" />
           </div>
-          <span className="text-white font-semibold tracking-tight">open-greg</span>
+          <span className="text-white font-semibold tracking-tight">Halo</span>
         </div>
 
         <div>
           <blockquote className="text-2xl font-light text-white/80 leading-relaxed mb-4">
-            "The only agent platform that actually keeps running."
+            "Your personal AI that never stops working."
           </blockquote>
           <p className="text-sm text-white/30">Self-hosted · Private · Autonomous</p>
         </div>
 
-        <div className="text-xs text-white/20">open-greg v0.1.0</div>
+        <div className="text-xs text-white/20">Halo v0.1.0</div>
       </div>
 
       {/* Right panel — form */}
@@ -77,7 +77,7 @@ export default function LoginPage() {
           <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center">
             <div className="w-2.5 h-2.5 rounded-full bg-black" />
           </div>
-          <span className="text-white font-semibold tracking-tight">open-greg</span>
+          <span className="text-white font-semibold tracking-tight">Halo</span>
         </div>
 
         <div className="w-full max-w-[360px]">

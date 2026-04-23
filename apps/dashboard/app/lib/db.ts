@@ -1,4 +1,6 @@
 import Database from 'better-sqlite3'
+import bcrypt from 'bcryptjs'
+import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
@@ -22,7 +24,26 @@ export function getDb(): Database.Database {
   migrateSchema(_db)
   migrateJson(_db)
   migrateJsonV2(_db)
+  bootstrapAuth(_db)
   return _db
+}
+
+/**
+ * On first boot, if GREG_ADMIN_PASSWORD is set and no auth row exists yet,
+ * initialise auth with that password so the login page works immediately.
+ * Never overwrites an existing auth config.
+ */
+function bootstrapAuth(db: Database.Database): void {
+  const password = process.env['GREG_ADMIN_PASSWORD']
+  if (!password) return
+  const existing = db.prepare('SELECT id FROM auth WHERE id = 1').get()
+  if (existing) return // already configured — never overwrite
+  const hash = bcrypt.hashSync(password, 12)
+  const secret = randomBytes(32).toString('hex')
+  db.prepare(
+    `INSERT INTO auth (id, enabled, username, password_hash, totp_enabled, totp_secret, session_secret)
+     VALUES (1, 1, 'admin', ?, 0, '', ?)`,
+  ).run(hash, secret)
 }
 
 // Additive column migrations — safe to run on existing DBs

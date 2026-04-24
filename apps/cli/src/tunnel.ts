@@ -7,7 +7,7 @@
  * The public URL is printed to stdout by cloudflared in the format:
  *   https://<random>.trycloudflare.com
  */
-import { createWriteStream, existsSync, chmodSync, mkdirSync } from 'node:fs'
+import { createWriteStream, existsSync, chmodSync, mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { homedir, platform, arch } from 'node:os'
 import { spawn, execSync, type ChildProcess } from 'node:child_process'
@@ -186,7 +186,6 @@ export async function startTunnel(
 
   // Persist URL so the dashboard can read it after CLI exits
   mkdirSync(resolve(homedir(), '.open-greg'), { recursive: true })
-  const { writeFileSync } = await import('node:fs')
   writeFileSync(TUNNEL_URL_FILE, url, 'utf-8')
 
   return {

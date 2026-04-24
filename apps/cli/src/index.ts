@@ -494,11 +494,12 @@ async function cmdInit(args: string[]): Promise<void> {
   note(
     [
       `Dashboard:  ${publicUrl}`,
+      `Username:   admin`,
       `Password:   ${adminPassword}`,
       '',
-      'Open the URL above and finish setup in the dashboard.',
+      'Open the URL above and log in to finish setup.',
       tunnelHandle
-        ? 'Keep this terminal open to maintain the public URL.'
+        ? 'The tunnel runs as a background service — you can close this terminal.'
         : 'You can close this terminal — services run in Docker.',
     ].join('\n'),
     'Halo is running',
@@ -508,8 +509,7 @@ async function cmdInit(args: string[]): Promise<void> {
 
   if (tunnelHandle) {
     // Print URL again prominently so it's easy to copy after the box scrolls
-    process.stdout.write(`\n  \x1b[1m\x1b[36m→ ${publicUrl}\x1b[0m\n`)
-    process.stdout.write(`  Press Ctrl+C to stop the tunnel.\n\n`)
+    process.stdout.write(`\n  \x1b[1m\x1b[36m→ ${publicUrl}\x1b[0m\n\n`)
 
     const keepAlive = setInterval(() => {}, 60_000)
     const cleanup = () => {

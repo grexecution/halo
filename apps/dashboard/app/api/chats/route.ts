@@ -34,7 +34,7 @@ export async function GET() {
       updatedAt: r.updated_at,
       messageCount: r.message_count,
     }))
-    return NextResponse.json({ sessions })
+    return NextResponse.json(sessions)
   } catch (e) {
     return NextResponse.json(
       { error: `Failed to read chats: ${e instanceof Error ? e.message : String(e)}` },

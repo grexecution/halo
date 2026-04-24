@@ -9,7 +9,6 @@ const withSerwist = withSerwistInit({
 })
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
   transpilePackages: ['@open-greg/connectors'],
   serverExternalPackages: [
     '@mastra/memory',

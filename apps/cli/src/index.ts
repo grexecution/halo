@@ -363,71 +363,15 @@ async function cmdInit(args: string[]): Promise<void> {
 
   const enableTunnel = accessMode === 'tunnel'
 
-  // ── Step 3: LLM provider ──────────────────────────────────────────────────
-  // Auto-detect from env vars in non-interactive mode
-  const defaultLlmProvider: string = process.env['ANTHROPIC_API_KEY']
-    ? 'anthropic'
-    : process.env['OPENAI_API_KEY']
-      ? 'openai'
-      : 'ollama'
-
-  const llmProvider = await promptOrDefault(
-    nonInteractive,
-    () =>
-      select({
-        message: 'Which LLM do you want to use?',
-        options: [
-          {
-            value: 'anthropic',
-            label: 'Anthropic Claude  (recommended)',
-            hint: 'Best quality — needs an API key',
-          },
-          {
-            value: 'openai',
-            label: 'OpenAI GPT',
-            hint: 'Needs an API key',
-          },
-          {
-            value: 'ollama',
-            label: 'Local Ollama  (free, runs on your machine)',
-            hint: 'Needs 8+ GB RAM — slower first run',
-          },
-        ],
-      }),
-    defaultLlmProvider,
+  // ── Step 3: LLM — always Ollama on install ────────────────────────────────
+  // No API key needed. Works offline. Switch to Anthropic/OpenAI any time
+  // from the dashboard Settings → LLM provider.
+  const llmProvider = 'ollama'
+  const anthropicKey = ''
+  const openaiKey = ''
+  log.info(
+    'Using local Ollama — ~2 GB model downloads on first chat. Change provider any time in Settings.',
   )
-
-  let anthropicKey = ''
-  let openaiKey = ''
-
-  if (llmProvider === 'anthropic') {
-    const key = await promptOrDefault(
-      nonInteractive,
-      () =>
-        text({
-          message: 'Anthropic API key:',
-          placeholder: 'sk-ant-...',
-          validate: (v) =>
-            v.trim().startsWith('sk-ant-') ? undefined : 'Should start with sk-ant-',
-        }),
-      process.env['ANTHROPIC_API_KEY'] ?? '',
-    )
-    anthropicKey = key.trim()
-  } else if (llmProvider === 'openai') {
-    const key = await promptOrDefault(
-      nonInteractive,
-      () =>
-        text({
-          message: 'OpenAI API key:',
-          placeholder: 'sk-...',
-          validate: (v) => (v.trim().startsWith('sk-') ? undefined : 'Should start with sk-'),
-        }),
-      process.env['OPENAI_API_KEY'] ?? '',
-    )
-    openaiKey = key.trim()
-  } else {
-    log.info('Ollama selected — model will be downloaded on first use (~2 GB). This is fine.')
-  }
 
   // ── Step 4: Admin password ────────────────────────────────────────────────
   const defaultPass = randomAdminPassword()

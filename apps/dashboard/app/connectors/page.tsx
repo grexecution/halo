@@ -1,6 +1,37 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import type { ReactNode } from 'react'
+import {
+  Building2,
+  FileText,
+  MessageSquare,
+  Bot,
+  Globe,
+  Plug,
+  Database,
+  Folder,
+  Monitor,
+  Code2,
+  BarChart2,
+  Mail,
+  CalendarDays,
+  DollarSign,
+  Search,
+  Rocket,
+  HardDrive,
+  Lock,
+  Palette,
+  PenLine,
+  FlaskConical,
+  Zap,
+  Megaphone,
+  Wrench,
+  Layers,
+  X,
+  Loader2,
+} from 'lucide-react'
+import { Select } from '@/app/components/ui/select'
 import {
   ALL_PLUGINS,
   CATEGORY_LABELS,
@@ -27,49 +58,49 @@ import {
 
 type Tab = 'models' | 'plugins' | 'mcps' | 'skills'
 
-const CATEGORY_ICONS: Record<PluginCategory, string> = {
-  workspace: '🏢',
-  project_management: '📋',
-  communication: '💬',
-  crm: '🤝',
-  development: '💻',
-  storage: '🗄️',
-  analytics: '📊',
-  email_marketing: '📧',
-  calendar: '📅',
-  finance: '💰',
-  seo: '🔍',
-  hosting: '🚀',
-  database: '🗃️',
-  ai: '🤖',
+const CATEGORY_ICONS: Record<PluginCategory, ReactNode> = {
+  workspace: <Building2 size={14} />,
+  project_management: <FileText size={14} />,
+  communication: <MessageSquare size={14} />,
+  crm: <Layers size={14} />,
+  development: <Code2 size={14} />,
+  storage: <HardDrive size={14} />,
+  analytics: <BarChart2 size={14} />,
+  email_marketing: <Mail size={14} />,
+  calendar: <CalendarDays size={14} />,
+  finance: <DollarSign size={14} />,
+  seo: <Search size={14} />,
+  hosting: <Rocket size={14} />,
+  database: <Database size={14} />,
+  ai: <Bot size={14} />,
 }
 
-const MCP_CATEGORY_ICONS: Record<McpCategory, string> = {
-  filesystem: '📁',
-  browser: '🌐',
-  database: '🗃️',
-  development: '💻',
-  communication: '💬',
-  productivity: '📋',
-  search: '🔍',
-  ai: '🤖',
-  media: '🎨',
-  devops: '🚀',
-  data: '📊',
-  security: '🔒',
+const MCP_CATEGORY_ICONS: Record<McpCategory, ReactNode> = {
+  filesystem: <Folder size={14} />,
+  browser: <Globe size={14} />,
+  database: <Database size={14} />,
+  development: <Code2 size={14} />,
+  communication: <MessageSquare size={14} />,
+  productivity: <FileText size={14} />,
+  search: <Search size={14} />,
+  ai: <Bot size={14} />,
+  media: <Palette size={14} />,
+  devops: <Rocket size={14} />,
+  data: <BarChart2 size={14} />,
+  security: <Lock size={14} />,
 }
 
-const SKILL_CATEGORY_ICONS: Record<SkillCategory, string> = {
-  writing: '✍️',
-  coding: '💻',
-  research: '🔬',
-  productivity: '⚡',
-  data: '📊',
-  communication: '💬',
-  creative: '🎨',
-  analysis: '🔎',
-  devops: '🚀',
-  marketing: '📣',
+const SKILL_CATEGORY_ICONS: Record<SkillCategory, ReactNode> = {
+  writing: <PenLine size={14} />,
+  coding: <Code2 size={14} />,
+  research: <FlaskConical size={14} />,
+  productivity: <Zap size={14} />,
+  data: <BarChart2 size={14} />,
+  communication: <MessageSquare size={14} />,
+  creative: <Palette size={14} />,
+  analysis: <Search size={14} />,
+  devops: <Rocket size={14} />,
+  marketing: <Megaphone size={14} />,
 }
 
 const STATUS_BADGE: Record<string, string> = {
@@ -78,26 +109,6 @@ const STATUS_BADGE: Record<string, string> = {
   beta: 'bg-yellow-900/50 text-yellow-300 border border-yellow-700',
   community: 'bg-purple-900/50 text-purple-300 border border-purple-700',
   planned: 'bg-gray-800 text-gray-500 border border-gray-700',
-}
-
-const PROVIDER_LOGOS: Record<string, string> = {
-  anthropic: '✳',
-  openai: '⬡',
-  google_gemini: '◈',
-  kimi: '🌙',
-  deepseek: '🐬',
-  xai_grok: '𝕏',
-  mistral: '☁',
-  groq: '⚡',
-  together_ai: '∞',
-  openrouter: '⊕',
-  perplexity: '◎',
-  cohere: '◉',
-  cerebras: '◆',
-  ollama: '🦙',
-  azure_openai: '☁',
-  amazon_bedrock: '☁',
-  custom_openai_compatible: '+',
 }
 
 const MODEL_PLUGINS = ALL_PLUGINS.filter((p) => p.category === 'ai')
@@ -167,9 +178,9 @@ function GenericModal({
           </div>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-white text-xl leading-none mt-0.5 ml-4"
+            className="text-gray-500 hover:text-white leading-none mt-0.5 ml-4 flex items-center justify-center"
           >
-            ×
+            <X size={14} />
           </button>
         </div>
         <form onSubmit={(e) => void handleSubmit(e)} className="px-5 py-4 space-y-4">
@@ -180,8 +191,7 @@ function GenericModal({
                 {field.required && <span className="text-red-400 ml-1">*</span>}
               </label>
               {field.type === 'select' && field.options ? (
-                <select
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+                <Select
                   value={values[field.key] ?? ''}
                   onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
                 >
@@ -191,7 +201,7 @@ function GenericModal({
                       {opt}
                     </option>
                   ))}
-                </select>
+                </Select>
               ) : field.type === 'textarea' ? (
                 <textarea
                   rows={5}
@@ -233,8 +243,9 @@ function GenericModal({
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
+              {saving && <Loader2 size={14} className="animate-spin" />}
               {saving ? 'Saving…' : submitLabel}
             </button>
           </div>
@@ -276,16 +287,17 @@ function ModelCard({
   onDisconnect: (p: Plugin) => void
 }) {
   const isLocal = provider.connectionType === 'credentials'
-  const logo = PROVIDER_LOGOS[provider.id] ?? provider.name[0]
   return (
     <div
       className={`bg-gray-900 border rounded-xl p-4 flex flex-col gap-3 transition-all ${connected ? 'border-green-700/60 shadow-sm shadow-green-900/20' : 'border-gray-800 hover:border-gray-700'}`}
     >
       <div className="flex items-center gap-3">
         <div
-          className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold shrink-0 ${connected ? 'bg-green-900/40 border border-green-800' : 'bg-gray-800 border border-gray-700'}`}
+          className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${connected ? 'bg-green-900/40 border border-green-800' : 'bg-gray-800 border border-gray-700'}`}
         >
-          {logo}
+          <div className="size-8 rounded-lg bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300">
+            {provider.name.slice(0, 2).toUpperCase()}
+          </div>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -637,7 +649,7 @@ function PluginsTab({
               onClick={() => setActiveCategory('all')}
               className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === 'all' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}`}
             >
-              <span>🔌</span>
+              <Plug size={14} />
               <span>All plugins</span>
               <span className="ml-auto text-xs text-gray-600">{OTHER_PLUGINS.length}</span>
             </button>
@@ -689,7 +701,7 @@ function PluginsTab({
           {customPlugins.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                🔧 Custom Plugins{' '}
+                <Wrench size={14} /> Custom Plugins{' '}
                 <span className="text-gray-700 font-normal normal-case tracking-normal">
                   ({customPlugins.length})
                 </span>
@@ -967,7 +979,7 @@ function McpsTab({ installed, onInstall, onUninstall }: McpsTabProps) {
               onClick={() => setActiveCategory('all')}
               className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === 'all' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}`}
             >
-              <span>🔌</span>
+              <Monitor size={14} />
               <span>All servers</span>
               <span className="ml-auto text-xs text-gray-600">{MCP_SERVERS.length}</span>
             </button>
@@ -1221,7 +1233,9 @@ function SkillDetailPanel({
       {/* Header */}
       <div className="flex items-start justify-between gap-4 p-5 border-b border-gray-800">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-2xl">{SKILL_CATEGORY_ICONS[category] ?? '⚡'}</span>
+          <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-800 text-gray-400 shrink-0">
+            {SKILL_CATEGORY_ICONS[category] ?? <Zap size={16} />}
+          </span>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-base font-semibold text-white truncate">{name}</h2>
@@ -1493,7 +1507,9 @@ function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill, onRefresh }: Skil
         onClick={() => setSelected(item)}
         className={`w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-colors ${isSelected ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}`}
       >
-        <span className="text-sm shrink-0">{SKILL_CATEGORY_ICONS[category] ?? '⚡'}</span>
+        <span className="flex items-center shrink-0 text-gray-500">
+          {SKILL_CATEGORY_ICONS[category] ?? <Zap size={14} />}
+        </span>
         <span className="flex-1 text-sm truncate">{s.name}</span>
         <div className="flex items-center gap-1.5 shrink-0">
           {hasMissingCreds && (
@@ -1524,7 +1540,7 @@ function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill, onRefresh }: Skil
               onClick={() => setActiveCategory('all')}
               className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === 'all' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}`}
             >
-              <span>⚡</span>
+              <Zap size={14} />
               <span>All skills</span>
               <span className="ml-auto text-xs text-gray-600">
                 {DEFAULT_SKILLS.length + userSkills.length}

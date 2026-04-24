@@ -1,7 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react'
 import { CardGridSkeleton } from '../components/ui/skeleton'
+import { Button } from '@/app/components/ui/button'
+import { Input } from '@/app/components/ui/input'
+import { Textarea } from '@/app/components/ui/textarea'
+import { EmptyState } from '@/app/components/ui/empty-state'
+import { FileText, Globe, ClipboardList, BookOpen, Upload, Link, Plus, Trash2 } from 'lucide-react'
 
 interface KnowledgeDoc {
   id: string
@@ -16,10 +21,10 @@ interface KnowledgeDoc {
   createdAt: string
 }
 
-const SOURCE_ICONS: Record<string, string> = {
-  upload: '📄',
-  url: '🌐',
-  paste: '📋',
+const SOURCE_ICONS: Record<string, ReactNode> = {
+  upload: <FileText size={14} />,
+  url: <Globe size={14} />,
+  paste: <ClipboardList size={14} />,
 }
 
 type AddMode = 'paste' | 'url' | null
@@ -138,12 +143,9 @@ export default function KnowledgePage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="text-xs border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-1.5 rounded-md transition-colors"
-          >
-            Upload file
-          </button>
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+            <Upload size={14} /> Upload file
+          </Button>
           <input
             ref={fileInputRef}
             type="file"
@@ -151,28 +153,22 @@ export default function KnowledgePage() {
             className="hidden"
             onChange={handleFileUpload}
           />
-          <button
-            onClick={() => setAddMode('url')}
-            className="text-xs border border-gray-700 hover:border-gray-500 text-gray-400 hover:text-white px-3 py-1.5 rounded-md transition-colors"
-          >
-            Add URL
-          </button>
-          <button
-            onClick={() => setAddMode('paste')}
-            className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-md transition-colors"
-          >
-            + Add text
-          </button>
+          <Button variant="outline" size="sm" onClick={() => setAddMode('url')}>
+            <Link size={14} /> Add URL
+          </Button>
+          <Button onClick={() => setAddMode('paste')}>
+            <Plus size={14} /> Add text
+          </Button>
         </div>
       </div>
 
       {/* Search */}
-      <input
+      <Input
         type="text"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search by title or tag…"
-        className="w-full mb-4 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-gray-500"
+        className="mb-4"
       />
 
       {/* Add form */}
@@ -182,52 +178,41 @@ export default function KnowledgePage() {
             <h3 className="text-sm font-medium text-white">
               {addMode === 'url' ? 'Add URL' : 'Paste text'}
             </h3>
-            <button
-              onClick={() => setAddMode(null)}
-              className="text-xs text-gray-500 hover:text-gray-300"
-            >
+            <Button variant="ghost" size="sm" onClick={() => setAddMode(null)}>
               Cancel
-            </button>
+            </Button>
           </div>
-          <input
+          <Input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Title (optional)"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
           />
           {addMode === 'url' ? (
-            <input
+            <Input
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://..."
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
             />
           ) : (
-            <textarea
+            <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
               placeholder="Paste your text here…"
               rows={6}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500 resize-none"
             />
           )}
-          <input
+          <Input
             type="text"
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             placeholder="Tags (comma-separated)"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-blue-500"
           />
           <div className="flex justify-end">
-            <button
-              onClick={handleSave}
-              disabled={saving || (!content && !url)}
-              className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm px-4 py-2 rounded-lg transition-colors"
-            >
+            <Button onClick={handleSave} disabled={saving || (!content && !url)}>
               {saving ? 'Saving…' : 'Save'}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -236,14 +221,13 @@ export default function KnowledgePage() {
       {loading ? (
         <CardGridSkeleton count={6} cols={3} />
       ) : filtered.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-600 gap-3">
-          <span className="text-4xl">📚</span>
-          <p className="text-sm">
-            {search
-              ? 'No documents match your search'
-              : 'No documents yet — add text, a URL, or upload a file'}
-          </p>
-        </div>
+        <EmptyState
+          icon={<BookOpen size={32} />}
+          title="No documents yet"
+          description={
+            search ? 'No documents match your search' : 'Add text, a URL, or upload a file'
+          }
+        />
       ) : (
         <div className="space-y-2">
           {filtered.map((doc) => (
@@ -251,7 +235,9 @@ export default function KnowledgePage() {
               key={doc.id}
               className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 flex items-start gap-3"
             >
-              <span className="text-xl flex-shrink-0 mt-0.5">{SOURCE_ICONS[doc.sourceType]}</span>
+              <span className="text-gray-400 flex-shrink-0 mt-0.5">
+                {SOURCE_ICONS[doc.sourceType]}
+              </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-medium text-white truncate">{doc.title}</span>
@@ -288,13 +274,15 @@ export default function KnowledgePage() {
                   {new Date(doc.createdAt).toLocaleString()}
                 </p>
               </div>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => deleteDoc(doc.id)}
-                className="text-gray-600 hover:text-red-400 text-xs flex-shrink-0 mt-0.5 transition-colors"
                 title="Delete"
+                className="flex-shrink-0 mt-0.5 text-gray-600 hover:text-red-400"
               >
-                ✕
-              </button>
+                <Trash2 size={14} />
+              </Button>
             </div>
           ))}
         </div>

@@ -23,7 +23,7 @@ import {
   FileText,
   ChevronDown,
 } from 'lucide-react'
-import { Button, Switch, EmptyState, cn } from '../components/ui/index'
+import { Button, Switch, EmptyState, cn, Input, Textarea, Select } from '../components/ui/index'
 import { Skeleton } from '../components/ui/skeleton'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -202,8 +202,8 @@ function DocumentRow({ doc, onChange, onDelete }: DocRowProps) {
             )}
           />
           <FileText size={12} className="text-gray-600 flex-shrink-0" />
-          <input
-            className="bg-transparent text-xs font-medium text-gray-300 focus:outline-none focus:text-white flex-1 min-w-0"
+          <Input
+            className="bg-transparent border-none text-xs font-medium text-gray-300 focus:outline-none focus:text-white flex-1 min-w-0 px-0 py-0 focus:ring-0 focus:border-none rounded-none"
             value={doc.title}
             onChange={(e) => onChange({ ...doc, title: e.target.value, updatedAt: now })}
             onClick={(e) => e.stopPropagation()}
@@ -218,8 +218,8 @@ function DocumentRow({ doc, onChange, onDelete }: DocRowProps) {
         </button>
       </div>
       {open && (
-        <textarea
-          className="w-full bg-gray-950/60 px-3 py-2 text-xs text-gray-300 font-mono focus:outline-none resize-none min-h-[120px] placeholder-gray-700"
+        <Textarea
+          className="w-full bg-gray-950/60 border-none px-3 py-2 text-xs text-gray-300 font-mono focus:outline-none focus:ring-0 focus:border-none rounded-none resize-none min-h-[120px] placeholder-gray-700"
           value={doc.content}
           onChange={(e) => onChange({ ...doc, content: e.target.value, updatedAt: now })}
           placeholder="Paste markdown, notes, documentation, README content…"
@@ -325,9 +325,9 @@ function FieldRow({ field, onChange, onDelete }: FieldRowProps) {
       {/* Key */}
       <div className="w-36 flex-shrink-0">
         {editingKey ? (
-          <input
+          <Input
             autoFocus
-            className="w-full bg-gray-800 border border-blue-600 rounded px-2 py-1 text-xs text-white font-mono focus:outline-none"
+            className="w-full bg-gray-800 border border-blue-600 rounded px-2 py-1 text-xs text-white font-mono focus:outline-none focus:ring-0"
             value={keyDraft}
             onChange={(e) => setKeyDraft(e.target.value)}
             onBlur={commitKey}
@@ -363,38 +363,38 @@ function FieldRow({ field, onChange, onDelete }: FieldRowProps) {
       {/* Value */}
       <div className="flex-1 relative">
         {field.type === 'url' ? (
-          <input
-            className="w-full bg-gray-800/60 rounded px-2 py-1 text-xs text-blue-300 font-mono focus:outline-none focus:ring-1 focus:ring-blue-600/50 hover:bg-gray-800 transition-colors"
+          <Input
+            className="w-full bg-gray-800/60 border-none rounded px-2 py-1 text-xs text-blue-300 font-mono focus:outline-none focus:ring-1 focus:ring-blue-600/50 hover:bg-gray-800 transition-colors"
             value={field.value}
             onChange={(e) => onChange({ ...field, value: e.target.value })}
             placeholder="https://"
           />
         ) : field.type === 'code' ? (
-          <input
-            className="w-full bg-gray-800/60 rounded px-2 py-1 text-xs text-green-300 font-mono focus:outline-none focus:ring-1 focus:ring-green-600/40 hover:bg-gray-800 transition-colors"
+          <Input
+            className="w-full bg-gray-800/60 border-none rounded px-2 py-1 text-xs text-green-300 font-mono focus:outline-none focus:ring-1 focus:ring-green-600/40 hover:bg-gray-800 transition-colors"
             value={field.value}
             onChange={(e) => onChange({ ...field, value: e.target.value })}
             placeholder="command"
           />
         ) : field.type === 'secret' ? (
-          <input
+          <Input
             type={showSecret ? 'text' : 'password'}
-            className="w-full bg-gray-800/60 rounded px-2 py-1 pr-7 text-xs text-yellow-300 font-mono focus:outline-none focus:ring-1 focus:ring-yellow-600/40 hover:bg-gray-800 transition-colors"
+            className="w-full bg-gray-800/60 border-none rounded px-2 py-1 pr-7 text-xs text-yellow-300 font-mono focus:outline-none focus:ring-1 focus:ring-yellow-600/40 hover:bg-gray-800 transition-colors"
             value={field.value}
             onChange={(e) => onChange({ ...field, value: e.target.value })}
             placeholder="••••••••"
           />
         ) : field.value.length > 60 ? (
-          <textarea
+          <Textarea
             rows={2}
-            className="w-full bg-gray-800/60 rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-600/40 hover:bg-gray-800 transition-colors resize-none"
+            className="w-full bg-gray-800/60 border-none rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-600/40 hover:bg-gray-800 transition-colors resize-none"
             value={field.value}
             onChange={(e) => onChange({ ...field, value: e.target.value })}
             placeholder="value"
           />
         ) : (
-          <input
-            className="w-full bg-gray-800/60 rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-600/40 hover:bg-gray-800 transition-colors"
+          <Input
+            className="w-full bg-gray-800/60 border-none rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-600/40 hover:bg-gray-800 transition-colors"
             value={field.value}
             onChange={(e) => onChange({ ...field, value: e.target.value })}
             placeholder="value"
@@ -412,16 +412,16 @@ function FieldRow({ field, onChange, onDelete }: FieldRowProps) {
 
       {/* Type selector */}
       <div className="flex-shrink-0">
-        <select
+        <Select
           value={field.type}
           onChange={(e) => onChange({ ...field, type: e.target.value as FieldType })}
-          className="bg-gray-800/60 border border-gray-700/60 rounded px-1.5 py-1 text-[10px] text-gray-500 focus:outline-none hover:border-gray-600 transition-colors"
+          className="bg-gray-800/60 border border-gray-700/60 rounded px-1.5 py-1 text-[10px] text-gray-500 focus:outline-none hover:border-gray-600 transition-colors w-auto"
         >
           <option value="text">text</option>
           <option value="url">url</option>
           <option value="code">code</option>
           <option value="secret">secret</option>
-        </select>
+        </Select>
       </div>
 
       {/* Icon + delete */}
@@ -452,6 +452,8 @@ function WorkspaceEditor({ workspace, onSave, onDelete, saving }: WorkspaceEdito
   const [editingName, setEditingName] = useState(false)
   const [nameDraft, setNameDraft] = useState(workspace.name)
   const [saved, setSaved] = useState(false)
+  const [showEmojiInput, setShowEmojiInput] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
   const meta = TYPE_META[draft.type]
   const Icon = meta.icon
 
@@ -520,25 +522,67 @@ function WorkspaceEditor({ workspace, onSave, onDelete, saving }: WorkspaceEdito
 
   return (
     <div className="flex flex-col h-full">
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-5 w-72 shadow-2xl">
+            <p className="text-sm font-medium text-white mb-1">Delete workspace?</p>
+            <p className="text-xs text-gray-400 mb-4">This cannot be undone.</p>
+            <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                className="flex-1"
+                onClick={() => {
+                  setDeleteConfirm(false)
+                  onDelete()
+                }}
+              >
+                Delete
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => setDeleteConfirm(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="px-6 pt-6 pb-4 border-b border-gray-800/60">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <button
-              className="text-2xl leading-none hover:scale-110 transition-transform flex-shrink-0"
-              title="Change emoji"
-              onClick={() => {
-                const e = prompt('Enter emoji', draft.emoji)
-                if (e) setDraft((p) => ({ ...p, emoji: e }))
-              }}
-            >
-              {draft.emoji}
-            </button>
+            {showEmojiInput ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={draft.emoji}
+                  onChange={(e) => setDraft((p) => ({ ...p, emoji: e.target.value }))}
+                  className="w-20 text-center text-lg"
+                  maxLength={2}
+                  autoFocus
+                  onBlur={() => setShowEmojiInput(false)}
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowEmojiInput(true)}
+                className="text-2xl hover:opacity-70 transition-opacity cursor-pointer"
+                title="Click to change emoji"
+              >
+                {draft.emoji}
+              </button>
+            )}
             <div className="min-w-0">
               {editingName ? (
-                <input
+                <Input
                   autoFocus
-                  className="bg-gray-800 border border-blue-600 rounded px-2 py-1 text-sm font-semibold text-white focus:outline-none w-full max-w-xs"
+                  className="bg-gray-800 border border-blue-600 rounded px-2 py-1 text-sm font-semibold text-white focus:outline-none focus:ring-0 w-full max-w-xs"
                   value={nameDraft}
                   onChange={(e) => setNameDraft(e.target.value)}
                   onBlur={commitName}
@@ -578,19 +622,19 @@ function WorkspaceEditor({ workspace, onSave, onDelete, saving }: WorkspaceEdito
                   <Icon size={10} />
                   {meta.label}
                 </span>
-                <select
+                <Select
                   value={draft.type}
                   onChange={(e) =>
                     setDraft((p) => ({ ...p, type: e.target.value as WorkspaceType }))
                   }
-                  className="bg-transparent text-[10px] text-gray-600 focus:outline-none cursor-pointer hover:text-gray-400"
+                  className="bg-transparent border-none text-[10px] text-gray-600 focus:outline-none focus:ring-0 cursor-pointer hover:text-gray-400 w-auto px-0 py-0"
                 >
                   {(Object.keys(TYPE_META) as WorkspaceType[]).map((t) => (
                     <option key={t} value={t}>
                       {TYPE_META[t].label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </div>
           </div>
@@ -607,8 +651,8 @@ function WorkspaceEditor({ workspace, onSave, onDelete, saving }: WorkspaceEdito
         </div>
 
         {/* Description */}
-        <input
-          className="mt-3 w-full bg-transparent text-xs text-gray-500 placeholder-gray-700 focus:outline-none hover:text-gray-400 focus:text-gray-300 transition-colors"
+        <Input
+          className="mt-3 w-full bg-transparent border-none text-xs text-gray-500 placeholder-gray-700 focus:outline-none focus:ring-0 hover:text-gray-400 focus:text-gray-300 transition-colors px-0"
           value={draft.description}
           onChange={(e) => setDraft((p) => ({ ...p, description: e.target.value }))}
           placeholder="Add a description..."
@@ -684,15 +728,15 @@ function WorkspaceEditor({ workspace, onSave, onDelete, saving }: WorkspaceEdito
 
       {/* Footer */}
       <div className="px-6 py-4 border-t border-gray-800/60 flex items-center justify-between">
-        <button
-          onClick={() => {
-            if (confirm(`Delete "${draft.name}"?`)) onDelete()
-          }}
-          className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-red-400 transition-colors"
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setDeleteConfirm(true)}
+          className="flex items-center gap-1.5 text-gray-600 hover:text-red-400"
         >
           <Trash2 size={13} />
           Delete workspace
-        </button>
+        </Button>
         <div className="flex items-center gap-3">
           {saved && (
             <span className="flex items-center gap-1 text-xs text-green-400">

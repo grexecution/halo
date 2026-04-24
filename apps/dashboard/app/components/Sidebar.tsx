@@ -18,6 +18,7 @@ import {
   Play,
   BookOpen,
   Sparkles,
+  DollarSign,
 } from 'lucide-react'
 import { cn } from './ui/cn'
 
@@ -33,6 +34,7 @@ const CORE_NAV = [
   { href: '/workspaces', label: 'Workspaces', icon: Briefcase },
   { href: '/connectors', label: 'Connectors', icon: Plug },
   { href: '/logs', label: 'Logs', icon: ScrollText },
+  { href: '/cost', label: 'Cost', icon: DollarSign },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 

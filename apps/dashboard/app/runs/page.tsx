@@ -1,7 +1,21 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { useEffect, useState, useCallback } from 'react'
+import {
+  MessageSquare,
+  Target,
+  Clock,
+  Smartphone,
+  Zap,
+  PlayCircle,
+  ChevronUp,
+  ChevronDown,
+  RefreshCw,
+} from 'lucide-react'
 import { TableSkeleton, StatBannerSkeleton } from '../components/ui/skeleton'
+import { Button } from '../components/ui/button'
+import { EmptyState } from '../components/ui/empty-state'
 
 interface AgentRun {
   id: string
@@ -36,13 +50,13 @@ const STATUS_STYLES: Record<string, string> = {
   aborted: 'bg-gray-500/15 text-gray-400 border-gray-500/30',
 }
 
-const TRIGGER_ICONS: Record<string, string> = {
-  chat: '💬',
-  goal: '🎯',
-  cron: '⏰',
-  telegram: '📱',
-  discord: '🎮',
-  default: '⚡',
+const TRIGGER_ICONS: Record<string, ReactNode> = {
+  chat: <MessageSquare size={14} className="text-gray-400" />,
+  goal: <Target size={14} className="text-gray-400" />,
+  cron: <Clock size={14} className="text-gray-400" />,
+  telegram: <Smartphone size={14} className="text-gray-400" />,
+  discord: <Smartphone size={14} className="text-gray-400" />,
+  default: <Zap size={14} className="text-gray-400" />,
 }
 
 function fmtDuration(ms: number | null) {
@@ -93,12 +107,10 @@ export default function RunsPage() {
           <h1 className="text-xl font-semibold text-white">Agent Runs</h1>
           <p className="text-sm text-gray-500 mt-0.5">Execution history, costs, and tool traces</p>
         </div>
-        <button
-          onClick={load}
-          className="text-xs text-gray-500 hover:text-gray-300 border border-gray-700 px-3 py-1.5 rounded-md"
-        >
+        <Button variant="outline" size="sm" onClick={load}>
+          <RefreshCw size={14} />
           Refresh
-        </button>
+        </Button>
       </div>
 
       {/* Stats banner */}
@@ -153,10 +165,11 @@ export default function RunsPage() {
       {loading ? (
         <TableSkeleton rows={6} cols={5} />
       ) : runs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-600 gap-3">
-          <span className="text-4xl">🏃</span>
-          <p className="text-sm">No runs yet — start a chat or trigger a goal</p>
-        </div>
+        <EmptyState
+          icon={<PlayCircle size={32} />}
+          title="No runs yet"
+          description="Start a chat or trigger a goal to see agent runs here"
+        />
       ) : (
         <div className="space-y-2">
           {runs.map((run) => (
@@ -169,7 +182,7 @@ export default function RunsPage() {
                 className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-800/50 transition-colors"
                 onClick={() => setExpanded(expanded === run.id ? null : run.id)}
               >
-                <span className="text-lg flex-shrink-0">
+                <span className="flex-shrink-0">
                   {TRIGGER_ICONS[run.trigger] ?? TRIGGER_ICONS.default}
                 </span>
                 <div className="flex-1 min-w-0">
@@ -194,8 +207,8 @@ export default function RunsPage() {
                     <div className="text-blue-400">{run.toolCalls.length} tools</div>
                   )}
                 </div>
-                <span className="text-gray-600 text-xs ml-1">
-                  {expanded === run.id ? '▲' : '▼'}
+                <span className="text-gray-600 ml-1">
+                  {expanded === run.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 </span>
               </button>
 

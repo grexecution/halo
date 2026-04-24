@@ -1,7 +1,21 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { useEffect, useState, useCallback } from 'react'
+import {
+  Terminal,
+  FileText,
+  Trash2,
+  Globe,
+  Mail,
+  GitBranch,
+  AlertTriangle,
+  CheckCircle2,
+  RefreshCw,
+} from 'lucide-react'
 import { TableSkeleton } from '../components/ui/skeleton'
+import { Button } from '../components/ui/button'
+import { EmptyState } from '../components/ui/empty-state'
 
 interface Approval {
   id: string
@@ -15,14 +29,14 @@ interface Approval {
   resolvedAt: string | null
 }
 
-const ACTION_ICONS: Record<string, string> = {
-  shell_exec: '💻',
-  fs_write: '📝',
-  fs_delete: '🗑️',
-  browser_navigate: '🌐',
-  email_send: '📧',
-  git_push: '🔀',
-  default: '⚠️',
+const ACTION_ICONS: Record<string, ReactNode> = {
+  shell_exec: <Terminal size={14} className="text-gray-400" />,
+  fs_write: <FileText size={14} className="text-gray-400" />,
+  fs_delete: <Trash2 size={14} className="text-gray-400" />,
+  browser_navigate: <Globe size={14} className="text-gray-400" />,
+  email_send: <Mail size={14} className="text-gray-400" />,
+  git_push: <GitBranch size={14} className="text-gray-400" />,
+  default: <AlertTriangle size={14} className="text-gray-400" />,
 }
 
 const STATUS_STYLES = {
@@ -88,12 +102,10 @@ export default function ApprovalsPage() {
             Actions agents are waiting on you to approve or deny
           </p>
         </div>
-        <button
-          onClick={load}
-          className="text-xs text-gray-500 hover:text-gray-300 border border-gray-700 px-3 py-1.5 rounded-md"
-        >
+        <Button variant="outline" size="sm" onClick={load}>
+          <RefreshCw size={14} />
           Refresh
-        </button>
+        </Button>
       </div>
 
       {/* Filter tabs */}
@@ -117,21 +129,18 @@ export default function ApprovalsPage() {
       {loading ? (
         <TableSkeleton rows={5} cols={5} />
       ) : approvals.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-gray-600 gap-3">
-          <span className="text-4xl">{filter === 'pending' ? '✅' : '📋'}</span>
-          <p className="text-sm">
-            {filter === 'pending'
-              ? 'No pending approvals — agents are running freely'
-              : `No ${filter} approvals`}
-          </p>
-        </div>
+        <EmptyState
+          icon={<CheckCircle2 size={32} />}
+          title={filter === 'pending' ? 'No pending approvals' : `No ${filter} approvals`}
+          {...(filter === 'pending' ? { description: 'Agents are running freely' } : {})}
+        />
       ) : (
         <div className="space-y-3 animate-fade-in">
           {approvals.map((a) => (
             <div key={a.id} className={`border rounded-xl p-4 ${STATUS_STYLES[a.status]}`}>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3 min-w-0">
-                  <span className="text-2xl flex-shrink-0 mt-0.5">
+                  <span className="flex-shrink-0 mt-0.5">
                     {ACTION_ICONS[a.actionType] ?? ACTION_ICONS.default}
                   </span>
                   <div className="min-w-0">
@@ -172,20 +181,22 @@ export default function ApprovalsPage() {
                 {/* Actions */}
                 {a.status === 'pending' && (
                   <div className="flex gap-2 flex-shrink-0">
-                    <button
+                    <Button
+                      variant="default"
+                      size="sm"
                       onClick={() => resolve(a.id, 'approve')}
                       disabled={resolving === a.id}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
                     >
                       Allow
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
                       onClick={() => resolve(a.id, 'deny')}
                       disabled={resolving === a.id}
-                      className="px-4 py-2 bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
                     >
                       Deny
-                    </button>
+                    </Button>
                   </div>
                 )}
                 {a.status !== 'pending' && (

@@ -1,6 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Plus } from 'lucide-react'
+import { Button } from '@/app/components/ui/button'
+import { Input } from '@/app/components/ui/input'
+import { Textarea } from '@/app/components/ui/textarea'
+import { Badge } from '@/app/components/ui/badge'
+import { Skeleton } from '@/app/components/ui/skeleton'
 
 interface CredentialStatus {
   key: string
@@ -149,72 +155,73 @@ export default function SkillsPage() {
   const allConnected = (s: Skill) => s.credentialStatus.every((c) => c.set)
   const missingCreds = (s: Skill) => s.credentialStatus.filter((c) => !c.set)
 
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
-        Loading skills…
-      </div>
-    )
-  }
-
   return (
     <div className="flex h-full gap-6 p-6">
       {/* Left: skill list */}
       <div className="flex w-80 flex-shrink-0 flex-col gap-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">Skills</h1>
-          <button
-            onClick={() => setCreating(true)}
-            className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            + New
-          </button>
+          <Button size="sm" onClick={() => setCreating(true)}>
+            <Plus size={14} />
+            New
+          </Button>
         </div>
 
-        <div className="flex flex-col gap-2 overflow-y-auto">
-          {skills.length === 0 && (
-            <p className="text-sm text-muted-foreground">No skills loaded yet.</p>
-          )}
-          {skills.map((s) => (
-            <button
-              key={s.name}
-              onClick={() => void openDetail(s)}
-              className={`flex flex-col gap-1 rounded-lg border p-3 text-left transition-colors hover:bg-accent ${
-                selected?.name === s.name ? 'border-primary bg-accent' : 'border-border'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-medium">{s.name}</span>
-                <div className="flex items-center gap-1.5">
-                  {/* Credential indicator */}
-                  {s.requiresEnv.length > 0 && (
-                    <span
-                      className={`h-2 w-2 rounded-full ${allConnected(s) ? 'bg-green-500' : 'bg-amber-500'}`}
-                      title={
-                        allConnected(s)
-                          ? 'All credentials connected'
-                          : `Missing: ${missingCreds(s)
-                              .map((c) => c.key)
-                              .join(', ')}`
-                      }
-                    />
-                  )}
-                  {/* Enabled toggle */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      void toggleSkill(s)
-                    }}
-                    className={`text-xs ${s.enabled ? 'text-green-600' : 'text-muted-foreground'}`}
-                  >
-                    {s.enabled ? 'on' : 'off'}
-                  </button>
+        {loading ? (
+          <div className="flex flex-col gap-2">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-lg" />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 overflow-y-auto">
+            {skills.length === 0 && (
+              <p className="text-sm text-muted-foreground">No skills loaded yet.</p>
+            )}
+            {skills.map((s) => (
+              <button
+                key={s.name}
+                onClick={() => void openDetail(s)}
+                className={`flex flex-col gap-1 rounded-lg border p-3 text-left transition-colors hover:bg-accent ${
+                  selected?.name === s.name ? 'border-primary bg-accent' : 'border-border'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium">{s.name}</span>
+                  <div className="flex items-center gap-1.5">
+                    {/* Credential indicator */}
+                    {s.requiresEnv.length > 0 && (
+                      <span
+                        className={`h-2 w-2 rounded-full ${allConnected(s) ? 'bg-green-500' : 'bg-amber-500'}`}
+                        title={
+                          allConnected(s)
+                            ? 'All credentials connected'
+                            : `Missing: ${missingCreds(s)
+                                .map((c) => c.key)
+                                .join(', ')}`
+                        }
+                      />
+                    )}
+                    {/* Enabled toggle */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void toggleSkill(s)
+                      }}
+                    >
+                      {s.enabled ? (
+                        <Badge variant="success">on</Badge>
+                      ) : (
+                        <Badge variant="muted">off</Badge>
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <p className="line-clamp-2 text-xs text-muted-foreground">{s.description}</p>
-            </button>
-          ))}
-        </div>
+                <p className="line-clamp-2 text-xs text-muted-foreground">{s.description}</p>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Right: detail or create panel */}
@@ -223,23 +230,23 @@ export default function SkillsPage() {
           <div className="flex flex-col gap-4 p-6">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">New skill</h2>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setCreating(false)
                   setCreateError(null)
                 }}
-                className="text-sm text-muted-foreground hover:text-foreground"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
             <div className="flex flex-col gap-3">
               <div>
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
                   Name (kebab-case)
                 </label>
-                <input
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                <Input
                   placeholder="my-skill"
                   value={newSkill.name}
                   onChange={(e) => setNewSkill((p) => ({ ...p, name: e.target.value }))}
@@ -249,8 +256,7 @@ export default function SkillsPage() {
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
                   Description (1–2 sentences: what it does + when to use it)
                 </label>
-                <input
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                <Input
                   placeholder="Use this skill when…"
                   value={newSkill.description}
                   onChange={(e) => setNewSkill((p) => ({ ...p, description: e.target.value }))}
@@ -260,8 +266,7 @@ export default function SkillsPage() {
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
                   Required credentials (comma-separated env vars, e.g. GITHUB_TOKEN)
                 </label>
-                <input
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                <Input
                   placeholder="API_KEY, SECRET_TOKEN"
                   value={newSkill.requiresEnv}
                   onChange={(e) => setNewSkill((p) => ({ ...p, requiresEnv: e.target.value }))}
@@ -271,21 +276,17 @@ export default function SkillsPage() {
                 <label className="mb-1 block text-xs font-medium text-muted-foreground">
                   Body (markdown — workflow steps, rules, examples)
                 </label>
-                <textarea
-                  className="h-48 w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
+                <Textarea
+                  className="h-48 font-mono"
                   placeholder="## Workflow&#10;1. Do this&#10;2. Then that&#10;&#10;## Rules&#10;- Never..."
                   value={newSkill.body}
                   onChange={(e) => setNewSkill((p) => ({ ...p, body: e.target.value }))}
                 />
               </div>
               {createError && <p className="text-sm text-destructive">{createError}</p>}
-              <button
-                onClick={() => void createSkill()}
-                disabled={createLoading}
-                className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-              >
+              <Button onClick={() => void createSkill()} disabled={createLoading}>
                 {createLoading ? 'Creating…' : 'Create skill'}
-              </button>
+              </Button>
             </div>
           </div>
         ) : selected ? (
@@ -296,22 +297,16 @@ export default function SkillsPage() {
                 <p className="mt-0.5 text-sm text-muted-foreground">{selected.description}</p>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={() => void toggleSkill(selected)}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium ${
-                    selected.enabled
-                      ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                  }`}
-                >
+                <Button variant="outline" size="sm" onClick={() => void toggleSkill(selected)}>
                   {selected.enabled ? 'Enabled' : 'Disabled'}
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
                   onClick={() => void deleteSkill(selected.name)}
-                  className="rounded-md bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/20"
                 >
                   Delete
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -332,15 +327,16 @@ export default function SkillsPage() {
                         </span>
                       </div>
                       {!c.set && (
-                        <button
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => {
                             setConnectingSkill(selected.name)
                             setCredKey(c.key)
                           }}
-                          className="rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/20"
                         >
                           Connect
-                        </button>
+                        </Button>
                       )}
                     </div>
                   ))}
@@ -353,31 +349,32 @@ export default function SkillsPage() {
                       Enter the value for <code className="font-mono">{credKey}</code>
                     </p>
                     <div className="flex gap-2">
-                      <input
+                      <Input
                         type="password"
-                        className="flex-1 rounded-md border border-input bg-background px-3 py-1.5 font-mono text-sm"
+                        className="flex-1 font-mono"
                         placeholder="Paste your key here…"
                         value={credValue}
                         onChange={(e) => setCredValue(e.target.value)}
                         autoFocus
                       />
-                      <button
+                      <Button
                         onClick={() => void saveCredential(selected.name)}
                         disabled={credSaving || !credValue}
-                        className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                        size="sm"
                       >
                         {credSaving ? 'Saving…' : 'Save'}
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => {
                           setConnectingSkill(null)
                           setCredValue('')
                           setCredError(null)
                         }}
-                        className="rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground"
                       >
                         Cancel
-                      </button>
+                      </Button>
                     </div>
                     {credError && <p className="mt-1.5 text-xs text-destructive">{credError}</p>}
                   </div>

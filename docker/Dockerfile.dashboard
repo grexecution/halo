@@ -31,12 +31,15 @@ COPY tsconfig.json ./
 
 RUN pnpm --filter @open-greg/dashboard build
 
+# Dereference pnpm symlinks in standalone so runner stage doesn't need .pnpm store
+RUN cp -rL /app/apps/dashboard/.next/standalone /app/apps/dashboard/.next/standalone-resolved
+
 # ── Run ──────────────────────────────────────────────────────────────────────
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY --from=builder /app/apps/dashboard/.next/standalone ./
+COPY --from=builder /app/apps/dashboard/.next/standalone-resolved ./
 COPY --from=builder /app/apps/dashboard/.next/static ./apps/dashboard/.next/static
 COPY --from=builder /app/apps/dashboard/public ./apps/dashboard/public
 

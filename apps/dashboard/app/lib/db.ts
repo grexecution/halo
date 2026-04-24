@@ -36,13 +36,22 @@ export function getDb(): Database.Database {
 function bootstrapAuth(db: Database.Database): void {
   const password = process.env['GREG_ADMIN_PASSWORD']
   if (!password) return
-  const existing = db.prepare('SELECT id FROM auth WHERE id = 1').get()
-  if (existing) return // already configured — never overwrite
+  const existing = db.prepare('SELECT id, password_hash FROM auth WHERE id = 1').get() as
+    | { id: number; password_hash: string }
+    | undefined
+  // Only skip if a real password has already been set by the user
+  if (existing?.password_hash) return
   const hash = bcrypt.hashSync(password, 12)
   const secret = randomBytes(32).toString('hex')
   db.prepare(
     `INSERT INTO auth (id, enabled, username, password_hash, totp_enabled, totp_secret, session_secret, must_change_password)
-     VALUES (1, 1, 'admin', ?, 0, '', ?, 1)`,
+     VALUES (1, 1, 'admin', ?, 0, '', ?, 1)
+     ON CONFLICT(id) DO UPDATE SET
+       enabled = 1,
+       username = 'admin',
+       password_hash = excluded.password_hash,
+       session_secret = CASE WHEN session_secret = '' OR session_secret IS NULL THEN excluded.session_secret ELSE session_secret END,
+       must_change_password = 1`,
   ).run(hash, secret)
 }
 

@@ -9,8 +9,6 @@ const withSerwist = withSerwistInit({
 })
 
 const nextConfig: NextConfig = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  experimental: { nodeMiddleware: true } as any,
   transpilePackages: ['@open-greg/connectors'],
   serverExternalPackages: [
     '@mastra/memory',

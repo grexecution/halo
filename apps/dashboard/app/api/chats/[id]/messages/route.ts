@@ -102,6 +102,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       let assistantContent = ''
       const assistantMsgId = generateId('msg-assistant')
 
+      // Keepalive heartbeat — prevents Cloudflare/nginx 524/504 timeout on slow LLMs.
+      // SSE comment lines are ignored by clients but keep the connection alive.
+      const keepaliveInterval = setInterval(() => {
+        try {
+          controller.enqueue(encoder.encode(': keep-alive\n\n'))
+        } catch {
+          // controller may already be closed
+        }
+      }, 15_000)
+
       try {
         // --- Try control-plane streaming ---
         const cpRes = await fetch(`${CONTROL_PLANE_URL}/api/chat/stream`, {
@@ -219,6 +229,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         .catch(() => {
           /* best effort */
         })
+
+      clearInterval(keepaliveInterval)
 
       const pendingActions = parseAgentActions(assistantContent)
       send({

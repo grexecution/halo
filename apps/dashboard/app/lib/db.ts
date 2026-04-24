@@ -45,13 +45,13 @@ function bootstrapAuth(db: Database.Database): void {
   const secret = randomBytes(32).toString('hex')
   db.prepare(
     `INSERT INTO auth (id, enabled, username, password_hash, totp_enabled, totp_secret, session_secret, must_change_password)
-     VALUES (1, 1, 'admin', ?, 0, '', ?, 1)
+     VALUES (1, 1, 'admin', ?, 0, '', ?, 0)
      ON CONFLICT(id) DO UPDATE SET
        enabled = 1,
        username = 'admin',
        password_hash = excluded.password_hash,
        session_secret = CASE WHEN session_secret = '' OR session_secret IS NULL THEN excluded.session_secret ELSE session_secret END,
-       must_change_password = 1`,
+       must_change_password = 0`,
   ).run(hash, secret)
 }
 

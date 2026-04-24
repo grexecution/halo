@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import {
   ComposerAddAttachment,
   ComposerAttachments,
@@ -53,7 +54,7 @@ const AssistantAvatar: FC<{ className?: string }> = ({ className }) => (
 
 // ── Thread root ───────────────────────────────────────────────────────────────
 
-export const Thread: FC = () => {
+export const Thread: FC<{ agentPicker?: ReactNode }> = ({ agentPicker }) => {
   return (
     <ThreadPrimitive.Root
       className="aui-root aui-thread-root @container flex h-full flex-col bg-background"
@@ -79,7 +80,7 @@ export const Thread: FC = () => {
 
           <ThreadPrimitive.ViewportFooter className="aui-thread-viewport-footer sticky bottom-0 mt-auto flex flex-col gap-4 overflow-visible rounded-t-(--composer-radius) bg-background pb-4 md:pb-6">
             <ThreadScrollToBottom />
-            <Composer />
+            <Composer agentPicker={agentPicker} />
           </ThreadPrimitive.ViewportFooter>
         </div>
       </ThreadPrimitive.Viewport>
@@ -168,7 +169,7 @@ const ThreadSuggestionItem: FC = () => {
 
 // ── Composer ──────────────────────────────────────────────────────────────────
 
-const Composer: FC = () => {
+const Composer: FC<{ agentPicker?: ReactNode }> = ({ agentPicker }) => {
   return (
     <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col">
       <ComposerPrimitive.AttachmentDropzone asChild>
@@ -184,23 +185,24 @@ const Composer: FC = () => {
             autoFocus
             aria-label="Message input"
           />
-          <ComposerAction />
+          <ComposerAction agentPicker={agentPicker} />
         </div>
       </ComposerPrimitive.AttachmentDropzone>
     </ComposerPrimitive.Root>
   )
 }
 
-const ComposerAction: FC = () => {
+const ComposerAction: FC<{ agentPicker?: ReactNode }> = ({ agentPicker }) => {
   return (
     <div className="aui-composer-action-wrapper relative flex items-center justify-between">
       <div className="flex items-center gap-2">
         <ComposerAddAttachment />
-        {/* Model badge */}
-        <span className="hidden @sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 border border-border/40 text-[10px] text-muted-foreground font-medium select-none">
-          <SparklesIcon className="size-2.5" />
-          Greg Agent
-        </span>
+        {agentPicker ?? (
+          <span className="hidden @sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/60 border border-border/40 text-[10px] text-muted-foreground font-medium select-none">
+            <SparklesIcon className="size-2.5" />
+            Greg Agent
+          </span>
+        )}
       </div>
       <AuiIf condition={(s) => !s.thread.isRunning}>
         <ComposerPrimitive.Send asChild>
@@ -210,7 +212,7 @@ const ComposerAction: FC = () => {
             type="button"
             variant="default"
             size="icon"
-            className="aui-composer-send size-8 rounded-full bg-primary hover:bg-primary/90 shadow-sm transition-all duration-150 hover:scale-105"
+            className="aui-composer-send size-8 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition-all duration-150 hover:scale-105 disabled:opacity-40 disabled:hover:scale-100"
             aria-label="Send message"
           >
             <ArrowUpIcon className="aui-composer-send-icon size-4" />
@@ -223,7 +225,7 @@ const ComposerAction: FC = () => {
             type="button"
             variant="default"
             size="icon"
-            className="aui-composer-cancel size-8 rounded-full"
+            className="aui-composer-cancel size-8 rounded-full bg-blue-600 hover:bg-blue-500 text-white"
             aria-label="Stop generating"
           >
             <SquareIcon className="aui-composer-cancel-icon size-3 fill-current" />

@@ -13,18 +13,22 @@ import {
   ChevronLeft,
   ChevronRight,
   SparklesIcon,
+  ChevronDown,
+  Cpu,
+  User,
 } from 'lucide-react'
 import {
   AssistantRuntimeProvider,
   useLocalRuntime,
   type ChatModelAdapter,
   type ChatModelRunResult,
+  type ThreadMessageLike,
 } from '@assistant-ui/react'
 import { Thread } from '@/app/components/assistant-ui/thread'
 import { ChatSidebarSkeleton } from '@/app/components/ui/skeleton'
 import { cn } from '@/app/components/ui/cn'
 
-// ─── Session types ─────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 interface ChatSession {
   id: string
@@ -34,14 +38,26 @@ interface ChatSession {
   messageCount: number
 }
 
-// ─── Date grouping ─────────────────────────────────────────────────────────
+interface HistoryMessage {
+  id: string
+  role: string
+  content: string
+  timestamp: string
+}
+
+interface Agent {
+  handle: string
+  name: string
+  model: string
+}
+
+// ─── Date grouping ──────────────────────────────────────────────────────────
 
 function getDateGroup(dateStr: string): string {
   const date = new Date(dateStr)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
   if (diffDays === 0) return 'Today'
   if (diffDays === 1) return 'Yesterday'
   if (diffDays < 7) return 'This week'
@@ -51,11 +67,31 @@ function getDateGroup(dateStr: string): string {
 
 const GROUP_ORDER = ['Today', 'Yesterday', 'This week', 'This month', 'Older']
 
-// ─── SSE adapter — bridges LocalRuntime ↔ /api/chats/[id]/messages ─────────
+// ─── Strip JSON wrapper from Llama tool-use responses ───────────────────────
+// Llama 3.2 sometimes wraps plain answers in {"message":"..."}
+function unwrapLlamaJson(text: string): string {
+  const t = text.trim()
+  if (t.startsWith('{') && t.endsWith('}')) {
+    try {
+      const obj = JSON.parse(t) as Record<string, unknown>
+      if (typeof obj['message'] === 'string') return obj['message'] as string
+      if (typeof obj['response'] === 'string') return obj['response'] as string
+      if (typeof obj['content'] === 'string') return obj['content'] as string
+      if (typeof obj['text'] === 'string') return obj['text'] as string
+    } catch {
+      // not JSON, keep as-is
+    }
+  }
+  return text
+}
+
+// ─── SSE adapter ────────────────────────────────────────────────────────────
 
 function makeAdapter(
   sessionIdRef: React.MutableRefObject<string | null>,
   onNewSession: (id: string, title: string) => void,
+  onSessionUpdated: (id: string) => void,
+  agentRef: React.MutableRefObject<string>,
 ): ChatModelAdapter {
   return {
     async *run({ messages, abortSignal }): AsyncGenerator<ChatModelRunResult, void> {
@@ -72,7 +108,10 @@ function makeAdapter(
         const res = await fetch('/api/chats', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: userText.slice(0, 60) || 'New chat' }),
+          body: JSON.stringify({
+            title: userText.slice(0, 60) || 'New chat',
+            agentId: agentRef.current,
+          }),
           signal: abortSignal,
         })
         if (!res.ok) throw new Error('Failed to create chat')
@@ -86,7 +125,7 @@ function makeAdapter(
       const res = await fetch(`/api/chats/${chatId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userText }),
+        body: JSON.stringify({ message: userText, agentId: agentRef.current }),
         signal: abortSignal,
       })
 
@@ -121,6 +160,14 @@ function makeAdapter(
               if (evt.type === 'chunk' && evt.text) {
                 text += evt.text
                 yield { content: [{ type: 'text' as const, text }] }
+              } else if (evt.type === 'done') {
+                // unwrap JSON wrapper if present
+                const clean = unwrapLlamaJson(text)
+                if (clean !== text) {
+                  text = clean
+                  yield { content: [{ type: 'text' as const, text }] }
+                }
+                onSessionUpdated(chatId)
               } else if (evt.type === 'tool') {
                 const toolArgsJson = JSON.stringify(evt.args ?? {})
                 yield {
@@ -139,8 +186,13 @@ function makeAdapter(
               } else if (evt.type === 'error') {
                 throw new Error(evt.message ?? 'Agent error')
               }
-            } catch {
-              // skip malformed events
+            } catch (parseErr) {
+              // skip malformed events (but rethrow real errors)
+              if (parseErr instanceof Error && parseErr.message !== 'Agent error') {
+                // parse error from JSON.parse — skip
+              } else {
+                throw parseErr
+              }
             }
           }
         }
@@ -148,12 +200,14 @@ function makeAdapter(
         reader.releaseLock()
       }
 
-      if (text) yield { content: [{ type: 'text' as const, text }] }
+      // Final yield with cleaned text
+      const finalText = unwrapLlamaJson(text)
+      if (finalText) yield { content: [{ type: 'text' as const, text: finalText }] }
     },
   }
 }
 
-// ─── Sidebar ───────────────────────────────────────────────────────────────
+// ─── Sidebar ─────────────────────────────────────────────────────────────────
 
 interface SidebarProps {
   sessions: ChatSession[]
@@ -199,7 +253,6 @@ function Sidebar({
     ? sessions.filter((s) => s.title.toLowerCase().includes(search.toLowerCase()))
     : sessions
 
-  // Group by date
   const grouped = new Map<string, ChatSession[]>()
   for (const s of filtered) {
     const group = getDateGroup(s.updatedAt || s.createdAt)
@@ -430,7 +483,7 @@ function SessionRow({
   )
 }
 
-// ─── Delete confirm modal ──────────────────────────────────────────────────
+// ─── Delete confirm modal ─────────────────────────────────────────────────────
 
 function DeleteModal({
   onConfirm,
@@ -482,7 +535,83 @@ function DeleteModal({
   )
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────
+// ─── Agent / model picker ─────────────────────────────────────────────────────
+
+interface AgentPickerProps {
+  agents: Agent[]
+  selectedAgent: string
+  onSelect: (handle: string) => void
+}
+
+export function AgentPicker({ agents, selectedAgent, onSelect }: AgentPickerProps) {
+  const [open, setOpen] = useState(false)
+  const current = agents.find((a) => a.handle === selectedAgent) ?? agents[0]
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    if (open) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [open])
+
+  if (!current) return null
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700/60 text-[11px] text-gray-300 font-medium transition-colors"
+      >
+        <User size={10} className="text-blue-400" />
+        <span className="max-w-[80px] truncate">{current.name}</span>
+        <ChevronDown size={9} className="text-gray-500" />
+      </button>
+
+      {open && (
+        <div className="absolute bottom-full mb-2 left-0 z-50 w-52 rounded-xl bg-gray-900 border border-gray-700/80 shadow-2xl overflow-hidden">
+          <div className="px-3 py-2 border-b border-gray-800">
+            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+              Agent
+            </p>
+          </div>
+          {agents.map((a) => (
+            <button
+              key={a.handle}
+              type="button"
+              onClick={() => {
+                onSelect(a.handle)
+                setOpen(false)
+              }}
+              className={cn(
+                'w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-gray-800 transition-colors',
+                a.handle === selectedAgent && 'bg-gray-800/60',
+              )}
+            >
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 mt-0.5">
+                <SparklesIcon size={10} className="text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-white truncate">{a.name}</p>
+                <p className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
+                  <Cpu size={8} />
+                  <span className="truncate">{a.model}</span>
+                </p>
+              </div>
+              {a.handle === selectedAgent && (
+                <Check size={12} className="shrink-0 text-blue-400 mt-1 ml-auto" />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([])
@@ -492,14 +621,24 @@ export default function ChatPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [agents, setAgents] = useState<Agent[]>([])
+  const [selectedAgent, setSelectedAgent] = useState<string>('greg')
+  // history for loading past sessions into the runtime
+  const [initialMessages, setInitialMessages] = useState<ThreadMessageLike[]>([])
+  const [threadKey, setThreadKey] = useState(0) // bump to reset runtime
 
-  // Ref so the adapter closure can read/write current session id without stale closure
   const sessionIdRef = useRef<string | null>(activeSessionId)
+  const agentRef = useRef<string>(selectedAgent)
+
   useEffect(() => {
     sessionIdRef.current = activeSessionId
   }, [activeSessionId])
 
-  // ── Fetch sessions ──────────────────────────────────────────────────────
+  useEffect(() => {
+    agentRef.current = selectedAgent
+  }, [selectedAgent])
+
+  // ── Fetch sessions ───────────────────────────────────────────────────────
   const fetchSessions = useCallback(async () => {
     try {
       const res = await fetch('/api/chats')
@@ -516,15 +655,51 @@ export default function ChatPage() {
     void fetchSessions()
   }, [fetchSessions])
 
-  // ── Session selection ───────────────────────────────────────────────────
-  function selectSession(id: string) {
+  // ── Fetch agents ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    fetch('/api/agents')
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        const agentList = data as Agent[]
+        if (agentList.length > 0) {
+          setAgents(agentList)
+          setSelectedAgent(agentList[0]!.handle)
+        }
+      })
+      .catch(() => {
+        // fallback: use default greg agent
+        setAgents([{ handle: 'greg', name: 'Greg', model: 'llama3.2' }])
+      })
+  }, [])
+
+  // ── Load past session into runtime ───────────────────────────────────────
+  const loadSession = useCallback(async (id: string) => {
     setActiveSessionId(id)
     sessionIdRef.current = id
-  }
 
+    try {
+      const res = await fetch(`/api/chats/${id}`)
+      if (!res.ok) return
+      const data = (await res.json()) as { messages: HistoryMessage[] }
+      const msgs: ThreadMessageLike[] = data.messages.map((m) => ({
+        role: m.role as 'user' | 'assistant',
+        content: [{ type: 'text' as const, text: unwrapLlamaJson(m.content) }],
+        id: m.id,
+      }))
+      setInitialMessages(msgs)
+      setThreadKey((k) => k + 1) // reset runtime with history
+    } catch {
+      setInitialMessages([])
+      setThreadKey((k) => k + 1)
+    }
+  }, [])
+
+  // ── New session ──────────────────────────────────────────────────────────
   function newSession() {
     setActiveSessionId(null)
     sessionIdRef.current = null
+    setInitialMessages([])
+    setThreadKey((k) => k + 1)
   }
 
   function handleNewSession(id: string, title: string) {
@@ -540,7 +715,17 @@ export default function ChatPage() {
     sessionIdRef.current = id
   }
 
-  // ── Delete ──────────────────────────────────────────────────────────────
+  function handleSessionUpdated(id: string) {
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.id === id
+          ? { ...s, updatedAt: new Date().toISOString(), messageCount: s.messageCount + 1 }
+          : s,
+      ),
+    )
+  }
+
+  // ── Delete ───────────────────────────────────────────────────────────────
   function requestDelete(id: string, e: React.MouseEvent) {
     e.stopPropagation()
     setDeleteConfirm(id)
@@ -559,7 +744,7 @@ export default function ChatPage() {
     }
   }
 
-  // ── Edit title ──────────────────────────────────────────────────────────
+  // ── Edit title ───────────────────────────────────────────────────────────
   async function saveTitle(id: string) {
     if (!editTitle.trim()) {
       setEditingId(null)
@@ -577,45 +762,52 @@ export default function ChatPage() {
     }
   }
 
-  // ── Runtime — stable ────────────────────────────────────────────────────
-  const adapter = useMemo(() => makeAdapter(sessionIdRef, handleNewSession), []) // stable
-  const runtime = useLocalRuntime(adapter)
+  // ── Runtime ──────────────────────────────────────────────────────────────
+  const adapter = useMemo(
+    () => makeAdapter(sessionIdRef, handleNewSession, handleSessionUpdated, agentRef),
+    [], // refs are stable, handlers are stable closures — safe to omit
+  )
 
   return (
-    <AssistantRuntimeProvider runtime={runtime}>
-      <div className="flex h-full overflow-hidden">
-        {/* Sidebar */}
-        <div
-          className={cn(
-            'shrink-0 flex flex-col transition-all duration-200',
-            sidebarCollapsed ? 'w-12' : 'w-56',
-          )}
-        >
-          <Sidebar
-            sessions={sessions}
-            sessionsFetched={sessionsFetched}
-            activeId={activeSessionId}
-            collapsed={sidebarCollapsed}
-            onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
-            onSelect={selectSession}
-            onNew={newSession}
-            onDelete={requestDelete}
-            editingId={editingId}
-            editTitle={editTitle}
-            onEditStart={(id, title) => {
-              setEditingId(id)
-              setEditTitle(title)
-            }}
-            onEditSave={saveTitle}
-            onEditCancel={() => setEditingId(null)}
-            onEditChange={setEditTitle}
-          />
-        </div>
+    <div className="flex h-full overflow-hidden">
+      {/* Sidebar */}
+      <div
+        className={cn(
+          'shrink-0 flex flex-col transition-all duration-200',
+          sidebarCollapsed ? 'w-12' : 'w-56',
+        )}
+      >
+        <Sidebar
+          sessions={sessions}
+          sessionsFetched={sessionsFetched}
+          activeId={activeSessionId}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
+          onSelect={loadSession}
+          onNew={newSession}
+          onDelete={requestDelete}
+          editingId={editingId}
+          editTitle={editTitle}
+          onEditStart={(id, title) => {
+            setEditingId(id)
+            setEditTitle(title)
+          }}
+          onEditSave={saveTitle}
+          onEditCancel={() => setEditingId(null)}
+          onEditChange={setEditTitle}
+        />
+      </div>
 
-        {/* Thread area */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
-          <Thread />
-        </div>
+      {/* Thread area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#09090b]">
+        <RuntimeWrapper
+          key={threadKey}
+          adapter={adapter}
+          initialMessages={initialMessages}
+          agents={agents}
+          selectedAgent={selectedAgent}
+          onAgentSelect={setSelectedAgent}
+        />
       </div>
 
       {/* Delete confirm modal */}
@@ -625,6 +817,36 @@ export default function ChatPage() {
           onCancel={() => setDeleteConfirm(null)}
         />
       )}
+    </div>
+  )
+}
+
+// ─── RuntimeWrapper — isolated so key reset works ────────────────────────────
+
+function RuntimeWrapper({
+  adapter,
+  initialMessages,
+  agents,
+  selectedAgent,
+  onAgentSelect,
+}: {
+  adapter: ChatModelAdapter
+  initialMessages: ThreadMessageLike[]
+  agents: Agent[]
+  selectedAgent: string
+  onAgentSelect: (handle: string) => void
+}) {
+  const runtime = useLocalRuntime(adapter, {
+    initialMessages,
+  })
+
+  return (
+    <AssistantRuntimeProvider runtime={runtime}>
+      <Thread
+        agentPicker={
+          <AgentPicker agents={agents} selectedAgent={selectedAgent} onSelect={onAgentSelect} />
+        }
+      />
     </AssistantRuntimeProvider>
   )
 }

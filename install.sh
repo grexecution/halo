@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# When run via `curl | bash`, stdin is the pipe — not a TTY.
-# Detect this and re-exec ourselves from a real TTY so interactive
-# prompts (arrow keys etc.) work correctly.
-if [ ! -t 0 ]; then
-  # Download to a temp file and exec it directly so stdin is the terminal
+# ── Non-interactive detection ─────────────────────────────────────────────────
+# If env vars are set, run fully non-interactively (no TTY needed).
+# Otherwise, re-exec from a real TTY so arrow-key prompts work.
+NON_INTERACTIVE=0
+if [ -n "${ANTHROPIC_API_KEY:-}" ] || [ -n "${OPENAI_API_KEY:-}" ] || [ "${HALO_CI:-}" = "1" ]; then
+  NON_INTERACTIVE=1
+elif [ ! -t 0 ]; then
   TMP=$(mktemp /tmp/halo-install-XXXXXX.sh)
   curl -fsSL "https://raw.githubusercontent.com/grexecution/halo/main/install.sh" -o "$TMP"
   chmod +x "$TMP"
@@ -13,14 +15,14 @@ if [ ! -t 0 ]; then
 fi
 
 REPO="https://github.com/grexecution/halo"
-INSTALL_DIR="$HOME/halo"
+INSTALL_DIR="${HALO_DIR:-$HOME/halo}"
 
 echo ""
 echo "  Halo — self-hosted AI agent"
 echo "  =============================="
 echo ""
 
-# ── Node 22 ──────────────────────────────────────────────────────────────────
+# ── Node 22 ───────────────────────────────────────────────────────────────────
 if ! command -v node &>/dev/null || [[ "$(node -e 'process.stdout.write(process.version.split(".")[0].replace("v",""))')" -lt 22 ]]; then
   echo "→ Installing Node.js 22..."
   if command -v apt-get &>/dev/null; then
@@ -37,7 +39,7 @@ else
   echo "  ✓ Node $(node --version)"
 fi
 
-# ── Build tools (needed for native node addons) ───────────────────────────────
+# ── Build tools ───────────────────────────────────────────────────────────────
 if command -v apt-get &>/dev/null; then
   if ! dpkg -s build-essential &>/dev/null 2>&1; then
     echo "→ Installing build tools..."
@@ -46,17 +48,23 @@ if command -v apt-get &>/dev/null; then
   fi
 fi
 
-# ── Docker ───────────────────────────────────────────────────────────────────
+# ── Docker ────────────────────────────────────────────────────────────────────
 if ! command -v docker &>/dev/null; then
   echo "→ Installing Docker..."
   curl -fsSL https://get.docker.com | sh >/dev/null 2>&1
   sudo usermod -aG docker "$USER" || true
-  echo "  ✓ Docker installed"
+  # Apply group without logout
+  if ! docker info >/dev/null 2>&1; then
+    echo "  ✓ Docker installed (you may need to log out and back in if this is a fresh server)"
+    # Try with newgrp for current session
+    exec newgrp docker bash "$0" "$@" 2>/dev/null || true
+  fi
+  echo "  ✓ Docker $(docker --version | cut -d' ' -f3 | tr -d ',')"
 else
   echo "  ✓ Docker $(docker --version | cut -d' ' -f3 | tr -d ',')"
 fi
 
-# ── pnpm ─────────────────────────────────────────────────────────────────────
+# ── pnpm ──────────────────────────────────────────────────────────────────────
 if ! command -v pnpm &>/dev/null; then
   echo "→ Installing pnpm..."
   npm install -g pnpm >/dev/null 2>&1
@@ -75,15 +83,20 @@ else
 fi
 echo "  ✓ Halo source at $INSTALL_DIR"
 
-# ── Install deps ─────────────────────────────────────────────────────────────
+# ── Install deps ──────────────────────────────────────────────────────────────
 echo "→ Installing dependencies..."
 pnpm install --dir "$INSTALL_DIR" >/dev/null 2>&1
 echo "  ✓ Dependencies ready"
 
 echo ""
-echo "  Starting setup wizard..."
+echo "  Starting setup..."
 echo ""
 
-# ── Run wizard ────────────────────────────────────────────────────────────────
+# ── Run CLI wizard ────────────────────────────────────────────────────────────
 cd "$INSTALL_DIR/apps/cli"
-npx tsx src/index.ts
+
+if [ "$NON_INTERACTIVE" = "1" ]; then
+  CLAW_NON_INTERACTIVE=1 npx tsx src/index.ts
+else
+  npx tsx src/index.ts
+fi

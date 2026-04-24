@@ -12,7 +12,7 @@ COPY apps/dashboard/package.json ./apps/dashboard/
 
 # pnpm v10: approve all build scripts in Docker (non-interactive environment)
 ENV PNPM_CONFIG_APPROVE_BUILD_SCRIPTS=true
-# Use --no-frozen-lockfile so platform-specific native binaries (linux-arm64-musl) are resolved
+# Use --no-frozen-lockfile so platform-specific native binaries are resolved
 RUN pnpm install --no-frozen-lockfile --filter @open-greg/dashboard...
 
 # ── Build ─────────────────────────────────────────────────────────────────────
@@ -31,21 +31,27 @@ COPY tsconfig.json ./
 
 RUN pnpm --filter @open-greg/dashboard build
 
-# Dereference pnpm symlinks in standalone so runner stage doesn't need .pnpm store
-RUN cp -rL /app/apps/dashboard/.next/standalone /app/apps/dashboard/.next/standalone-resolved
-
 # ── Run ──────────────────────────────────────────────────────────────────────
+# Use full workspace in runner to avoid pnpm symlink issues in standalone output
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY --from=builder /app/apps/dashboard/.next/standalone-resolved ./
-COPY --from=builder /app/apps/dashboard/.next/static ./apps/dashboard/.next/static
-COPY --from=builder /app/apps/dashboard/public ./apps/dashboard/public
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=deps /app/packages/connectors/node_modules ./packages/connectors/node_modules
+COPY --from=deps /app/apps/dashboard/node_modules ./apps/dashboard/node_modules
+
+COPY --from=builder /app/packages/shared ./packages/shared
+COPY --from=builder /app/packages/connectors ./packages/connectors
+COPY --from=builder /app/apps/dashboard ./apps/dashboard
+
+COPY package.json pnpm-workspace.yaml ./
 
 EXPOSE 3000
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=90s \
   CMD node -e "require('http').get('http://localhost:3000', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"
 
-CMD ["node", "server.js"]
+WORKDIR /app/apps/dashboard
+CMD ["node_modules/.bin/next", "start", "-p", "3000"]

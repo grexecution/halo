@@ -37,6 +37,15 @@ else
   echo "  ✓ Node $(node --version)"
 fi
 
+# ── Build tools (needed for native node addons) ───────────────────────────────
+if command -v apt-get &>/dev/null; then
+  if ! dpkg -s build-essential &>/dev/null 2>&1; then
+    echo "→ Installing build tools..."
+    sudo apt-get update -qq && sudo apt-get install -y -qq build-essential python3 curl git >/dev/null 2>&1
+    echo "  ✓ Build tools ready"
+  fi
+fi
+
 # ── Docker ───────────────────────────────────────────────────────────────────
 if ! command -v docker &>/dev/null; then
   echo "→ Installing Docker..."

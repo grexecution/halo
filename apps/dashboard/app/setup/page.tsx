@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { CheckCircle, Loader2, Eye, EyeOff, Bot, Send } from 'lucide-react'
 import { Button, Input, Label, Select, cn } from '../components/ui/index'
 
-const CONTROL_PLANE = process.env['NEXT_PUBLIC_CONTROL_PLANE_URL'] ?? 'http://localhost:3001'
+const CONTROL_PLANE = '' // use relative URLs — proxied server-side via /api/setup
 
 type Provider = 'anthropic' | 'openai' | 'ollama'
 type Step = 'llm' | 'telegram' | 'done'

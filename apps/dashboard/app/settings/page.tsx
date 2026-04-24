@@ -1558,13 +1558,11 @@ function UpdateTab() {
   const [log, setLog] = useState<string[]>([])
   const [done, setDone] = useState(false)
 
-  const CONTROL_PLANE = process.env['NEXT_PUBLIC_CONTROL_PLANE_URL'] ?? 'http://localhost:3001'
-
   async function checkForUpdates() {
     setChecking(true)
     setStatus(null)
     try {
-      const res = await fetch(`${CONTROL_PLANE}/api/update/check`)
+      const res = await fetch(`/api/update/check`)
       const data = (await res.json()) as typeof status
       setStatus(data)
     } catch {
@@ -1584,7 +1582,7 @@ function UpdateTab() {
     setLog([])
     setDone(false)
     try {
-      const res = await fetch(`${CONTROL_PLANE}/api/update/apply`, { method: 'POST' })
+      const res = await fetch(`/api/update/apply`, { method: 'POST' })
       const reader = res.body?.getReader()
       if (!reader) return
       const decoder = new TextDecoder()

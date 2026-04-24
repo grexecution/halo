@@ -6,58 +6,77 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 FROM base AS deps
 WORKDIR /app
 
-# Copy workspace manifests first for layer caching
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* .npmrc* ./
 COPY packages/shared/package.json ./packages/shared/
-COPY packages/agent-core/package.json ./packages/agent-core/
+COPY packages/connectors/package.json ./packages/connectors/
 COPY packages/memory/package.json ./packages/memory/
 COPY packages/permissions/package.json ./packages/permissions/
-COPY packages/telemetry/package.json ./packages/telemetry/
+COPY packages/agent-core/package.json ./packages/agent-core/
 COPY packages/messaging/package.json ./packages/messaging/
-COPY packages/connectors/package.json ./packages/connectors/
 COPY packages/tools/package.json ./packages/tools/
 COPY services/control-plane/package.json ./services/control-plane/
 
-# Use --no-frozen-lockfile + --dangerously-allow-all-builds so native addons
-# (better-sqlite3, onnxruntime-node) compile during install in Docker
-RUN pnpm install --no-frozen-lockfile --dangerously-allow-all-builds --filter @open-greg/control-plane...
+# --no-frozen-lockfile regenerates platform-specific native binaries (linux-x64-gnu)
+# pnpm-workspace.yaml onlyBuiltDependencies allows build scripts for native addons
+RUN pnpm install --no-frozen-lockfile --filter @open-greg/control-plane...
 
-# ── Run ──────────────────────────────────────────────────────────────────────
-FROM base AS runner
+# ── Build ─────────────────────────────────────────────────────────────────────
+FROM base AS builder
 WORKDIR /app
 
-# Copy the full root node_modules (includes .pnpm store with all actual packages)
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=deps /app/packages/connectors/node_modules ./packages/connectors/node_modules
+COPY --from=deps /app/packages/memory/node_modules ./packages/memory/node_modules
+COPY --from=deps /app/packages/permissions/node_modules ./packages/permissions/node_modules
+COPY --from=deps /app/packages/agent-core/node_modules ./packages/agent-core/node_modules
+COPY --from=deps /app/packages/messaging/node_modules ./packages/messaging/node_modules
+COPY --from=deps /app/packages/tools/node_modules ./packages/tools/node_modules
+COPY --from=deps /app/services/control-plane/node_modules ./services/control-plane/node_modules
 
-# Copy source first
 COPY packages/shared ./packages/shared
-COPY packages/agent-core ./packages/agent-core
+COPY packages/connectors ./packages/connectors
 COPY packages/memory ./packages/memory
 COPY packages/permissions ./packages/permissions
-COPY packages/telemetry ./packages/telemetry
+COPY packages/agent-core ./packages/agent-core
 COPY packages/messaging ./packages/messaging
-COPY packages/connectors ./packages/connectors
 COPY packages/tools ./packages/tools
 COPY services/control-plane ./services/control-plane
 COPY tsconfig.json ./
 
-# Copy service node_modules on top of source
+RUN pnpm --filter @open-greg/control-plane build
+
+# ── Run ──────────────────────────────────────────────────────────────────────
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+# Copy full node_modules including .pnpm store (symlinks resolve at runtime)
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=deps /app/packages/connectors/node_modules ./packages/connectors/node_modules
+COPY --from=deps /app/packages/memory/node_modules ./packages/memory/node_modules
+COPY --from=deps /app/packages/permissions/node_modules ./packages/permissions/node_modules
+COPY --from=deps /app/packages/agent-core/node_modules ./packages/agent-core/node_modules
+COPY --from=deps /app/packages/messaging/node_modules ./packages/messaging/node_modules
+COPY --from=deps /app/packages/tools/node_modules ./packages/tools/node_modules
 COPY --from=deps /app/services/control-plane/node_modules ./services/control-plane/node_modules
 
-# Copy workspace package node_modules where pnpm created them (may not exist for all)
-# Use -rL to dereference symlinks so the .pnpm store is not needed at runtime
-RUN --mount=type=bind,from=deps,source=/app,target=/deps \
-    for pkg in packages/shared packages/agent-core packages/memory packages/permissions \
-               packages/messaging packages/connectors packages/tools; do \
-      if [ -d "/deps/$pkg/node_modules" ]; then \
-        cp -rL "/deps/$pkg/node_modules" "/app/$pkg/node_modules"; \
-      fi; \
-    done
+COPY --from=builder /app/packages/shared ./packages/shared
+COPY --from=builder /app/packages/connectors ./packages/connectors
+COPY --from=builder /app/packages/memory ./packages/memory
+COPY --from=builder /app/packages/permissions ./packages/permissions
+COPY --from=builder /app/packages/agent-core ./packages/agent-core
+COPY --from=builder /app/packages/messaging ./packages/messaging
+COPY --from=builder /app/packages/tools ./packages/tools
+COPY --from=builder /app/services/control-plane ./services/control-plane
 
-ENV NODE_ENV=production
+COPY package.json pnpm-workspace.yaml ./
+
 EXPOSE 3001
 
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 --start-period=60s \
   CMD node -e "require('http').get('http://localhost:3001/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
-CMD ["node", "--import", "tsx/esm", "services/control-plane/src/index.ts"]
+WORKDIR /app/services/control-plane
+CMD ["node", "dist/index.js"]

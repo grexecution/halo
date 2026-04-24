@@ -1,8 +1,8 @@
 FROM node:22-slim AS base
-RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# ── Install deps + build native binaries ────────────────────────────────────
+# ── Install deps ─────────────────────────────────────────────────────────────
 FROM base AS deps
 WORKDIR /app
 
@@ -11,9 +11,9 @@ COPY packages/shared/package.json ./packages/shared/
 COPY packages/connectors/package.json ./packages/connectors/
 COPY apps/dashboard/package.json ./apps/dashboard/
 
-# Use --no-frozen-lockfile + --dangerously-allow-all-builds so native addons
-# (better-sqlite3, onnxruntime-node) compile during install in Docker
-RUN pnpm install --no-frozen-lockfile --dangerously-allow-all-builds --filter @open-greg/dashboard...
+# --no-frozen-lockfile regenerates platform-specific native binaries (linux-x64-gnu)
+# pnpm-workspace.yaml onlyBuiltDependencies allows build scripts for native addons
+RUN pnpm install --no-frozen-lockfile --filter @open-greg/dashboard...
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 FROM base AS builder
@@ -36,7 +36,7 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Copy full node_modules including .pnpm store (symlinks need it for native binaries)
+# Copy full node_modules including .pnpm store (symlinks resolve at runtime)
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 COPY --from=deps /app/packages/connectors/node_modules ./packages/connectors/node_modules

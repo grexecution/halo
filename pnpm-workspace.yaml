@@ -9,5 +9,4 @@ onlyBuiltDependencies:
   - keytar
   - sharp
   - esbuild
-  - canvas
   - '@parcel/watcher'

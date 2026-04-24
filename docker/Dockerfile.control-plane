@@ -18,9 +18,9 @@ COPY packages/connectors/package.json ./packages/connectors/
 COPY packages/tools/package.json ./packages/tools/
 COPY services/control-plane/package.json ./services/control-plane/
 
-# Use --no-frozen-lockfile so pnpm resolves platform-specific native binaries
-# .npmrc has allow-build=better-sqlite3,... so native addons compile during install
-RUN pnpm install --no-frozen-lockfile --filter @open-greg/control-plane...
+# Use --no-frozen-lockfile + --dangerously-allow-all-builds so native addons
+# (better-sqlite3, onnxruntime-node) compile during install in Docker
+RUN pnpm install --no-frozen-lockfile --dangerously-allow-all-builds --filter @open-greg/control-plane...
 
 # ── Run ──────────────────────────────────────────────────────────────────────
 FROM base AS runner

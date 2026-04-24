@@ -11,9 +11,9 @@ COPY packages/shared/package.json ./packages/shared/
 COPY packages/connectors/package.json ./packages/connectors/
 COPY apps/dashboard/package.json ./apps/dashboard/
 
-# Use --no-frozen-lockfile so platform-specific native binaries are resolved
-# .npmrc has allow-build=better-sqlite3,... so native addons compile during install
-RUN pnpm install --no-frozen-lockfile --filter @open-greg/dashboard...
+# Use --no-frozen-lockfile + --dangerously-allow-all-builds so native addons
+# (better-sqlite3, onnxruntime-node) compile during install in Docker
+RUN pnpm install --no-frozen-lockfile --dangerously-allow-all-builds --filter @open-greg/dashboard...
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 FROM base AS builder

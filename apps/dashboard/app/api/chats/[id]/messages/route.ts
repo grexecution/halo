@@ -123,7 +123,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             threadId: id,
             resourceId: 'user',
           }),
-          signal: AbortSignal.timeout(120_000),
+          signal: AbortSignal.timeout(300_000),
         })
 
         if (!cpRes.ok || !cpRes.body) throw new Error(`control-plane ${cpRes.status}`)

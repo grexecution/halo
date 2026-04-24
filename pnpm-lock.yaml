@@ -428,6 +428,9 @@ importers:
       '@open-greg/memory':
         specifier: workspace:*
         version: link:../../packages/memory
+      '@open-greg/messaging':
+        specifier: workspace:*
+        version: link:../../packages/messaging
       '@open-greg/permissions':
         specifier: workspace:*
         version: link:../../packages/permissions
@@ -440,6 +443,9 @@ importers:
       ai:
         specifier: ^6.0.168
         version: 6.0.168(zod@3.25.76)
+      better-sqlite3:
+        specifier: ^12.9.0
+        version: 12.9.0
       fastify:
         specifier: ^5.0.0
         version: 5.8.5

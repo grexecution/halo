@@ -12,32 +12,48 @@ COPY packages/agent-core/package.json ./packages/agent-core/
 COPY packages/memory/package.json ./packages/memory/
 COPY packages/permissions/package.json ./packages/permissions/
 COPY packages/telemetry/package.json ./packages/telemetry/
+COPY packages/messaging/package.json ./packages/messaging/
+COPY packages/connectors/package.json ./packages/connectors/
+COPY packages/tools/package.json ./packages/tools/
 COPY services/control-plane/package.json ./services/control-plane/
 
 # pnpm v10 requires approval for packages with install scripts.
-# In a Docker build we trust all deps — use PNPM_CONFIG_APPROVE_BUILD_SCRIPTS=true
-# so the interactive prompt is never shown.
 ENV PNPM_CONFIG_APPROVE_BUILD_SCRIPTS=true
-RUN pnpm install --frozen-lockfile --filter @open-greg/control-plane...
+# Use --no-frozen-lockfile so pnpm resolves platform-specific native binaries
+# (lockfile was generated on macOS; linux-arm64-musl optionals need re-resolution)
+RUN pnpm install --no-frozen-lockfile --filter @open-greg/control-plane...
 
 # ── Run ──────────────────────────────────────────────────────────────────────
 FROM base AS runner
 WORKDIR /app
 
+# Copy the full root node_modules (includes .pnpm store with all actual packages)
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY --from=deps /app/packages/agent-core/node_modules ./packages/agent-core/node_modules
-COPY --from=deps /app/packages/memory/node_modules ./packages/memory/node_modules
-COPY --from=deps /app/packages/permissions/node_modules ./packages/permissions/node_modules
-COPY --from=deps /app/services/control-plane/node_modules ./services/control-plane/node_modules
 
+# Copy source first
 COPY packages/shared ./packages/shared
 COPY packages/agent-core ./packages/agent-core
 COPY packages/memory ./packages/memory
 COPY packages/permissions ./packages/permissions
 COPY packages/telemetry ./packages/telemetry
+COPY packages/messaging ./packages/messaging
+COPY packages/connectors ./packages/connectors
+COPY packages/tools ./packages/tools
 COPY services/control-plane ./services/control-plane
 COPY tsconfig.json ./
+
+# Copy service node_modules on top of source
+COPY --from=deps /app/services/control-plane/node_modules ./services/control-plane/node_modules
+
+# Copy workspace package node_modules where pnpm created them (may not exist for all)
+# Use -rL to dereference symlinks so the .pnpm store is not needed at runtime
+RUN --mount=type=bind,from=deps,source=/app,target=/deps \
+    for pkg in packages/shared packages/agent-core packages/memory packages/permissions \
+               packages/messaging packages/connectors packages/tools; do \
+      if [ -d "/deps/$pkg/node_modules" ]; then \
+        cp -rL "/deps/$pkg/node_modules" "/app/$pkg/node_modules"; \
+      fi; \
+    done
 
 ENV NODE_ENV=production
 EXPOSE 3001

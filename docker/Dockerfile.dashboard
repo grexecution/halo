@@ -16,6 +16,8 @@ ENV PNPM_CONFIG_APPROVE_BUILD_SCRIPTS=true
 # Use --no-frozen-lockfile so platform-specific native binaries are resolved
 # and better-sqlite3 is compiled for the target platform (linux-x64-glibc)
 RUN pnpm install --no-frozen-lockfile --filter @open-greg/dashboard...
+# Explicitly rebuild native addons for the target platform
+RUN pnpm rebuild better-sqlite3
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 FROM base AS builder

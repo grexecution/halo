@@ -10,7 +10,7 @@
 import { createWriteStream, existsSync, chmodSync, mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { homedir, platform, arch } from 'node:os'
-import { spawn, type ChildProcess } from 'node:child_process'
+import { spawn, execSync, type ChildProcess } from 'node:child_process'
 import { pipeline } from 'node:stream/promises'
 
 const BIN_DIR = resolve(homedir(), '.open-greg', 'bin')
@@ -74,51 +74,132 @@ export interface TunnelHandle {
   stop: () => void
 }
 
+const TUNNEL_URL_FILE = resolve(homedir(), '.open-greg', 'tunnel-url.txt')
+const SYSTEMD_SERVICE = 'halo-tunnel'
+
+// ── Install cloudflared as a persistent systemd service ───────────────────────
+// On Linux with systemd: creates a service unit so the tunnel survives reboots
+// and CLI exit. On macOS / no systemd: falls back to detached spawn.
+
+async function installSystemdService(port: number): Promise<void> {
+  const { writeFileSync } = await import('node:fs')
+  const unit = `[Unit]
+Description=Halo Cloudflare Tunnel
+After=network.target
+
+[Service]
+ExecStart=${CLOUDFLARED_BIN} tunnel --url http://localhost:${port}
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+`
+  writeFileSync(`/etc/systemd/system/${SYSTEMD_SERVICE}.service`, unit)
+  const { execSync } = await import('node:child_process')
+  execSync(`systemctl daemon-reload && systemctl enable --now ${SYSTEMD_SERVICE}`, {
+    stdio: 'ignore',
+  })
+}
+
+function hasSystemd(): boolean {
+  try {
+    execSync('systemctl --version', { stdio: 'ignore', timeout: 3000 })
+    // also need to be root to write to /etc/systemd
+    return process.getuid?.() === 0
+  } catch {
+    return false
+  }
+}
+
+// Wait for cloudflared to print its trycloudflare URL, reading from journalctl
+// (systemd) or a pipe (fallback).
+async function waitForTunnelUrl(
+  proc: ChildProcess | null,
+  onStatus: (msg: string) => void,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let resolved = false
+    const timeout = setTimeout(() => {
+      if (!resolved) reject(new Error('Timed out waiting for cloudflared URL (60s)'))
+    }, 60_000)
+
+    const tryMatch = (text: string) => {
+      const match = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/)
+      if (match && !resolved) {
+        resolved = true
+        clearTimeout(timeout)
+        resolve(match[0]!)
+      }
+      if (text.includes('failed') || text.includes('ERR')) {
+        onStatus(`[cloudflared] ${text.slice(0, 120)}`)
+      }
+    }
+
+    if (proc) {
+      proc.stdout?.on('data', (d: Buffer) => tryMatch(d.toString()))
+      proc.stderr?.on('data', (d: Buffer) => tryMatch(d.toString()))
+      proc.on('error', (err) => {
+        clearTimeout(timeout)
+        if (!resolved) reject(err)
+      })
+      return
+    }
+
+    // systemd: poll journalctl for the URL
+    const jctl = spawn('journalctl', ['-u', SYSTEMD_SERVICE, '-f', '--no-pager', '-n', '50'], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    jctl.stdout?.on('data', (d: Buffer) => tryMatch(d.toString()))
+    jctl.stderr?.on('data', (d: Buffer) => tryMatch(d.toString()))
+    jctl.on('error', (err: Error) => {
+      clearTimeout(timeout)
+      if (!resolved) reject(err)
+    })
+  })
+}
+
 export async function startTunnel(
   port: number,
   onStatus: (msg: string) => void,
 ): Promise<TunnelHandle> {
   await downloadCloudflared(onStatus)
 
-  return new Promise((resolve, reject) => {
-    const proc: ChildProcess = spawn(
-      CLOUDFLARED_BIN,
-      ['tunnel', '--url', `http://localhost:${port}`],
-      {
-        stdio: ['ignore', 'pipe', 'pipe'],
-      },
-    )
+  let proc: ChildProcess | null = null
 
-    let resolved = false
-    const timeout = setTimeout(() => {
-      if (!resolved) reject(new Error('Timed out waiting for cloudflared tunnel URL (30s)'))
-    }, 30_000)
-
-    const handleOutput = (data: Buffer) => {
-      const text = data.toString()
-      // cloudflared prints the URL to stderr
-      const match = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/)
-      if (match && !resolved) {
-        resolved = true
-        clearTimeout(timeout)
-        resolve({
-          url: match[0],
-          stop: () => {
-            proc.kill('SIGTERM')
-          },
-        })
-      }
-      if (text.includes('failed') || text.includes('error')) {
-        onStatus(`[cloudflared] ${text.trim()}`)
-      }
-    }
-
-    proc.stdout?.on('data', handleOutput)
-    proc.stderr?.on('data', handleOutput)
-
-    proc.on('error', (err) => {
-      clearTimeout(timeout)
-      if (!resolved) reject(err)
+  if (hasSystemd()) {
+    // Install + start as a persistent systemd service
+    onStatus('Installing tunnel as systemd service...')
+    await installSystemdService(port)
+  } else {
+    // Detached spawn — survives CLI exit on macOS / non-systemd Linux
+    proc = spawn(CLOUDFLARED_BIN, ['tunnel', '--url', `http://localhost:${port}`], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: true,
     })
-  })
+    proc.unref() // don't keep the Node process alive waiting for it
+  }
+
+  const url = await waitForTunnelUrl(proc, onStatus)
+
+  // Persist URL so the dashboard can read it after CLI exits
+  mkdirSync(resolve(homedir(), '.open-greg'), { recursive: true })
+  const { writeFileSync } = await import('node:fs')
+  writeFileSync(TUNNEL_URL_FILE, url, 'utf-8')
+
+  return {
+    url,
+    stop: () => {
+      if (proc) proc.kill('SIGTERM')
+      else {
+        try {
+          execSync(`systemctl stop ${SYSTEMD_SERVICE}`, { stdio: 'ignore' })
+        } catch {
+          /* ignore */
+        }
+      }
+    },
+  }
 }

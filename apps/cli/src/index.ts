@@ -363,15 +363,68 @@ async function cmdInit(args: string[]): Promise<void> {
 
   const enableTunnel = accessMode === 'tunnel'
 
-  // ── Step 3: LLM — always Ollama on install ────────────────────────────────
-  // No API key needed. Works offline. Switch to Anthropic/OpenAI any time
-  // from the dashboard Settings → LLM provider.
-  const llmProvider = 'ollama'
-  const anthropicKey = ''
-  const openaiKey = ''
-  log.info(
-    'Using local Ollama — ~2 GB model downloads on first chat. Change provider any time in Settings.',
+  // ── Step 3: LLM provider ──────────────────────────────────────────────────
+  // Ollama is the default — no API key, no billing, works offline.
+  // User can opt into a cloud provider if they want.
+  const llmProvider = await promptOrDefault(
+    nonInteractive,
+    () =>
+      select({
+        message: 'Which LLM do you want to use?',
+        options: [
+          {
+            value: 'ollama',
+            label: 'Local Ollama  (default — free, no API key)',
+            hint: '~2 GB model download on first chat',
+          },
+          {
+            value: 'anthropic',
+            label: 'Anthropic Claude',
+            hint: 'Best quality — needs an API key',
+          },
+          {
+            value: 'openai',
+            label: 'OpenAI GPT',
+            hint: 'Needs an API key',
+          },
+        ],
+      }),
+    'ollama' as string,
   )
+
+  let anthropicKey = ''
+  let openaiKey = ''
+
+  if (llmProvider === 'anthropic') {
+    const key = await promptOrDefault(
+      nonInteractive,
+      () =>
+        text({
+          message: 'Anthropic API key:',
+          placeholder: 'sk-ant-...',
+          validate: (v) =>
+            v.trim().startsWith('sk-ant-') ? undefined : 'Should start with sk-ant-',
+        }),
+      process.env['ANTHROPIC_API_KEY'] ?? '',
+    )
+    anthropicKey = key.trim()
+  } else if (llmProvider === 'openai') {
+    const key = await promptOrDefault(
+      nonInteractive,
+      () =>
+        text({
+          message: 'OpenAI API key:',
+          placeholder: 'sk-...',
+          validate: (v) => (v.trim().startsWith('sk-') ? undefined : 'Should start with sk-'),
+        }),
+      process.env['OPENAI_API_KEY'] ?? '',
+    )
+    openaiKey = key.trim()
+  } else {
+    log.info(
+      'Ollama selected — model downloads on first chat (~2 GB). Change provider any time in Settings.',
+    )
+  }
 
   // ── Step 4: Admin password ────────────────────────────────────────────────
   const defaultPass = randomAdminPassword()
@@ -421,6 +474,7 @@ async function cmdInit(args: string[]): Promise<void> {
 
   // ── Cloudflare Tunnel ─────────────────────────────────────────────────────
   let publicUrl = `http://localhost:3000`
+  let tunnelHandle: { stop: () => void } | null = null
 
   if (enableTunnel && dockerAvailable && composeAvailable) {
     const tsp = spinner()
@@ -428,16 +482,8 @@ async function cmdInit(args: string[]): Promise<void> {
     try {
       const tunnel = await startTunnel(3000, (msg) => tsp.message(msg))
       publicUrl = tunnel.url
-      tsp.stop(`Tunnel active: ${publicUrl}`)
-      // Keep the tunnel alive — process stays running
-      process.on('SIGINT', () => {
-        tunnel.stop()
-        process.exit(0)
-      })
-      process.on('SIGTERM', () => {
-        tunnel.stop()
-        process.exit(0)
-      })
+      tunnelHandle = tunnel
+      tsp.stop('Tunnel active')
     } catch (err) {
       tsp.stop('Tunnel failed — falling back to local URL.')
       log.warn(String(err))
@@ -447,23 +493,33 @@ async function cmdInit(args: string[]): Promise<void> {
   // ── Done ──────────────────────────────────────────────────────────────────
   note(
     [
-      `Dashboard URL:    ${publicUrl}`,
-      `Admin password:   ${adminPassword}`,
+      `Dashboard:  ${publicUrl}`,
+      `Password:   ${adminPassword}`,
       '',
-      'Open the URL and finish setup in the dashboard',
-      '(connect Telegram, tune your agent, start chatting).',
-      '',
-      enableTunnel
+      'Open the URL above and finish setup in the dashboard.',
+      tunnelHandle
         ? 'Keep this terminal open to maintain the public URL.'
-        : 'Close this terminal any time — services run in Docker.',
+        : 'You can close this terminal — services run in Docker.',
     ].join('\n'),
     'Halo is running',
   )
 
-  if (!enableTunnel) {
-    outro('Done. Run again any time to reconfigure.')
+  outro('')
+
+  if (tunnelHandle) {
+    // Print URL again prominently so it's easy to copy after the box scrolls
+    process.stdout.write(`\n  \x1b[1m\x1b[36m→ ${publicUrl}\x1b[0m\n`)
+    process.stdout.write(`  Press Ctrl+C to stop the tunnel.\n\n`)
+
+    const keepAlive = setInterval(() => {}, 60_000)
+    const cleanup = () => {
+      clearInterval(keepAlive)
+      tunnelHandle!.stop()
+      process.exit(0)
+    }
+    process.on('SIGINT', cleanup)
+    process.on('SIGTERM', cleanup)
   }
-  // If tunnel: process stays alive intentionally
 }
 
 function showHelp(): void {

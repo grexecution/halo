@@ -133,7 +133,7 @@ export async function initDBOS(): Promise<boolean> {
   }
 
   try {
-    DBOS.setConfig({ systemDatabaseUrl: pgUrl })
+    DBOS.setConfig({ systemDatabaseUrl: pgUrl, runAdminServer: false })
     await DBOS.launch()
     _initialized = true
     return true

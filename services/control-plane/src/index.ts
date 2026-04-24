@@ -98,8 +98,8 @@ app.post<{
         content: m.content,
         timestamp: m.timestamp ?? new Date().toISOString(),
       })),
-      threadId: body.threadId,
-      resourceId: body.resourceId,
+      threadId: body.threadId ?? 'default',
+      resourceId: body.resourceId ?? 'user',
     })
     emitLog({
       level: 'info',
@@ -184,8 +184,8 @@ app.post<{
         content: m.content,
         timestamp: m.timestamp ?? new Date().toISOString(),
       })),
-      threadId: body.threadId,
-      resourceId: body.resourceId,
+      threadId: body.threadId ?? 'default',
+      resourceId: body.resourceId ?? 'user',
       onChunk: (chunk) => send({ type: 'chunk', text: chunk }),
       onToolCall: (name, args) => {
         toolCalls.push({ toolId: name, args, result: {} })

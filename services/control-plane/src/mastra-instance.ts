@@ -61,7 +61,8 @@ function resolveModel() {
   }
 
   // Ollama / OpenAI-compatible
-  const ollamaUrl = process.env['OLLAMA_URL'] ?? 'http://localhost:11434'
+  const ollamaUrl =
+    process.env['OLLAMA_BASE_URL'] ?? process.env['OLLAMA_URL'] ?? 'http://localhost:11434'
   const ollamaModel = process.env['OLLAMA_MODEL'] ?? settings.ollamaModel ?? 'llama3.2'
   return createOpenAI({ baseURL: `${ollamaUrl}/v1`, apiKey: 'ollama' }).chat(ollamaModel)
 }
@@ -83,7 +84,8 @@ function buildMemory(): Memory {
     : new LibSQLVector({ id: 'og-memory-vector', url: MEMORY_DB_URL })
 
   const anthropicKey = process.env['ANTHROPIC_API_KEY']
-  const ollamaUrl = process.env['OLLAMA_URL'] ?? 'http://localhost:11434'
+  const ollamaUrl =
+    process.env['OLLAMA_BASE_URL'] ?? process.env['OLLAMA_URL'] ?? 'http://localhost:11434'
   const settings = readSettings()
   const ollamaModel = process.env['OLLAMA_MODEL'] ?? settings.ollamaModel ?? 'llama3.2'
 
@@ -106,10 +108,16 @@ function buildMemory(): Memory {
         enabled: true,
         scope: 'resource',
       },
-      observationalMemory: {
-        model: omModel,
-        observation: { messageTokens: 20_000 },
-      },
+      // Only enable observational memory when Anthropic is available.
+      // On Ollama, simultaneous chat+observation calls OOM the runner.
+      ...(anthropicKey
+        ? {
+            observationalMemory: {
+              model: omModel,
+              observation: { messageTokens: 20_000 },
+            },
+          }
+        : {}),
     },
   })
 }
@@ -192,7 +200,8 @@ export function getAgentForConfig(cfg: AgentConfig): Agent {
   let model: ReturnType<typeof resolveModel>
   try {
     const anthropicKey = process.env['ANTHROPIC_API_KEY']
-    const ollamaUrl = process.env['OLLAMA_URL'] ?? 'http://localhost:11434'
+    const ollamaUrl =
+      process.env['OLLAMA_BASE_URL'] ?? process.env['OLLAMA_URL'] ?? 'http://localhost:11434'
 
     if (cfg.model.startsWith('claude-')) {
       model = createAnthropic({ apiKey: anthropicKey! })(

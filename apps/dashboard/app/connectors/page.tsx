@@ -1120,6 +1120,11 @@ function McpsTab({ installed, onInstall, onUninstall }: McpsTabProps) {
 
 // ── Skills tab ────────────────────────────────────────────────────────────────
 
+interface CredentialStatus {
+  key: string
+  set: boolean
+}
+
 interface UserSkillDef {
   id: string
   name: string
@@ -1131,6 +1136,11 @@ interface UserSkillDef {
   example_trigger: string
   docs_url: string
   builtin: false
+  enabled?: boolean
+  requiresEnv?: string[]
+  credentialStatus?: CredentialStatus[]
+  version?: string
+  body?: string
 }
 
 interface SkillsTabProps {
@@ -1143,81 +1153,240 @@ interface SkillsTabProps {
     exampleTrigger: string
   }) => Promise<void>
   onDeleteSkill: (id: string) => Promise<void>
+  onRefresh: () => void
 }
 
-function SkillCard({
-  skill,
+// Unified type for list items (built-in or user)
+type SkillListItem = { kind: 'builtin'; skill: Skill } | { kind: 'user'; skill: UserSkillDef }
+
+function SkillDetailPanel({
+  item,
+  onClose,
   onDelete,
-  builtin,
+  onToggle,
+  onRefresh,
 }: {
-  skill: Skill | UserSkillDef
+  item: SkillListItem
+  onClose: () => void
   onDelete?: (id: string) => void
-  builtin: boolean
+  onToggle?: (id: string, enabled: boolean) => void
+  onRefresh: () => void
 }) {
-  const [expanded, setExpanded] = useState(false)
+  const [connectingKey, setConnectingKey] = useState<string | null>(null)
+  const [credValue, setCredValue] = useState('')
+  const [credSaving, setCredSaving] = useState(false)
+  const [credError, setCredError] = useState<string | null>(null)
+
+  const isUser = item.kind === 'user'
+  const skill = item.skill
+  const name = skill.name
+  const description = skill.description
   const category = skill.category as SkillCategory
+
+  const requiresEnv = isUser ? (item.skill.requiresEnv ?? []) : []
+  const credStatus = isUser ? (item.skill.credentialStatus ?? []) : []
+  const enabled = isUser ? (item.skill.enabled ?? true) : true
+  const prompt = item.kind === 'builtin' ? item.skill.systemPrompt : item.skill.system_prompt
+  const docsUrl = item.kind === 'builtin' ? (item.skill.docsUrl ?? '') : (item.skill.docs_url ?? '')
+  const exampleTrigger =
+    item.kind === 'builtin' ? (item.skill.exampleTrigger ?? '') : (item.skill.example_trigger ?? '')
+
+  async function saveCredential(skillName: string, envKey: string) {
+    if (!credValue) return
+    setCredSaving(true)
+    setCredError(null)
+    try {
+      const res = await fetch(`/api/skills/${skillName}/credentials`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ envKey, value: credValue }),
+      })
+      if (res.ok) {
+        setConnectingKey(null)
+        setCredValue('')
+        onRefresh()
+      } else {
+        const err = (await res.json()) as { error?: string }
+        setCredError(err.error ?? 'Failed to save')
+      }
+    } catch (e) {
+      setCredError(String(e))
+    } finally {
+      setCredSaving(false)
+    }
+  }
+
   return (
-    <div className="bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-xl p-4 flex flex-col gap-2.5 transition-all">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-base">{SKILL_CATEGORY_ICONS[category] ?? '⚡'}</span>
-            <span className="font-semibold text-white text-sm truncate">{skill.name}</span>
-            {builtin && (
-              <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-blue-900/40 text-blue-300 border border-blue-800">
-                built-in
-              </span>
+    <div className="flex flex-col h-full overflow-y-auto">
+      {/* Header */}
+      <div className="flex items-start justify-between gap-4 p-5 border-b border-gray-800">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-2xl">{SKILL_CATEGORY_ICONS[category] ?? '⚡'}</span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base font-semibold text-white truncate">{name}</h2>
+              {!isUser && (
+                <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-blue-900/40 text-blue-300 border border-blue-800">
+                  built-in
+                </span>
+              )}
+              {isUser && (
+                <span
+                  className={`shrink-0 text-xs px-1.5 py-0.5 rounded-full border ${enabled ? 'bg-green-900/40 text-green-300 border-green-800' : 'bg-gray-800 text-gray-500 border-gray-700'}`}
+                >
+                  {enabled ? 'enabled' : 'disabled'}
+                </span>
+              )}
+            </div>
+            <p className="text-gray-500 text-sm mt-0.5">{description}</p>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          className="shrink-0 text-gray-600 hover:text-gray-300 text-xl leading-none"
+          aria-label="Close"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-5 p-5">
+        {/* Action buttons for user skills */}
+        {isUser && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => onToggle && onToggle(item.skill.name, !enabled)}
+              className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${enabled ? 'border-green-800 bg-green-900/30 text-green-300 hover:bg-green-900/50' : 'border-gray-700 bg-gray-800 text-gray-400 hover:text-white'}`}
+            >
+              {enabled ? 'Disable' : 'Enable'}
+            </button>
+            {onDelete && (
+              <button
+                onClick={() => {
+                  if (confirm(`Delete skill "${name}"? This cannot be undone.`)) {
+                    onDelete(item.skill.id)
+                    onClose()
+                  }
+                }}
+                className="px-3 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-500 hover:text-red-400 hover:border-red-800 transition-colors"
+              >
+                Delete
+              </button>
+            )}
+            {docsUrl && (
+              <a
+                href={docsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-auto px-3 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-400 hover:text-white transition-colors"
+              >
+                Docs ↗
+              </a>
             )}
           </div>
-          <p className="text-gray-500 text-xs leading-relaxed">{skill.description}</p>
-        </div>
-      </div>
-      {'example_trigger' in skill && skill.example_trigger ? (
-        <p className="text-xs text-gray-600 italic">e.g. &ldquo;{skill.example_trigger}&rdquo;</p>
-      ) : 'exampleTrigger' in skill && (skill as Skill).exampleTrigger ? (
-        <p className="text-xs text-gray-600 italic">
-          e.g. &ldquo;{(skill as Skill).exampleTrigger}&rdquo;
-        </p>
-      ) : null}
-      {expanded && (
-        <pre className="text-xs text-gray-400 bg-gray-800 rounded-lg p-3 overflow-auto max-h-40 whitespace-pre-wrap">
-          {'systemPrompt' in skill ? skill.systemPrompt : skill.system_prompt}
-        </pre>
-      )}
-      <div className="flex gap-2 flex-wrap mt-auto">
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
-        >
-          {expanded ? 'Hide prompt' : 'View prompt'}
-        </button>
-        {'docsUrl' in skill && skill.docsUrl && (
+        )}
+
+        {/* Credentials section (user skills only) */}
+        {isUser && requiresEnv.length > 0 && (
+          <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-4">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              Credentials
+            </h3>
+            <div className="flex flex-col gap-2">
+              {credStatus.map((c) => (
+                <div key={c.key} className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2 w-2 rounded-full shrink-0 ${c.set ? 'bg-green-500' : 'bg-amber-500'}`}
+                    />
+                    <code className="text-sm text-gray-300">{c.key}</code>
+                    <span className="text-xs text-gray-600">{c.set ? 'Connected' : 'Not set'}</span>
+                  </div>
+                  {!c.set && (
+                    <button
+                      onClick={() => {
+                        setConnectingKey(c.key)
+                        setCredValue('')
+                        setCredError(null)
+                      }}
+                      className="px-2.5 py-1 text-xs rounded-lg border border-blue-800 bg-blue-900/30 text-blue-300 hover:bg-blue-900/50 transition-colors"
+                    >
+                      Connect
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {connectingKey && (
+              <div className="mt-3 rounded-lg border border-dashed border-gray-700 p-3">
+                <p className="mb-2 text-xs text-gray-500">
+                  Value for <code className="font-mono text-gray-300">{connectingKey}</code>
+                </p>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    className="flex-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 font-mono text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                    placeholder="Paste your key here…"
+                    value={credValue}
+                    onChange={(e) => setCredValue(e.target.value)}
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => void saveCredential(name, connectingKey)}
+                    disabled={credSaving || !credValue}
+                    className="px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 transition-colors"
+                  >
+                    {credSaving ? 'Saving…' : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setConnectingKey(null)
+                      setCredValue('')
+                      setCredError(null)
+                    }}
+                    className="px-3 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-400 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {credError && <p className="mt-1.5 text-xs text-red-400">{credError}</p>}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Example trigger */}
+        {exampleTrigger && (
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+              Example
+            </p>
+            <p className="text-sm text-gray-400 italic">&ldquo;{exampleTrigger}&rdquo;</p>
+          </div>
+        )}
+
+        {/* Prompt body */}
+        {prompt && (
+          <div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              {isUser ? 'Instructions / Prompt' : 'System Prompt'}
+            </p>
+            <pre className="whitespace-pre-wrap rounded-xl bg-gray-900 border border-gray-800 p-4 font-mono text-xs text-gray-400 leading-relaxed overflow-auto max-h-80">
+              {prompt}
+            </pre>
+          </div>
+        )}
+
+        {/* Docs link for built-in */}
+        {!isUser && docsUrl && (
           <a
-            href={skill.docsUrl}
+            href={docsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
+            className="text-xs text-blue-400 hover:text-blue-300 underline"
           >
-            Docs
+            Documentation ↗
           </a>
-        )}
-        {'docs_url' in skill && skill.docs_url && (
-          <a
-            href={skill.docs_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
-          >
-            Docs
-          </a>
-        )}
-        {!builtin && onDelete && (
-          <button
-            onClick={() => onDelete(skill.id)}
-            className="ml-auto px-2.5 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-500 hover:text-red-400 hover:border-red-800 transition-colors"
-          >
-            Delete
-          </button>
         )}
       </div>
     </div>
@@ -1273,10 +1442,11 @@ const CREATE_SKILL_FIELDS: ModalField[] = [
   },
 ]
 
-function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill }: SkillsTabProps) {
+function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill, onRefresh }: SkillsTabProps) {
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState<SkillCategory | 'all'>('all')
   const [showCreate, setShowCreate] = useState(false)
+  const [selected, setSelected] = useState<SkillListItem | null>(null)
 
   const categoryMap = getSkillsByCategory()
   const categories = Array.from(categoryMap.keys())
@@ -1295,16 +1465,56 @@ function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill }: SkillsTabProps)
       s.description.toLowerCase().includes(search.toLowerCase())
     return matchSearch && (activeCategory === 'all' || s.category === activeCategory)
   })
-  const groupedBuiltin = new Map<SkillCategory, Skill[]>()
-  for (const s of filteredBuiltin) {
-    const list = groupedBuiltin.get(s.category) ?? []
-    list.push(s)
-    groupedBuiltin.set(s.category, list)
+
+  async function handleToggle(skillName: string, enabled: boolean) {
+    await fetch(`/api/skills/${skillName}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    })
+    onRefresh()
+    // Optimistically update selected
+    if (selected?.kind === 'user' && selected.skill.name === skillName) {
+      setSelected({ kind: 'user', skill: { ...selected.skill, enabled } })
+    }
   }
+
+  // ── List row component ─────────────────────────────────────────────────────
+  function SkillRow({ item }: { item: SkillListItem }) {
+    const s = item.skill
+    const category = s.category as SkillCategory
+    const isSelected = selected?.kind === item.kind && selected.skill.name === s.name
+    const enabled = item.kind === 'user' ? (item.skill.enabled ?? true) : true
+    const hasMissingCreds =
+      item.kind === 'user' && (item.skill.credentialStatus ?? []).some((c) => !c.set)
+
+    return (
+      <button
+        onClick={() => setSelected(item)}
+        className={`w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-colors ${isSelected ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}`}
+      >
+        <span className="text-sm shrink-0">{SKILL_CATEGORY_ICONS[category] ?? '⚡'}</span>
+        <span className="flex-1 text-sm truncate">{s.name}</span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {hasMissingCreds && (
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" title="Missing credentials" />
+          )}
+          {item.kind === 'user' && !enabled && <span className="text-xs text-gray-600">off</span>}
+          {item.kind === 'builtin' && <span className="text-xs text-gray-700">built-in</span>}
+        </div>
+      </button>
+    )
+  }
+
+  const allItems: SkillListItem[] = [
+    ...filteredUser.map((s): SkillListItem => ({ kind: 'user', skill: s })),
+    ...filteredBuiltin.map((s): SkillListItem => ({ kind: 'builtin', skill: s })),
+  ]
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      <aside className="w-48 shrink-0 border-r border-gray-800 bg-gray-950 overflow-y-auto">
+      {/* Left: category sidebar */}
+      <aside className="w-44 shrink-0 border-r border-gray-800 bg-gray-950 overflow-y-auto">
         <div className="p-3 border-b border-gray-800">
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Categories</p>
         </div>
@@ -1337,71 +1547,79 @@ function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill }: SkillsTabProps)
           ))}
         </ul>
       </aside>
-      <div className="flex-1 overflow-auto">
-        <div className="sticky top-0 bg-gray-950/90 backdrop-blur border-b border-gray-800 px-6 py-4 z-10">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h1 className="text-xl font-bold text-white">Skills</h1>
-              <p className="text-sm text-gray-500 mt-0.5">
-                {DEFAULT_SKILLS.length} built-in · {userSkills.length} custom
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="search"
-                placeholder="Search skills…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 w-56"
-              />
-              <button
-                onClick={() => setShowCreate(true)}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors"
-              >
-                <span>+</span> New skill
-              </button>
-            </div>
+
+      {/* Middle: skill list */}
+      <div className="w-64 shrink-0 border-r border-gray-800 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="sticky top-0 bg-gray-950/90 backdrop-blur border-b border-gray-800 px-3 py-3 z-10">
+          <div className="flex items-center gap-2 mb-2">
+            <h1 className="text-sm font-bold text-white flex-1">Skills</h1>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-1 px-2 py-1 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+            >
+              New skill
+            </button>
           </div>
+          <input
+            type="search"
+            placeholder="Search…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
+          />
         </div>
-        <div className="px-6 py-5 space-y-8">
+        <div className="flex-1 overflow-y-auto px-2 py-2">
           {filteredUser.length > 0 && (
-            <section>
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                🔧 Your Skills{' '}
-                <span className="text-gray-700 font-normal normal-case tracking-normal">
-                  ({filteredUser.length})
-                </span>
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {filteredUser.map((s) => (
-                  <SkillCard
-                    key={s.id}
-                    skill={s}
-                    builtin={false}
-                    onDelete={(id) => void onDeleteSkill(id)}
-                  />
-                ))}
-              </div>
-            </section>
+            <div className="mb-3">
+              <p className="px-3 py-1 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                Your skills ({filteredUser.length})
+              </p>
+              {filteredUser.map((s) => (
+                <SkillRow key={s.id} item={{ kind: 'user', skill: s }} />
+              ))}
+            </div>
           )}
-          {Array.from(groupedBuiltin.entries()).map(([cat, skills]) => (
-            <section key={cat}>
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <span>{SKILL_CATEGORY_ICONS[cat]}</span>
-                {SKILL_CATEGORY_LABELS[cat]}{' '}
-                <span className="text-gray-700 font-normal normal-case tracking-normal">
-                  ({skills.length})
-                </span>
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {skills.map((s) => (
-                  <SkillCard key={s.id} skill={s} builtin={true} />
-                ))}
-              </div>
-            </section>
-          ))}
+          {filteredBuiltin.length > 0 && (
+            <div>
+              <p className="px-3 py-1 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                Built-in ({filteredBuiltin.length})
+              </p>
+              {filteredBuiltin.map((s) => (
+                <SkillRow key={s.id} item={{ kind: 'builtin', skill: s }} />
+              ))}
+            </div>
+          )}
+          {allItems.length === 0 && (
+            <p className="px-3 py-4 text-xs text-gray-600">No skills match your search.</p>
+          )}
         </div>
       </div>
+
+      {/* Right: detail panel */}
+      <div className="flex-1 overflow-hidden bg-gray-950">
+        {selected ? (
+          <SkillDetailPanel
+            item={selected}
+            onClose={() => setSelected(null)}
+            {...(selected.kind === 'user'
+              ? {
+                  onDelete: (id: string) => {
+                    void onDeleteSkill(id)
+                    setSelected(null)
+                  },
+                }
+              : {})}
+            onToggle={(skillName, enabled) => void handleToggle(skillName, enabled)}
+            onRefresh={onRefresh}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-gray-600">
+            Select a skill to view details
+          </div>
+        )}
+      </div>
+
       {showCreate && (
         <GenericModal
           title="Create Skill"
@@ -1755,6 +1973,7 @@ export default function ConnectorsPage() {
             userSkills={userSkills}
             onCreateSkill={handleCreateSkill}
             onDeleteSkill={handleDeleteSkill}
+            onRefresh={() => void loadAll()}
           />
         )}
       </div>

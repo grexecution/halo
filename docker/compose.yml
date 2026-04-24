@@ -40,7 +40,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     healthcheck:
-      test: ['CMD-SHELL', 'curl -sf http://localhost:11434/api/tags || exit 1']
+      test: ['CMD-SHELL', 'ollama list || exit 1']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -83,6 +83,7 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_URL: http://ollama:11434
       LITELLM_BASE_URL: http://litellm:4000
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-open-greg-local}
       GREG_DATA_DIR: /data
@@ -115,10 +116,13 @@ services:
     ports:
       - '${DASHBOARD_PORT:-3000}:3000'
     environment:
-      # Internal Docker service name — dashboard talks to control-plane container-to-container
+      # Server-side fetch (Node.js): use Docker service name
+      CONTROL_PLANE_URL: http://control-plane:3001
+      # Browser-side (Next.js NEXT_PUBLIC_): use host-accessible URL
       NEXT_PUBLIC_CONTROL_PLANE_URL: http://control-plane:3001
-      # For SSE / browser calls that go direct from user's browser, use localhost
       NEXT_PUBLIC_CONTROL_PLANE_PUBLIC_URL: http://localhost:${CONTROL_PLANE_PORT:-3001}
+      # Ollama: reachable via Docker service name from within the container
+      OLLAMA_URL: http://ollama:11434
       GREG_DATA_DIR: /data
     volumes:
       - halo_data:/data

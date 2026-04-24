@@ -543,7 +543,7 @@ interface AgentPickerProps {
   onSelect: (handle: string) => void
 }
 
-export function AgentPicker({ agents, selectedAgent, onSelect }: AgentPickerProps) {
+function AgentPicker({ agents, selectedAgent, onSelect }: AgentPickerProps) {
   const [open, setOpen] = useState(false)
   const current = agents.find((a) => a.handle === selectedAgent) ?? agents[0]
   const ref = useRef<HTMLDivElement>(null)

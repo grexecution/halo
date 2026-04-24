@@ -85,7 +85,6 @@ services:
       OLLAMA_BASE_URL: http://ollama:11434
       LITELLM_BASE_URL: http://litellm:4000
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-open-greg-local}
-      GREG_ADMIN_PASSWORD: ${GREG_ADMIN_PASSWORD:-}
       GREG_DATA_DIR: /data
     volumes:
       - halo_data:/data
@@ -120,7 +119,6 @@ services:
       NEXT_PUBLIC_CONTROL_PLANE_URL: http://control-plane:3001
       # For SSE / browser calls that go direct from user's browser, use localhost
       NEXT_PUBLIC_CONTROL_PLANE_PUBLIC_URL: http://localhost:${CONTROL_PLANE_PORT:-3001}
-      GREG_ADMIN_PASSWORD: ${GREG_ADMIN_PASSWORD:-}
       GREG_DATA_DIR: /data
     volumes:
       - halo_data:/data

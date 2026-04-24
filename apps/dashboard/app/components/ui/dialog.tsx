@@ -35,7 +35,7 @@ export function Dialog({ open, onClose, title, description, children, className 
             <X size={16} />
           </button>
         </div>
-        <div className="px-5 py-4 overflow-y-auto">{children}</div>
+        <div className="flex-1 min-h-0 px-5 py-4 overflow-y-auto">{children}</div>
       </div>
     </div>
   )

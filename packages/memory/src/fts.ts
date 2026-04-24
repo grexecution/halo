@@ -95,7 +95,10 @@ export interface PGQueryFn {
 }
 
 export class PostgresFTS implements FTSIndex {
-  constructor(private query: PGQueryFn) {}
+  private query: PGQueryFn
+  constructor(query: PGQueryFn) {
+    this.query = query
+  }
 
   async index(doc: FTSDocument): Promise<void> {
     await this.query(

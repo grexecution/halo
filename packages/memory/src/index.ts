@@ -77,7 +77,10 @@ export class ChatIndexing {
 // ---------------------------------------------------------------------------
 
 export class PrePromptInjection {
-  constructor(private indexing: ChatIndexing) {}
+  private indexing: ChatIndexing
+  constructor(indexing: ChatIndexing) {
+    this.indexing = indexing
+  }
 
   /**
    * Return a string of relevant past messages to prepend to the system prompt.
@@ -208,11 +211,18 @@ export {
 } from './user-model.js'
 
 export class ExportImport {
+  private chatIndex: ChatIndexing
+  private connectorIndex: ConnectorIndexing
+  private entityLinking: EntityLinking
   constructor(
-    private chatIndex: ChatIndexing,
-    private connectorIndex: ConnectorIndexing,
-    private entityLinking: EntityLinking,
-  ) {}
+    chatIndex: ChatIndexing,
+    connectorIndex: ConnectorIndexing,
+    entityLinking: EntityLinking,
+  ) {
+    this.chatIndex = chatIndex
+    this.connectorIndex = connectorIndex
+    this.entityLinking = entityLinking
+  }
 
   /** Serialize the full memory state to a plain JSON-serialisable object. */
   export(): MemoryExport {

@@ -32,6 +32,9 @@ import {
   Loader2,
 } from 'lucide-react'
 import { Select } from '@/app/components/ui/select'
+import { Dialog } from '@/app/components/ui/dialog'
+import { Input } from '@/app/components/ui/input'
+import { Button } from '@/app/components/ui/button'
 import {
   ALL_PLUGINS,
   CATEGORY_LABELS,
@@ -169,101 +172,82 @@ function GenericModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg shadow-2xl my-4">
-        <div className="flex items-start justify-between px-5 py-4 border-b border-gray-800">
-          <div>
-            <h2 className="text-white font-semibold text-lg">{title}</h2>
-            {subtitle && <p className="text-gray-400 text-sm mt-0.5">{subtitle}</p>}
+    <Dialog
+      open
+      title={title}
+      {...(subtitle !== undefined ? { description: subtitle } : {})}
+      onClose={onClose}
+      className="max-w-lg"
+    >
+      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+        {fields.map((field) => (
+          <div key={field.key}>
+            <label className="block text-sm text-gray-300 mb-1">
+              {field.label}
+              {field.required && <span className="text-red-400 ml-1">*</span>}
+            </label>
+            {field.type === 'select' && field.options ? (
+              <Select
+                value={values[field.key] ?? ''}
+                onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
+              >
+                <option value="">Select…</option>
+                {field.options.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </Select>
+            ) : field.type === 'textarea' ? (
+              <textarea
+                rows={5}
+                placeholder={field.placeholder}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 resize-y"
+                value={values[field.key] ?? ''}
+                onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
+              />
+            ) : (
+              <Input
+                type={field.type === 'password' ? 'password' : 'text'}
+                placeholder={field.placeholder}
+                value={values[field.key] ?? ''}
+                onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
+              />
+            )}
+            {field.helpUrl && (
+              <a
+                href={field.helpUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-400 hover:underline mt-1 inline-block"
+              >
+                How to get this →
+              </a>
+            )}
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-white leading-none mt-0.5 ml-4 flex items-center justify-center"
-          >
-            <X size={14} />
-          </button>
-        </div>
-        <form onSubmit={(e) => void handleSubmit(e)} className="px-5 py-4 space-y-4">
-          {fields.map((field) => (
-            <div key={field.key}>
-              <label className="block text-sm text-gray-300 mb-1">
-                {field.label}
-                {field.required && <span className="text-red-400 ml-1">*</span>}
-              </label>
-              {field.type === 'select' && field.options ? (
-                <Select
-                  value={values[field.key] ?? ''}
-                  onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                >
-                  <option value="">Select…</option>
-                  {field.options.map((opt) => (
-                    <option key={opt} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </Select>
-              ) : field.type === 'textarea' ? (
-                <textarea
-                  rows={5}
-                  placeholder={field.placeholder}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 resize-y"
-                  value={values[field.key] ?? ''}
-                  onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                />
-              ) : (
-                <input
-                  type={field.type === 'password' ? 'password' : 'text'}
-                  placeholder={field.placeholder}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
-                  value={values[field.key] ?? ''}
-                  onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
-                />
-              )}
-              {field.helpUrl && (
-                <a
-                  href={field.helpUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-400 hover:underline mt-1 inline-block"
-                >
-                  How to get this →
-                </a>
-              )}
-            </div>
-          ))}
-          {error && <p className="text-red-400 text-sm">{error}</p>}
-          <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 text-sm rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="flex-1 px-4 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-            >
-              {saving && <Loader2 size={14} className="animate-spin" />}
-              {saving ? 'Saving…' : submitLabel}
-            </button>
-          </div>
-        </form>
+        ))}
+        {error && <p className="text-red-400 text-sm">{error}</p>}
         {footerLink && (
-          <div className="px-5 pb-4">
-            <a
-              href={footerLink.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
-            >
-              {footerLink.label} →
-            </a>
-          </div>
+          <a
+            href={footerLink.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-gray-500 hover:text-gray-300 transition-colors block"
+          >
+            {footerLink.label} →
+          </a>
         )}
-      </div>
-    </div>
+        <div className="flex gap-3 pt-2">
+          <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={saving} className="flex-1">
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            {saving ? 'Saving…' : submitLabel}
+          </Button>
+        </div>
+      </form>
+    </Dialog>
   )
 }
 
@@ -1010,19 +994,16 @@ function McpsTab({ installed, onInstall, onUninstall }: McpsTabProps) {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <input
+              <Input
                 type="search"
                 placeholder="Search MCPs…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 w-56"
+                className="w-56"
               />
-              <button
-                onClick={() => setShowCustom(true)}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 hover:border-gray-600 transition-colors"
-              >
-                <span>+</span> Custom
-              </button>
+              <Button variant="outline" size="sm" onClick={() => setShowCustom(true)}>
+                + Custom
+              </Button>
             </div>
           </div>
         </div>
@@ -1188,6 +1169,7 @@ function SkillDetailPanel({
   const [credValue, setCredValue] = useState('')
   const [credSaving, setCredSaving] = useState(false)
   const [credError, setCredError] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const isUser = item.kind === 'user'
   const skill = item.skill
@@ -1257,10 +1239,10 @@ function SkillDetailPanel({
         </div>
         <button
           onClick={onClose}
-          className="shrink-0 text-gray-600 hover:text-gray-300 text-xl leading-none"
+          className="shrink-0 text-gray-600 hover:text-gray-300 leading-none"
           aria-label="Close"
         >
-          ✕
+          <X size={16} />
         </button>
       </div>
 
@@ -1276,12 +1258,7 @@ function SkillDetailPanel({
             </button>
             {onDelete && (
               <button
-                onClick={() => {
-                  if (confirm(`Delete skill "${name}"? This cannot be undone.`)) {
-                    onDelete(item.skill.id)
-                    onClose()
-                  }
-                }}
+                onClick={() => setConfirmDelete(true)}
                 className="px-3 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-500 hover:text-red-400 hover:border-red-800 transition-colors"
               >
                 Delete
@@ -1337,31 +1314,32 @@ function SkillDetailPanel({
                   Value for <code className="font-mono text-gray-300">{connectingKey}</code>
                 </p>
                 <div className="flex gap-2">
-                  <input
+                  <Input
                     type="password"
-                    className="flex-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-1.5 font-mono text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
+                    className="flex-1 font-mono"
                     placeholder="Paste your key here…"
                     value={credValue}
                     onChange={(e) => setCredValue(e.target.value)}
                     autoFocus
                   />
-                  <button
+                  <Button
+                    size="sm"
                     onClick={() => void saveCredential(name, connectingKey)}
                     disabled={credSaving || !credValue}
-                    className="px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 transition-colors"
                   >
                     {credSaving ? 'Saving…' : 'Save'}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
                     onClick={() => {
                       setConnectingKey(null)
                       setCredValue('')
                       setCredError(null)
                     }}
-                    className="px-3 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-400 hover:text-white transition-colors"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 </div>
                 {credError && <p className="mt-1.5 text-xs text-red-400">{credError}</p>}
               </div>
@@ -1403,6 +1381,32 @@ function SkillDetailPanel({
           </a>
         )}
       </div>
+
+      {confirmDelete && onDelete && (
+        <Dialog
+          open
+          title="Delete skill"
+          description={`Delete "${name}"? This cannot be undone.`}
+          onClose={() => setConfirmDelete(false)}
+          className="max-w-sm"
+        >
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setConfirmDelete(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={() => {
+                onDelete(item.skill.id)
+                onClose()
+              }}
+            >
+              Delete
+            </Button>
+          </div>
+        </Dialog>
+      )}
     </div>
   )
 }
@@ -1577,12 +1581,12 @@ function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill, onRefresh }: Skil
               New skill
             </button>
           </div>
-          <input
+          <Input
             type="search"
             placeholder="Search…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-blue-500"
+            className="w-full text-xs"
           />
         </div>
         <div className="flex-1 overflow-y-auto px-2 py-2">

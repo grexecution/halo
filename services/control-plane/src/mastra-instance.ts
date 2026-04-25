@@ -171,9 +171,9 @@ export function getAgent(): Agent {
     name: 'Halo',
     instructions: SYSTEM_PROMPT,
     model,
-    tools: allMastraTools,
-    // Only attach memory when a cloud model is available (large context).
-    // Ollama default skips memory to avoid the 30-60s Postgres+fastembed init.
+    // Ollama (no anthropicKey): no tools (breaks tool-call template, adds 1000+ tokens),
+    // no memory (blocks 30-60s on init). Cloud models get full tools + memory.
+    tools: anthropicKey ? allMastraTools : {},
     ...(anthropicKey ? { memory: getMemory() } : {}),
   })
 
@@ -269,7 +269,11 @@ export function getAgentForConfig(cfg: AgentConfig): Agent {
     name: cfg.handle,
     instructions: cfg.systemPrompt || SYSTEM_PROMPT,
     model,
-    tools: allMastraTools,
+    // Small-context local models (Ollama) get no tools and no memory:
+    // - Tool schemas add 1000+ tokens, blowing the 4096 ctx limit
+    // - llama3.2 tool-call template causes 500 errors on Ollama
+    // - Memory init blocks for 30-60s on first call
+    tools: isSmallCtx ? {} : allMastraTools,
     ...(isSmallCtx ? {} : { memory: getMemory() }),
   })
 

@@ -25,6 +25,10 @@ import {
 import type { ChannelId } from '@open-greg/messaging'
 import { skillLoader } from './skill-loader.js'
 import { startHeartbeat, stopHeartbeat } from './heartbeat.js'
+import { initMemoryPipeline } from './memory-pipeline.js'
+import { readFileSync } from 'node:fs'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const app = Fastify({ logger: true })
 
@@ -732,6 +736,36 @@ await initDBOS()
 
 // Start messaging bots (Telegram, Discord, etc.) — non-fatal if not configured
 await initMessaging()
+
+// Initialise lifetime memory pipeline (Postgres-backed) — non-fatal if DB not available
+const pgUrl = process.env['DATABASE_URL']
+if (pgUrl) {
+  try {
+    const pipeline = initMemoryPipeline(pgUrl)
+    await pipeline.connect()
+
+    // Run schema migration (idempotent — safe to call on every startup)
+    const migrationPath = join(
+      dirname(fileURLToPath(import.meta.url)),
+      'migrations',
+      '001-lifetime-memory.sql',
+    )
+    try {
+      const migrationSql = readFileSync(migrationPath, 'utf-8')
+      await pipeline.runMigration(migrationSql)
+    } catch (migErr) {
+      app.log.warn(`Memory migration skipped: ${migErr}`)
+    }
+
+    // Start the async embedding worker
+    pipeline.startWorker()
+    app.log.info('Lifetime memory pipeline started')
+  } catch (err) {
+    app.log.warn(`Memory pipeline init failed (non-fatal): ${err}`)
+  }
+} else {
+  app.log.info('DATABASE_URL not set — lifetime memory pipeline disabled')
+}
 
 // Start the heartbeat scheduler (cron tick + periodic check-in)
 const heartbeatMinutes = Number(process.env['HEARTBEAT_INTERVAL_MINUTES'] ?? 30)

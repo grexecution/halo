@@ -22,6 +22,8 @@ import { emitLog } from './log-store.js'
 import { AgentOrchestrator } from './orchestrator.js'
 import { loadSettings } from './setup-store.js'
 import { sendTelegramNotification } from './notifier.js'
+import { consolidateMemories } from './memory-consolidator.js'
+import pg from 'pg'
 
 const DB_PATH = join(homedir(), '.open-greg', 'app.db')
 
@@ -239,12 +241,52 @@ If there's anything worth surfacing — something you noticed, a task that's due
 }
 
 // ---------------------------------------------------------------------------
+// Daily memory consolidation
+// ---------------------------------------------------------------------------
+
+let _lastConsolidationDate = ''
+
+async function runDailyConsolidation(): Promise<void> {
+  const today = new Date().toISOString().slice(0, 10)
+  if (_lastConsolidationDate === today) return // already ran today
+  _lastConsolidationDate = today
+
+  const pgUrl = process.env['DATABASE_URL']
+  if (!pgUrl) return
+
+  emitLog({
+    level: 'info',
+    agentId: 'system',
+    message: '[heartbeat] running daily memory consolidation',
+  })
+  let pool: pg.Pool | null = null
+  try {
+    pool = new pg.Pool({ connectionString: pgUrl, max: 2 })
+    const merged = await consolidateMemories(pool)
+    emitLog({
+      level: 'info',
+      agentId: 'system',
+      message: `[heartbeat] consolidation done — merged ${merged} duplicate memory pairs`,
+    })
+  } catch (err) {
+    emitLog({
+      level: 'warn',
+      agentId: 'system',
+      message: `[heartbeat] consolidation failed: ${String(err)}`,
+    })
+  } finally {
+    await pool?.end()
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Scheduler singleton
 // ---------------------------------------------------------------------------
 
 let cronIntervalId: ReturnType<typeof setInterval> | null = null
 let heartbeatIntervalId: ReturnType<typeof setInterval> | null = null
 let ollamaWarmIntervalId: ReturnType<typeof setInterval> | null = null
+let consolidationIntervalId: ReturnType<typeof setInterval> | null = null
 let orchestratorRef: AgentOrchestrator | null = null
 
 /**
@@ -290,6 +332,16 @@ export function startHeartbeat(heartbeatIntervalMinutes = 30): void {
     if (orchestratorRef) tickCrons(orchestratorRef).catch(() => {})
   }, 60_000)
 
+  // Daily memory consolidation: check every hour, run once per day
+  consolidationIntervalId = setInterval(
+    () => {
+      runDailyConsolidation().catch(() => {})
+    },
+    60 * 60 * 1000,
+  )
+  // Also try immediately on startup (will skip if already ran today)
+  void runDailyConsolidation()
+
   // Heartbeat check-in
   const heartbeatMs = heartbeatIntervalMinutes * 60 * 1000
   heartbeatIntervalId = setInterval(() => {
@@ -315,6 +367,10 @@ export function stopHeartbeat(): void {
   if (ollamaWarmIntervalId) {
     clearInterval(ollamaWarmIntervalId)
     ollamaWarmIntervalId = null
+  }
+  if (consolidationIntervalId) {
+    clearInterval(consolidationIntervalId)
+    consolidationIntervalId = null
   }
   orchestratorRef = null
 }

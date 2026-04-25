@@ -20,6 +20,81 @@ import {
   MASTRA_THREAD_ID_KEY,
   MASTRA_RESOURCE_ID_KEY,
 } from '@mastra/core/request-context'
+import { getMemoryPipeline, detectQueryType, extractFactKey } from './memory-pipeline.js'
+
+// Token budgets for memory injection
+const CLOUD_MEMORY_BUDGET = 8_000 // cloud models (GPT-4.1, Claude — large context)
+const OLLAMA_MEMORY_BUDGET = 500 // local 4096-token models — strict cap
+const CHARS_PER_TOKEN = 4 // rough estimate for token counting
+
+/**
+ * Build the memory context section to inject into the system prompt.
+ * Routes to the appropriate tier based on query type:
+ *   Tier 1: Pinned facts (name, company, etc.) — always < 5ms
+ *   Tier 2: Hybrid BM25+vector search — < 200ms
+ *   Tier 3: Health trend SQL aggregates — bypasses semantic entirely
+ */
+async function buildMemorySection(query: string, isSmallCtx: boolean): Promise<string> {
+  const pipeline = getMemoryPipeline()
+  if (!pipeline) return '' // pipeline not yet initialised (Postgres not connected)
+
+  const budget = isSmallCtx ? OLLAMA_MEMORY_BUDGET : CLOUD_MEMORY_BUDGET
+  const qtype = detectQueryType(query)
+
+  try {
+    // Tier 1: Pinned fact lookup
+    if (qtype === 'fact') {
+      const key = extractFactKey(query)
+      if (key) {
+        const value = await pipeline.getFact(key)
+        if (value)
+          return `\n\n--- Key fact ---\n${key.replace('user.', '').replace('.', ' ')}: ${value}`
+      }
+    }
+
+    // Tier 3: Health trend (structured SQL aggregate — no vector search needed)
+    if (qtype === 'health') {
+      const metric = /heart rate|hrv/i.test(query)
+        ? 'heart_rate'
+        : /steps/i.test(query)
+          ? 'steps'
+          : /sleep/i.test(query)
+            ? 'sleep_hours'
+            : /weight/i.test(query)
+              ? 'weight'
+              : /vo2/i.test(query)
+                ? 'vo2max'
+                : 'heart_rate'
+      const trend = await pipeline.healthTrendQuery({ metric, period: 'month', span: 60 })
+      if (trend.length > 0) {
+        const summary = pipeline.formatHealthTrend(trend, metric, '')
+        return `\n\n--- Health trend (${metric}) ---\n${summary}`
+      }
+    }
+
+    // Tier 2: Hybrid BM25 + vector search
+    const results = isSmallCtx
+      ? await pipeline.ollamaSearch(query, 5)
+      : await pipeline.hybridSearch(query, { limit: 50 })
+
+    if (results.length === 0) return ''
+
+    // Fill token budget (stop before overflowing context)
+    const lines = ['--- Relevant memory ---']
+    let tokens = 40
+    for (const m of results) {
+      const line = `[${m.source} @ ${m.createdAt.slice(0, 10)}] ${m.content}`
+      const t = Math.ceil(line.length / CHARS_PER_TOKEN)
+      if (tokens + t > budget) break
+      lines.push(line)
+      tokens += t
+    }
+    return lines.length > 1 ? `\n\n${lines.join('\n')}` : ''
+  } catch {
+    // Never crash the chat turn due to memory failure
+    return ''
+  }
+}
 
 export interface RunTurnOptions {
   agent: AgentConfig
@@ -105,7 +180,10 @@ export class AgentOrchestrator {
         userModelSection = `\n\n--- Learned user preferences ---\n${userModelBlock}`
     }
 
-    const contextualPrompt = `${basePrompt}${userProfileSection}${journalSection}${userModelSection}${skillsSection}`
+    // Inject lifetime memory (Tier 1/2/3) — budget-aware, never crashes chat
+    const memorySection = await buildMemorySection(message, isSmallCtx)
+
+    const contextualPrompt = `${basePrompt}${userProfileSection}${journalSection}${userModelSection}${skillsSection}${memorySection}`
 
     if (this.dryRun) {
       return this.dryRunTurn(contextualPrompt, message, history, onChunk)

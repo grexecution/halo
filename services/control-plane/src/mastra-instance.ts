@@ -163,13 +163,18 @@ export function getMemory(): Memory {
 export function getAgent(): Agent {
   if (_agent) return _agent
 
+  const anthropicKey = process.env['ANTHROPIC_API_KEY']
+  const model = resolveModel()
+
   _agent = new Agent({
     id: 'halo',
     name: 'Halo',
     instructions: SYSTEM_PROMPT,
-    model: resolveModel(),
+    model,
     tools: allMastraTools,
-    memory: getMemory(),
+    // Only attach memory when a cloud model is available (large context).
+    // Ollama default skips memory to avoid the 30-60s Postgres+fastembed init.
+    ...(anthropicKey ? { memory: getMemory() } : {}),
   })
 
   return _agent
@@ -249,13 +254,23 @@ export function getAgentForConfig(cfg: AgentConfig): Agent {
     model = resolveModel()
   }
 
+  // Small-context local models (Ollama) skip memory entirely — the Postgres +
+  // fastembed init blocks for 30-60s on first call and blows the 4096 ctx anyway.
+  // Cloud/plugin models (Claude, GPT, Kimi…) have large contexts and get memory.
+  const isSmallCtx =
+    !isPluginModel &&
+    !cfg.model.startsWith('claude-') &&
+    !cfg.model.startsWith('gpt-') &&
+    !cfg.model.startsWith('o1') &&
+    !cfg.model.startsWith('o3')
+
   const agent = new Agent({
     id: cfg.id,
     name: cfg.handle,
     instructions: cfg.systemPrompt || SYSTEM_PROMPT,
     model,
     tools: allMastraTools,
-    memory: getMemory(),
+    ...(isSmallCtx ? {} : { memory: getMemory() }),
   })
 
   if (!isPluginModel) {

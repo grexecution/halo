@@ -14,7 +14,9 @@ import { homedir } from 'node:os'
 import { existsSync } from 'node:fs'
 
 function dbPath(): string {
-  const dir = process.env['GREG_DATA_DIR'] ?? join(homedir(), '.open-greg')
+  // Docker volume mounts at /data; fall back to GREG_DATA_DIR or ~/.open-greg for local dev.
+  const dir =
+    process.env['GREG_DATA_DIR'] ?? (existsSync('/data') ? '/data' : join(homedir(), '.open-greg'))
   return join(dir, 'app.db')
 }
 
@@ -87,6 +89,7 @@ interface LlmPlugin {
 }
 
 const LLM_PLUGINS: LlmPlugin[] = [
+  { id: 'openai', baseUrl: 'https://api.openai.com/v1', apiKeyField: 'api_key' },
   { id: 'kimi', baseUrl: 'https://api.moonshot.cn/v1', apiKeyField: 'api_key' },
   { id: 'deepseek', baseUrl: 'https://api.deepseek.com/v1', apiKeyField: 'api_key' },
   { id: 'xai_grok', baseUrl: 'https://api.x.ai/v1', apiKeyField: 'api_key' },

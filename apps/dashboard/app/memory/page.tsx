@@ -96,7 +96,7 @@ function MemoryCard({ item, onDelete }: MemoryCardProps) {
         {/* Content */}
         <p
           className={
-            'text-sm text-gray-300 leading-relaxed whitespace-pre-wrap ' +
+            'text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap ' +
             (!expanded ? 'line-clamp-3' : '')
           }
         >
@@ -105,12 +105,12 @@ function MemoryCard({ item, onDelete }: MemoryCardProps) {
 
         {/* Expand/collapse */}
         <div className="flex items-center justify-between mt-2">
-          <span className="text-[11px] text-gray-600">
+          <span className="text-[11px] text-muted-foreground/70">
             {fmtDate(item.createdAt ?? item.updatedAt ?? item.timestamp ?? '')}
           </span>
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="flex items-center gap-1 text-[11px] text-gray-600 hover:text-gray-400 transition-colors"
+            className="flex items-center gap-1 text-[11px] text-muted-foreground/70 hover:text-muted-foreground transition-colors"
           >
             {expanded ? (
               <>
@@ -134,9 +134,9 @@ function MemoryCard({ item, onDelete }: MemoryCardProps) {
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-lg px-4 py-3 min-w-[110px]">
-      <p className="text-xl font-bold text-white">{value}</p>
-      <p className="text-[11px] text-gray-500 mt-0.5 truncate">{label}</p>
+    <div className="bg-card border border-border rounded-lg px-4 py-3 min-w-[110px]">
+      <p className="text-xl font-bold text-foreground">{value}</p>
+      <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{label}</p>
     </div>
   )
 }
@@ -239,7 +239,7 @@ export default function MemoryPage() {
     <main className="p-6 max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white mb-4">Memory</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-4">Memory</h1>
 
         {/* Stat cards */}
         {!initialLoadDone ? (
@@ -260,7 +260,7 @@ export default function MemoryPage() {
         <div className="relative flex-1 min-w-[200px]">
           <Search
             size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/70 pointer-events-none"
           />
           <Input
             data-testid="memory-search-input"
@@ -318,7 +318,10 @@ export default function MemoryPage() {
       {isSearching && !initialLoadDone ? (
         <TableSkeleton rows={5} cols={4} />
       ) : isSearching ? (
-        <p data-testid="searching-indicator" className="text-xs text-gray-600 animate-pulse">
+        <p
+          data-testid="searching-indicator"
+          className="text-xs text-muted-foreground/70 animate-pulse"
+        >
           Searching…
         </p>
       ) : results.length === 0 ? (

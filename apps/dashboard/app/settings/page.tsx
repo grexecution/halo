@@ -117,8 +117,8 @@ function ModelsTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-sm font-semibold text-white">Language Models</h2>
-        <p className="text-xs text-gray-500 mt-0.5">
+        <h2 className="text-sm font-semibold text-foreground">Language Models</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
           Models are now managed in the Connectors page.
         </p>
       </div>
@@ -129,15 +129,15 @@ function ModelsTab() {
               🤖
             </div>
             <div>
-              <p className="text-white font-medium">AI Models live in Connectors</p>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-foreground font-medium">AI Models live in Connectors</p>
+              <p className="text-sm text-muted-foreground mt-1">
                 Connect providers, set the primary model, enable/disable, and configure usage limits
                 all in one place.
               </p>
             </div>
             <a
               href="/connectors"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary hover:bg-blue-500 text-foreground text-sm font-medium transition-colors"
             >
               Open Connectors →
             </a>
@@ -177,8 +177,8 @@ function MessagingTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-sm font-semibold text-white">Messaging Bots</h2>
-        <p className="text-xs text-gray-500 mt-0.5">
+        <h2 className="text-sm font-semibold text-foreground">Messaging Bots</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
           Talk to your agents via Telegram (and Discord later). Connect a bot in Connectors, then
           check its live status here.
         </p>
@@ -189,10 +189,10 @@ function MessagingTab() {
           {[0, 1].map((i) => (
             <div
               key={i}
-              className="rounded-lg border border-gray-800 p-3 flex items-center gap-3 animate-pulse"
+              className="rounded-lg border border-border p-3 flex items-center gap-3 animate-pulse"
             >
               <div className="h-2 w-2 rounded-full bg-gray-700" />
-              <div className="h-3 w-32 rounded bg-gray-800" />
+              <div className="h-3 w-32 rounded bg-muted" />
               <div className="h-3 w-20 rounded bg-gray-700 ml-auto" />
             </div>
           ))}
@@ -207,7 +207,9 @@ function MessagingTab() {
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{meta?.icon}</span>
                     <div>
-                      <p className="text-sm font-medium text-white">{meta?.label ?? bot.channel}</p>
+                      <p className="text-sm font-medium text-foreground">
+                        {meta?.label ?? bot.channel}
+                      </p>
                       {bot.running ? (
                         <p className="text-xs text-green-400 mt-0.5">
                           Running · started{' '}
@@ -216,7 +218,7 @@ function MessagingTab() {
                       ) : bot.error ? (
                         <p className="text-xs text-red-400 mt-0.5">Error: {bot.error}</p>
                       ) : (
-                        <p className="text-xs text-gray-500 mt-0.5">Not connected</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">Not connected</p>
                       )}
                     </div>
                   </div>
@@ -229,7 +231,7 @@ function MessagingTab() {
                     )}
                     <a
                       href={`/connectors?tab=plugins&plugin=${meta?.pluginId ?? bot.channel}`}
-                      className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium transition-colors"
+                      className="px-3 py-1.5 rounded-lg bg-muted hover:bg-gray-700 text-foreground text-xs font-medium transition-colors"
                     >
                       Configure →
                     </a>
@@ -243,13 +245,13 @@ function MessagingTab() {
 
       <Card>
         <CardContent className="py-5 px-5">
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-foreground">
             To connect Telegram: go to{' '}
-            <a href="/connectors?tab=plugins" className="text-blue-400 underline">
+            <a href="/connectors?tab=plugins" className="text-primary underline">
               Connectors → Plugins
             </a>
-            , find <strong className="text-white">Telegram</strong>, and enter your BotFather token.
-            The bot starts automatically after saving.
+            , find <strong className="text-foreground">Telegram</strong>, and enter your BotFather
+            token. The bot starts automatically after saving.
           </p>
         </CardContent>
       </Card>
@@ -274,8 +276,10 @@ function VisionVoiceTab({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-white">Vision and Voice</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Configure OCR and audio processing.</p>
+          <h2 className="text-sm font-semibold text-foreground">Vision and Voice</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Configure OCR and audio processing.
+          </p>
         </div>
         <SaveButton onSave={onSave} saved={saved} />
       </div>
@@ -333,7 +337,7 @@ function VisionVoiceTab({
           <CardContent className="space-y-6">
             {/* STT */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Speech to Text (STT)
               </p>
               <div>
@@ -372,7 +376,7 @@ function VisionVoiceTab({
 
             {/* TTS */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Text to Speech (TTS)
               </p>
               <div>
@@ -448,7 +452,7 @@ function UrlList({ label, urls, onAdd, onRemove }: UrlListProps) {
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium text-gray-400">{label}</p>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <div className="flex gap-2">
         <Input
           placeholder="https://example.com"
@@ -468,12 +472,12 @@ function UrlList({ label, urls, onAdd, onRemove }: UrlListProps) {
           {urls.map((url) => (
             <div
               key={url}
-              className="flex items-center gap-2 px-3 py-1.5 bg-gray-800/60 rounded-lg border border-gray-700/50"
+              className="flex items-center gap-2 px-3 py-1.5 bg-muted/60 rounded-lg border border-border/50"
             >
-              <span className="flex-1 text-xs text-gray-300 font-mono truncate">{url}</span>
+              <span className="flex-1 text-xs text-foreground/80 font-mono truncate">{url}</span>
               <button
                 onClick={() => onRemove(url)}
-                className="flex-shrink-0 text-gray-600 hover:text-red-400 transition-colors"
+                className="flex-shrink-0 text-muted-foreground/70 hover:text-red-400 transition-colors"
                 aria-label={`Remove ${url}`}
               >
                 <X size={12} />
@@ -570,8 +574,10 @@ function PermissionsTab({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-white">Permissions</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Control what the agent is allowed to do.</p>
+          <h2 className="text-sm font-semibold text-foreground">Permissions</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Control what the agent is allowed to do.
+          </p>
         </div>
         <SaveButton onSave={onSave} saved={saved} />
       </div>
@@ -593,11 +599,11 @@ function PermissionsTab({
               <div>
                 <label
                   htmlFor={`tool-${tool.key}`}
-                  className="text-sm text-white font-medium cursor-pointer"
+                  className="text-sm text-foreground font-medium cursor-pointer"
                 >
                   {tool.label}
                 </label>
-                <p className="text-xs text-gray-500 mt-0.5">{tool.description}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{tool.description}</p>
               </div>
             </div>
           ))}
@@ -621,7 +627,7 @@ function PermissionsTab({
             <div>
               <label
                 htmlFor="sudo-toggle-sw"
-                className="text-sm text-white font-medium cursor-pointer"
+                className="text-sm text-foreground font-medium cursor-pointer"
               >
                 Enable sudo for shell commands
               </label>
@@ -655,11 +661,11 @@ function PermissionsTab({
             <div>
               <label
                 htmlFor="url-whitelist-toggle-sw"
-                className="text-sm text-white font-medium cursor-pointer"
+                className="text-sm text-foreground font-medium cursor-pointer"
               >
                 URL allowlist mode
               </label>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 When enabled, only URLs on the allowlist can be accessed.
               </p>
             </div>
@@ -707,8 +713,10 @@ function TelemetryTab({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-white">Telemetry</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Observability and tracing configuration.</p>
+          <h2 className="text-sm font-semibold text-foreground">Telemetry</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Observability and tracing configuration.
+          </p>
         </div>
         <SaveButton onSave={onSave} saved={saved} />
       </div>
@@ -729,11 +737,11 @@ function TelemetryTab({
             <div>
               <label
                 htmlFor="telemetry-toggle-sw"
-                className="text-sm text-white font-medium cursor-pointer"
+                className="text-sm text-foreground font-medium cursor-pointer"
               >
                 Enable OpenTelemetry
               </label>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Sends traces and metrics to an OpenTelemetry-compatible backend (e.g. Jaeger,
                 Grafana Tempo, Honeycomb). No data is sent to Anthropic or third parties — only to
                 the endpoint you configure below.
@@ -756,7 +764,7 @@ function TelemetryTab({
                 }))
               }
             />
-            <p className="text-xs text-gray-600 mt-1.5">
+            <p className="text-xs text-muted-foreground/70 mt-1.5">
               OTLP HTTP endpoint. Must accept JSON or protobuf traces.
             </p>
           </div>
@@ -819,8 +827,8 @@ function MemoryTab({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-sm font-semibold text-white">Memory</h2>
-        <p className="text-xs text-gray-500 mt-0.5">
+        <h2 className="text-sm font-semibold text-foreground">Memory</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
           Configure how the agent synthesizes and recalls conversation history.
         </p>
       </div>
@@ -848,7 +856,7 @@ function MemoryTab({
               ))}
             </Select>
             {selectedPrimary && (
-              <p className="text-[11px] text-gray-600">{selectedPrimary.description}</p>
+              <p className="text-[11px] text-muted-foreground/70">{selectedPrimary.description}</p>
             )}
           </div>
 
@@ -871,7 +879,7 @@ function MemoryTab({
                   </option>
                 ))}
               </Select>
-              <p className="text-[11px] text-gray-600">
+              <p className="text-[11px] text-muted-foreground/70">
                 Used if the primary model fails. Typically a faster/cheaper model.
               </p>
             </div>
@@ -879,9 +887,11 @@ function MemoryTab({
 
           <Separator />
 
-          <div className="rounded-lg bg-gray-900 border border-gray-800 p-3 space-y-1.5">
-            <p className="text-[11px] font-medium text-gray-400">Recommended models by use case</p>
-            <div className="grid grid-cols-2 gap-1 text-[11px] text-gray-600">
+          <div className="rounded-lg bg-card border border-border p-3 space-y-1.5">
+            <p className="text-[11px] font-medium text-muted-foreground">
+              Recommended models by use case
+            </p>
+            <div className="grid grid-cols-2 gap-1 text-[11px] text-muted-foreground/70">
               <span className="font-mono">claude-haiku-4-5-20251001</span>
               <span>Best quality, cheapest cloud ($0.25/MTok)</span>
               <span className="font-mono">qwen2.5:3b</span>
@@ -891,7 +901,7 @@ function MemoryTab({
               <span className="font-mono">llama3.2:1b</span>
               <span>Minimal resources, 800MB RAM</span>
             </div>
-            <p className="text-[11px] text-gray-700 pt-1">
+            <p className="text-[11px] text-muted-foreground/50 pt-1">
               To add a model, configure it in the Models tab first, then select it here.
             </p>
           </div>
@@ -929,7 +939,7 @@ function CopyButton({ text }: { text: string }) {
         setCopied(true)
         setTimeout(() => setCopied(false), 2000)
       }}
-      className="flex-shrink-0 text-gray-600 hover:text-gray-300 transition-colors"
+      className="flex-shrink-0 text-muted-foreground/70 hover:text-foreground/80 transition-colors"
     >
       {copied ? <Check size={13} className="text-green-400" /> : <Copy size={13} />}
     </button>
@@ -980,8 +990,8 @@ function TunnelSection() {
   if (!status) {
     return (
       <div className="flex items-center gap-2 py-4">
-        <RefreshCw size={14} className="text-gray-600 animate-spin" />
-        <span className="text-xs text-gray-600">Checking tunnel…</span>
+        <RefreshCw size={14} className="text-muted-foreground/70 animate-spin" />
+        <span className="text-xs text-muted-foreground/70">Checking tunnel…</span>
       </div>
     )
   }
@@ -991,7 +1001,7 @@ function TunnelSection() {
       <div
         className={cn(
           'flex items-center gap-3 p-4 rounded-xl border',
-          status.running ? 'bg-green-900/20 border-green-800/50' : 'bg-gray-900/60 border-gray-800',
+          status.running ? 'bg-green-900/20 border-green-800/50' : 'bg-card/60 border-border',
         )}
       >
         <div
@@ -1003,7 +1013,7 @@ function TunnelSection() {
         <div className="flex-1 min-w-0">
           {status.running && status.url ? (
             <>
-              <p className="text-xs font-medium text-white mb-0.5">Tunnel active</p>
+              <p className="text-xs font-medium text-foreground mb-0.5">Tunnel active</p>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono text-green-300 truncate">{status.url}</span>
                 <CopyButton text={status.url} />
@@ -1011,14 +1021,14 @@ function TunnelSection() {
                   href={status.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-gray-600 hover:text-gray-400"
+                  className="text-muted-foreground/70 hover:text-muted-foreground"
                 >
                   <ExternalLink size={12} />
                 </a>
               </div>
             </>
           ) : (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Tunnel not running — dashboard accessible at localhost:3000 only
             </p>
           )}
@@ -1042,10 +1052,12 @@ function TunnelSection() {
         <div className="flex items-start gap-3 p-4 bg-yellow-900/20 border border-yellow-800/40 rounded-xl">
           <AlertTriangle size={15} className="text-yellow-500 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-white mb-1">cloudflared not installed</p>
-            <p className="text-xs text-gray-400 mb-2">Install to expose the dashboard publicly.</p>
-            <div className="bg-gray-900 rounded-lg p-3 flex items-center gap-2">
-              <Terminal size={12} className="text-gray-600 flex-shrink-0" />
+            <p className="text-sm font-medium text-foreground mb-1">cloudflared not installed</p>
+            <p className="text-xs text-muted-foreground mb-2">
+              Install to expose the dashboard publicly.
+            </p>
+            <div className="bg-card rounded-lg p-3 flex items-center gap-2">
+              <Terminal size={12} className="text-muted-foreground/70 flex-shrink-0" />
               <code className="text-[11px] text-green-300 font-mono flex-1">
                 brew install cloudflare/cloudflare/cloudflared
               </code>
@@ -1055,8 +1067,8 @@ function TunnelSection() {
       )}
 
       <div className="flex items-start gap-3 p-4 bg-blue-900/10 border border-blue-900/30 rounded-xl">
-        <Smartphone size={14} className="text-blue-400 flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-gray-500">
+        <Smartphone size={14} className="text-primary flex-shrink-0 mt-0.5" />
+        <p className="text-xs text-muted-foreground">
           Once the tunnel is running, open the URL on any device.
         </p>
       </div>
@@ -1064,7 +1076,7 @@ function TunnelSection() {
       {status.running && status.url && (
         <div>
           <button
-            className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground/80 transition-colors"
             onClick={() => {
               const el = document.getElementById('dns-instructions')
               if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none'
@@ -1076,11 +1088,11 @@ function TunnelSection() {
           <div
             id="dns-instructions"
             style={{ display: 'none' }}
-            className="mt-3 p-4 border border-gray-800 rounded-xl"
+            className="mt-3 p-4 border border-border rounded-xl"
           >
-            <p className="text-xs text-gray-500 mb-2">Add a CNAME record pointing to:</p>
-            <div className="flex items-center gap-2 bg-gray-900 rounded-lg p-2">
-              <code className="text-xs font-mono text-gray-300 flex-1">
+            <p className="text-xs text-muted-foreground mb-2">Add a CNAME record pointing to:</p>
+            <div className="flex items-center gap-2 bg-card rounded-lg p-2">
+              <code className="text-xs font-mono text-foreground/80 flex-1">
                 {status.url.replace(/^https?:\/\//, '')}
               </code>
               <CopyButton text={status.url.replace(/^https?:\/\//, '')} />
@@ -1169,8 +1181,8 @@ function AuthSection() {
   if (!auth)
     return (
       <div className="flex items-center gap-2 py-4">
-        <RefreshCw size={14} className="text-gray-600 animate-spin" />
-        <span className="text-xs text-gray-600">Loading…</span>
+        <RefreshCw size={14} className="text-muted-foreground/70 animate-spin" />
+        <span className="text-xs text-muted-foreground/70">Loading…</span>
       </div>
     )
 
@@ -1178,8 +1190,8 @@ function AuthSection() {
     <div className="space-y-6" data-testid="auth-section">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-white">Require login</p>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-sm font-medium text-foreground">Require login</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Protect the dashboard with username and password
           </p>
         </div>
@@ -1210,7 +1222,7 @@ function AuthSection() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground/80"
                 >
                   {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                 </button>
@@ -1245,11 +1257,11 @@ function AuthSection() {
       )}
 
       {auth.enabled && (
-        <div className="space-y-3 pt-3 border-t border-gray-800">
+        <div className="space-y-3 pt-3 border-t border-border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-white">Two-factor authentication</p>
-              <p className="text-xs text-gray-500 mt-0.5">TOTP via authenticator app</p>
+              <p className="text-sm font-medium text-foreground">Two-factor authentication</p>
+              <p className="text-xs text-muted-foreground mt-0.5">TOTP via authenticator app</p>
             </div>
             {auth.totpEnabled ? (
               <Button variant="outline" size="sm" onClick={() => void disableTotp()}>
@@ -1263,8 +1275,8 @@ function AuthSection() {
           </div>
 
           {totpSetup && (
-            <div className="space-y-4 p-4 border border-gray-800 rounded-xl">
-              <p className="text-xs text-gray-400">
+            <div className="space-y-4 p-4 border border-border rounded-xl">
+              <p className="text-xs text-muted-foreground">
                 Scan this QR code with your authenticator app.
               </p>
               <img src={totpSetup.qrDataUrl} alt="TOTP QR code" className="w-40 h-40 rounded-lg" />
@@ -1305,8 +1317,8 @@ function ExposeTab() {
     <div className="space-y-8 py-2">
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <Globe size={15} className="text-gray-400" />
-          <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
+          <Globe size={15} className="text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
             Public tunnel
           </h2>
         </div>
@@ -1319,8 +1331,8 @@ function ExposeTab() {
 
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <Shield size={15} className="text-gray-400" />
-          <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
+          <Shield size={15} className="text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
             Authentication
           </h2>
         </div>
@@ -1333,13 +1345,13 @@ function ExposeTab() {
 
       <section className="space-y-3">
         <div className="flex items-center gap-2">
-          <Shield size={15} className="text-gray-400" />
-          <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
+          <Shield size={15} className="text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
             Security tips
           </h2>
         </div>
         <Card>
-          <CardContent className="pt-4 space-y-2 text-xs text-gray-400">
+          <CardContent className="pt-4 space-y-2 text-xs text-muted-foreground">
             <p>• Always enable authentication before exposing publicly</p>
             <p>• Use TOTP 2FA for stronger protection</p>
             <p>• Stop the tunnel when not needed</p>
@@ -1384,8 +1396,10 @@ function BuildHealthTab() {
   return (
     <div className="space-y-6 py-2">
       <div className="flex items-center gap-2">
-        <Activity size={15} className="text-gray-400" />
-        <h2 className="text-sm font-semibold text-white uppercase tracking-wider">Build Health</h2>
+        <Activity size={15} className="text-muted-foreground" />
+        <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
+          Build Health
+        </h2>
       </div>
 
       <Card>
@@ -1409,7 +1423,8 @@ function BuildHealthTab() {
                     data-testid={`regression-${r.id}`}
                     className="text-xs text-red-400 font-mono"
                   >
-                    REGRESSION: {r.id} — {r.title} <span className="text-gray-600">({r.ts})</span>
+                    REGRESSION: {r.id} — {r.title}{' '}
+                    <span className="text-muted-foreground/70">({r.ts})</span>
                   </li>
                 ))}
               </ul>
@@ -1428,11 +1443,11 @@ function BuildHealthTab() {
             {loading ? (
               <TableSkeleton rows={4} cols={3} />
             ) : nightly.length === 0 ? (
-              <p className="text-xs text-gray-600">No nightly runs recorded yet</p>
+              <p className="text-xs text-muted-foreground/70">No nightly runs recorded yet</p>
             ) : (
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="text-left text-gray-600 border-b border-gray-800">
+                  <tr className="text-left text-muted-foreground/70 border-b border-border">
                     <th className="pb-2">Date</th>
                     <th className="pb-2">Status</th>
                     <th className="pb-2 font-mono">Run ID</th>
@@ -1441,7 +1456,7 @@ function BuildHealthTab() {
                 <tbody className="divide-y divide-gray-800/60">
                   {nightly.map((n, i) => (
                     <tr key={i} data-testid={`nightly-row-${n.date}`}>
-                      <td className="py-2 text-gray-400">{n.date}</td>
+                      <td className="py-2 text-muted-foreground">{n.date}</td>
                       <td
                         className={cn(
                           'py-2 font-semibold',
@@ -1450,7 +1465,7 @@ function BuildHealthTab() {
                       >
                         {n.status}
                       </td>
-                      <td className="py-2 font-mono text-gray-600">{n.run_id}</td>
+                      <td className="py-2 font-mono text-muted-foreground/70">{n.run_id}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1467,7 +1482,7 @@ function BuildHealthTab() {
         </CardHeader>
         <CardContent>
           <div data-testid="stuck-section">
-            <p className="text-xs text-gray-600">No STUCK.md files found</p>
+            <p className="text-xs text-muted-foreground/70">No STUCK.md files found</p>
           </div>
         </CardContent>
       </Card>
@@ -1481,8 +1496,8 @@ function AboutTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-sm font-semibold text-white">About</h2>
-        <p className="text-xs text-gray-500 mt-0.5">System information and links.</p>
+        <h2 className="text-sm font-semibold text-foreground">About</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">System information and links.</p>
       </div>
 
       <Card>
@@ -1491,18 +1506,18 @@ function AboutTab() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500">App version</span>
+            <span className="text-xs text-muted-foreground">App version</span>
             <Badge variant="default">0.1.0</Badge>
           </div>
           <Separator />
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500">Runtime</span>
-            <span className="text-xs text-gray-300">Node.js</span>
+            <span className="text-xs text-muted-foreground">Runtime</span>
+            <span className="text-xs text-foreground/80">Node.js</span>
           </div>
           <Separator />
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-500">Platform</span>
-            <span className="text-xs text-gray-300 font-mono">
+            <span className="text-xs text-muted-foreground">Platform</span>
+            <span className="text-xs text-foreground/80 font-mono">
               {typeof navigator !== 'undefined' ? navigator.platform : 'unknown'}
             </span>
           </div>
@@ -1515,24 +1530,24 @@ function AboutTab() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">GitHub repository</span>
+            <span className="text-xs text-muted-foreground">GitHub repository</span>
             <a
               href="https://github.com/open-greg/open-greg"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+              className="text-xs text-primary hover:text-blue-300 transition-colors"
             >
               github.com/open-greg
             </a>
           </div>
           <Separator />
           <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-400">Documentation</span>
+            <span className="text-xs text-muted-foreground">Documentation</span>
             <a
               href="https://docs.open-greg.dev"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+              className="text-xs text-primary hover:text-blue-300 transition-colors"
             >
               docs.open-greg.dev
             </a>
@@ -1644,7 +1659,7 @@ function UpdateTab() {
                   {status.commitsAvailable} new commit{status.commitsAvailable !== 1 ? 's' : ''} on
                   main
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-muted-foreground">
                   {status.currentVersion} → {status.latestVersion}
                 </div>
               </div>
@@ -1652,7 +1667,7 @@ function UpdateTab() {
                 size="sm"
                 onClick={() => void applyUpdate()}
                 disabled={updating}
-                className="bg-amber-600 hover:bg-amber-700 text-white border-0"
+                className="bg-amber-600 hover:bg-amber-700 text-foreground border-0"
               >
                 <Terminal className="h-3.5 w-3.5 mr-1.5" />
                 {updating ? 'Updating...' : 'Apply Update & Restart'}
@@ -1665,7 +1680,7 @@ function UpdateTab() {
               {log.map((line, i) => (
                 <div
                   key={i}
-                  className={cn('text-gray-300', line.startsWith('Error') && 'text-red-400')}
+                  className={cn('text-foreground/80', line.startsWith('Error') && 'text-red-400')}
                 >
                   {'> '}
                   {line}
@@ -1737,11 +1752,11 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-950 p-6">
+    <main className="min-h-screen bg-sidebar-bg p-6">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-lg font-semibold text-white">Settings</h1>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <h1 className="text-lg font-semibold text-foreground">Settings</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Configure open-greg agent behavior and integrations.
           </p>
         </div>

@@ -222,9 +222,10 @@ function CronDialog({ open, initial, onClose, onSave }: CronDialogProps) {
             placeholder="0 9 * * *"
             className="font-mono"
           />
-          <p className="text-[11px] text-gray-600 mt-1.5">
-            Examples: <span className="font-mono text-gray-500">0 9 * * *</span> (daily 9am)
-            &middot; <span className="font-mono text-gray-500">0 10 * * 1</span> (weekly Mon)
+          <p className="text-[11px] text-muted-foreground/70 mt-1.5">
+            Examples: <span className="font-mono text-muted-foreground">0 9 * * *</span> (daily 9am)
+            &middot; <span className="font-mono text-muted-foreground">0 10 * * 1</span> (weekly
+            Mon)
           </p>
         </div>
         <div>
@@ -377,7 +378,7 @@ function GoalsTab() {
   return (
     <div data-testid="goals-section" className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-white">Goals</h1>
+        <h1 className="text-xl font-semibold text-foreground">Goals</h1>
         <Button size="sm" onClick={openAdd}>
           <Plus size={14} />
           Add Goal
@@ -386,7 +387,7 @@ function GoalsTab() {
 
       {/* Stats */}
       <div className="flex items-center gap-3 text-sm">
-        <span className="text-gray-400">{total} total</span>
+        <span className="text-muted-foreground">{total} total</span>
         {pending > 0 && <Badge variant="warning">{pending} pending</Badge>}
         {running > 0 && <Badge variant="info">{running} running</Badge>}
         {completed > 0 && <Badge variant="success">{completed} completed</Badge>}
@@ -410,7 +411,7 @@ function GoalsTab() {
       ) : (
         <div className="space-y-1">
           {/* Header row */}
-          <div className="grid grid-cols-[40px_1fr_120px_160px_80px] gap-3 px-3 py-1.5 text-[11px] font-medium text-gray-600 uppercase tracking-wider">
+          <div className="grid grid-cols-[40px_1fr_120px_160px_80px] gap-3 px-3 py-1.5 text-[11px] font-medium text-muted-foreground/70 uppercase tracking-wider">
             <span>Pri</span>
             <span>Title</span>
             <span>Status</span>
@@ -421,7 +422,7 @@ function GoalsTab() {
             <div
               key={goal.id}
               data-testid={`goal-${goal.id}`}
-              className="grid grid-cols-[40px_1fr_120px_160px_80px] gap-3 items-center px-3 py-2.5 bg-gray-900 border border-gray-800 rounded-lg hover:border-gray-700 transition-colors"
+              className="grid grid-cols-[40px_1fr_120px_160px_80px] gap-3 items-center px-3 py-2.5 bg-card border border-border rounded-lg hover:border-border transition-colors"
             >
               {/* Priority badge */}
               <span
@@ -434,7 +435,7 @@ function GoalsTab() {
               </span>
 
               {/* Title */}
-              <span className="text-sm text-white font-medium truncate">{goal.title}</span>
+              <span className="text-sm text-foreground font-medium truncate">{goal.title}</span>
 
               {/* Status */}
               <Badge
@@ -445,11 +446,11 @@ function GoalsTab() {
               </Badge>
 
               {/* Last run */}
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 {goal.lastRunAt ? (
                   fmtDate(goal.lastRunAt)
                 ) : (
-                  <span className="text-gray-700">—</span>
+                  <span className="text-muted-foreground/50">—</span>
                 )}
               </span>
 
@@ -622,7 +623,7 @@ function CronJobsTab() {
   return (
     <div data-testid="cron-section" className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-white">Cron Jobs</h1>
+        <h1 className="text-xl font-semibold text-foreground">Cron Jobs</h1>
         <Button size="sm" onClick={openAdd}>
           <Plus size={14} />
           Add Job
@@ -631,7 +632,7 @@ function CronJobsTab() {
 
       {/* Stats */}
       <div className="flex items-center gap-3 text-sm">
-        <span className="text-gray-400">{total} total</span>
+        <span className="text-muted-foreground">{total} total</span>
         {active > 0 && <Badge variant="success">{active} active</Badge>}
         {paused > 0 && <Badge variant="muted">{paused} paused</Badge>}
       </div>
@@ -657,7 +658,7 @@ function CronJobsTab() {
             <div
               key={job.id}
               data-testid={`cron-job-${job.id}`}
-              className="flex items-center gap-4 px-4 py-3 bg-gray-900 border border-gray-800 rounded-lg hover:border-gray-700 transition-colors"
+              className="flex items-center gap-4 px-4 py-3 bg-card border border-border rounded-lg hover:border-border transition-colors"
             >
               {/* Active toggle */}
               <Switch
@@ -670,18 +671,18 @@ function CronJobsTab() {
               {/* Name + schedule */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-mono font-medium text-white">{job.name}</span>
-                  <span className="text-xs font-mono text-gray-500">{job.schedule}</span>
+                  <span className="text-sm font-mono font-medium text-foreground">{job.name}</span>
+                  <span className="text-xs font-mono text-muted-foreground">{job.schedule}</span>
                 </div>
                 <div className="flex items-center gap-3 mt-0.5">
                   {job.nextRunAt && (
-                    <span className="text-[11px] text-gray-600">
+                    <span className="text-[11px] text-muted-foreground/70">
                       Next: {fmtDate(job.nextRunAt)}
                     </span>
                   )}
                   {job.goal && (
-                    <span className="text-[11px] text-gray-600">
-                      Goal: <span className="text-gray-500">{job.goal}</span>
+                    <span className="text-[11px] text-muted-foreground/70">
+                      Goal: <span className="text-muted-foreground">{job.goal}</span>
                     </span>
                   )}
                 </div>
@@ -689,7 +690,7 @@ function CronJobsTab() {
 
               {/* Last run */}
               {job.lastRunAt && (
-                <div className="flex items-center gap-1.5 text-[11px] text-gray-600 shrink-0">
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70 shrink-0">
                   <StatusDot
                     status={
                       job.lastRunStatus === 'success'
@@ -704,7 +705,7 @@ function CronJobsTab() {
               )}
 
               {/* Run count */}
-              <span className="text-[11px] text-gray-600 shrink-0 w-16 text-right">
+              <span className="text-[11px] text-muted-foreground/70 shrink-0 w-16 text-right">
                 {job.runCount} runs
               </span>
 

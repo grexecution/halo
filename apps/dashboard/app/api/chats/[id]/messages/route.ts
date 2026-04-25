@@ -36,15 +36,28 @@ interface MessageRow {
 // Route handler — returns SSE stream
 // ---------------------------------------------------------------------------
 
+interface AgentRow {
+  handle: string
+  name: string
+  model: string
+  system_prompt: string
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const body = (await req.json()) as { message: string; model?: string }
+  const body = (await req.json()) as { message: string; agentId?: string; model?: string }
   const db = getDb()
 
-  const chat = db.prepare('SELECT id, title FROM chats WHERE id = ?').get(id) as
-    | { id: string; title: string }
+  const chat = db.prepare('SELECT id, title, agent_id FROM chats WHERE id = ?').get(id) as
+    | { id: string; title: string; agent_id: string }
     | undefined
   if (!chat) return NextResponse.json({ error: 'Chat not found' }, { status: 404 })
+
+  // Look up the agent assigned to this chat
+  const agentHandle = body.agentId ?? chat.agent_id ?? 'greg'
+  const agentRow = db
+    .prepare('SELECT handle, name, model, system_prompt FROM agents WHERE handle = ?')
+    .get(agentHandle) as AgentRow | undefined
 
   const now = new Date().toISOString()
   const userMsgId = generateId('msg-user')
@@ -122,6 +135,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             history: historyForLLM,
             threadId: id,
             resourceId: 'user',
+            agentConfig: agentRow
+              ? {
+                  id: agentRow.handle,
+                  handle: agentRow.handle,
+                  model: agentRow.model,
+                  systemPrompt: agentRow.system_prompt,
+                  timezone: process.env['TZ'] ?? 'UTC',
+                }
+              : undefined,
           }),
           signal: AbortSignal.timeout(300_000),
         })

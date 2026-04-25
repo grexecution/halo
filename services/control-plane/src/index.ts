@@ -149,6 +149,13 @@ app.post<{
     history?: Array<{ role: string; content: string; timestamp?: string }>
     threadId?: string
     resourceId?: string
+    agentConfig?: {
+      id: string
+      handle: string
+      model: string
+      systemPrompt: string
+      timezone?: string
+    }
   }
 }>('/api/chat/stream', async (req, reply) => {
   const body = req.body
@@ -171,7 +178,7 @@ app.post<{
   try {
     const toolCalls: Array<{ toolId: string; args: unknown; result: unknown }> = []
     await orchestrator.runTurn({
-      agent: {
+      agent: body.agentConfig ?? {
         id: 'greg',
         handle: 'greg',
         systemPrompt: '',

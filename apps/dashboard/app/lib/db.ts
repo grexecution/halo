@@ -20,6 +20,8 @@ export function getDb(): Database.Database {
   _db = new Database(DB_PATH)
   _db.pragma('journal_mode = WAL')
   _db.pragma('foreign_keys = ON')
+  // Recover any WAL pages left by a previous crash before running migrations
+  _db.pragma('wal_checkpoint(TRUNCATE)')
   initSchema(_db)
   migrateSchema(_db)
   migrateJson(_db)
@@ -27,6 +29,32 @@ export function getDb(): Database.Database {
   bootstrapAuth(_db)
   return _db
 }
+
+// Graceful shutdown — checkpoint WAL before process exits so data survives
+// container restarts. Registered once per process.
+let _shutdownRegistered = false
+function registerShutdownHook() {
+  if (_shutdownRegistered) return
+  _shutdownRegistered = true
+  let closing = false
+  const shutdown = (signal: NodeJS.Signals) => {
+    if (closing) return
+    closing = true
+    if (_db) {
+      try {
+        _db.pragma('wal_checkpoint(TRUNCATE)')
+        _db.close()
+      } catch {
+        // best effort
+      }
+    }
+    // Re-raise so the process exits with the correct signal code
+    process.kill(process.pid, signal)
+  }
+  process.once('SIGTERM', () => shutdown('SIGTERM'))
+  process.once('SIGINT', () => shutdown('SIGINT'))
+}
+registerShutdownHook()
 
 /**
  * On first boot, if GREG_ADMIN_PASSWORD is set and no auth row exists yet,

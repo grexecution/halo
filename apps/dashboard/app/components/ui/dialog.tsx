@@ -1,5 +1,6 @@
 'use client'
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { cn } from './cn'
 
@@ -13,8 +14,14 @@ interface DialogProps {
 }
 
 export function Dialog({ open, onClose, title, description, children, className }: DialogProps) {
-  if (!open) return null
-  return (
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!open || !mounted) return null
+
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div
@@ -37,6 +44,7 @@ export function Dialog({ open, onClose, title, description, children, className 
         </div>
         <div className="flex-1 min-h-0 px-5 py-4 overflow-y-auto">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

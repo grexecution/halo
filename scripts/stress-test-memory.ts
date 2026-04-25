@@ -308,9 +308,7 @@ async function testT5(pool: pg.Pool): Promise<{ passed: boolean; before: number;
     log(`  T5 before consolidation: ${before} entries`)
 
     // 3. Embed them all inline (synchronously for test purposes)
-    const { FlagEmbedding, EmbeddingModel } = await import('fastembed')
-    const cacheDir = process.env['FASTEMBED_CACHE_DIR'] ?? '/data/fastembed-cache'
-    const model = await FlagEmbedding.init({ model: EmbeddingModel.AllMiniLML6V2, cacheDir })
+    const model = await getEmbedModel()
 
     const { rows: unembedded } = await client.query<{
       id: string

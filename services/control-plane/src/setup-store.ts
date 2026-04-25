@@ -9,7 +9,10 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 
-const DIR = join(homedir(), '.open-greg')
+// Prefer the Docker data volume mount (/data) so settings survive container restarts.
+// Fall back to ~/.open-greg for local development without the volume.
+const DIR =
+  process.env['DATA_DIR'] ?? (existsSync('/data') ? '/data' : join(homedir(), '.open-greg'))
 const SETTINGS_PATH = join(DIR, 'settings.json')
 
 export interface UserProfile {

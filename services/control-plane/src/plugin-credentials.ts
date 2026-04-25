@@ -12,8 +12,6 @@ import Database from 'better-sqlite3'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { existsSync } from 'node:fs'
-import { ALL_PLUGINS } from '@open-greg/connectors/plugins'
-import type { PluginLlmMeta } from '@open-greg/connectors/plugins'
 
 function dbPath(): string {
   const dir = process.env['GREG_DATA_DIR'] ?? join(homedir(), '.open-greg')
@@ -78,13 +76,31 @@ export function parsePluginModelId(
 }
 
 /**
+ * Minimal LLM plugin catalog — inlined to avoid cross-package import issues.
+ * Mirrors the llmMeta fields from packages/connectors/src/plugins.ts.
+ * Keep in sync when adding new LLM providers to the connectors package.
+ */
+interface LlmPlugin {
+  id: string
+  baseUrl: string
+  apiKeyField: string
+}
+
+const LLM_PLUGINS: LlmPlugin[] = [
+  { id: 'kimi', baseUrl: 'https://api.moonshot.cn/v1', apiKeyField: 'api_key' },
+  { id: 'deepseek', baseUrl: 'https://api.deepseek.com/v1', apiKeyField: 'api_key' },
+  { id: 'xai_grok', baseUrl: 'https://api.x.ai/v1', apiKeyField: 'api_key' },
+  { id: 'mistral', baseUrl: 'https://api.mistral.ai/v1', apiKeyField: 'api_key' },
+  { id: 'groq', baseUrl: 'https://api.groq.com/openai/v1', apiKeyField: 'api_key' },
+]
+
+/**
  * Given a composite model ID (`plugin-kimi:kimi-k2.5`), resolve the LLM
  * connection info from the plugin catalog + stored credentials.
  *
  * Returns null if:
  *  - The ID is not a plugin model ID
  *  - The plugin is not in the catalog
- *  - The plugin has no llmMeta (not an LLM plugin)
  *  - No credentials are stored
  *  - The API key field is empty
  */
@@ -94,21 +110,17 @@ export function resolvePluginLlm(compositeId: string): PluginLlmInfo | null {
 
   const { pluginId, variantModelId } = parsed
 
-  const plugin = ALL_PLUGINS.find((p) => p.id === pluginId)
+  const plugin = LLM_PLUGINS.find((p) => p.id === pluginId)
   if (!plugin) return null
-
-  const llmMeta: PluginLlmMeta | undefined = plugin.llmMeta
-  if (!llmMeta) return null
 
   const creds = getPluginCredential(pluginId)
   if (!creds) return null
 
-  const apiKeyField = llmMeta.apiKeyField ?? 'api_key'
-  const apiKey = creds.fields[apiKeyField] ?? ''
+  const apiKey = creds.fields[plugin.apiKeyField] ?? ''
   if (!apiKey) return null
 
   return {
-    baseUrl: llmMeta.baseUrl,
+    baseUrl: plugin.baseUrl,
     apiKey,
     modelId: variantModelId,
   }

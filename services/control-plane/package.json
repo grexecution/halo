@@ -21,7 +21,6 @@
     "@mastra/memory": "^1.16.0",
     "@mastra/pg": "^1.9.2",
     "@open-greg/agent-core": "workspace:*",
-    "@open-greg/connectors": "workspace:*",
     "@open-greg/memory": "workspace:*",
     "@open-greg/messaging": "workspace:*",
     "@open-greg/permissions": "workspace:*",

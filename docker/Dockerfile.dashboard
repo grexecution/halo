@@ -19,8 +19,10 @@ RUN pnpm install --no-frozen-lockfile --filter @open-greg/dashboard...
 FROM base AS builder
 WORKDIR /app
 
-# Only copy root node_modules (contains full .pnpm store + workspace symlinks)
+# Copy root node_modules (full .pnpm store + workspace symlinks)
 COPY --from=deps /app/node_modules ./node_modules
+# Copy app-level node_modules (some packages like next-themes land here)
+COPY --from=deps /app/apps/dashboard/node_modules ./apps/dashboard/node_modules
 
 COPY packages/shared ./packages/shared
 COPY packages/connectors ./packages/connectors

@@ -71,18 +71,23 @@ export class AgentOrchestrator {
     let skillsSection = ''
     let userModelSection = ''
 
+    // Always inject a minimal user profile so the model knows who it's talking to.
+    // For small-ctx models keep it to 1-2 lines to stay under the 4096 token limit.
+    const profile = loadSettings().userProfile ?? {}
+    const minimalProfileLines: string[] = []
+    if (profile.name) minimalProfileLines.push(`The user's name is ${profile.name}.`)
+    if (profile.occupation) minimalProfileLines.push(`They work as: ${profile.occupation}.`)
+    if (minimalProfileLines.length > 0)
+      userProfileSection = `\n\n--- User profile ---\n${minimalProfileLines.join('\n')}`
+
     if (!isSmallCtx) {
-      // Inject user profile if available
-      const profile = loadSettings().userProfile ?? {}
-      const profileLines: string[] = []
-      if (profile.name) profileLines.push(`The user's name is ${profile.name}.`)
-      if (profile.occupation) profileLines.push(`They work as: ${profile.occupation}.`)
-      if (profile.timezone) profileLines.push(`Their timezone is ${profile.timezone}.`)
-      if (profile.customNotes) profileLines.push(`Notes about this user: ${profile.customNotes}`)
+      // Full profile injection for cloud models
+      const extraLines: string[] = []
+      if (profile.timezone) extraLines.push(`Their timezone is ${profile.timezone}.`)
+      if (profile.customNotes) extraLines.push(`Notes about this user: ${profile.customNotes}`)
       if (profile.connectedServices?.length)
-        profileLines.push(`Connected services: ${profile.connectedServices.join(', ')}.`)
-      if (profileLines.length > 0)
-        userProfileSection = `\n\n--- User profile ---\n${profileLines.join('\n')}`
+        extraLines.push(`Connected services: ${profile.connectedServices.join(', ')}.`)
+      if (extraLines.length > 0) userProfileSection += `\n${extraLines.join('\n')}`
 
       // Inject journal (last 3 days of conversation history — the "long memory" layer)
       const journalContent = readRecentJournal(3)

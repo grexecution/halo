@@ -14,7 +14,9 @@ interface MemoryItem {
   content: string
   source: string
   type: MemoryType
-  timestamp: string
+  timestamp?: string
+  createdAt?: string
+  updatedAt?: string
   metadata?: Record<string, unknown>
 }
 
@@ -103,7 +105,9 @@ function MemoryCard({ item, onDelete }: MemoryCardProps) {
 
         {/* Expand/collapse */}
         <div className="flex items-center justify-between mt-2">
-          <span className="text-[11px] text-gray-600">{fmtDate(item.timestamp)}</span>
+          <span className="text-[11px] text-gray-600">
+            {fmtDate(item.createdAt ?? item.updatedAt ?? item.timestamp ?? '')}
+          </span>
           <button
             onClick={() => setExpanded((v) => !v)}
             className="flex items-center gap-1 text-[11px] text-gray-600 hover:text-gray-400 transition-colors"

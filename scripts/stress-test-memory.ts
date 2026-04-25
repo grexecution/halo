@@ -14,6 +14,8 @@
 
 import pg from 'pg'
 import { randomUUID } from 'node:crypto'
+import { existsSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 
 const { Pool } = pg
 
@@ -51,7 +53,9 @@ async function getEmbedModel() {
       embed: (texts: string[]) => AsyncGenerator<number[][], void, unknown>
     }
   const { FlagEmbedding, EmbeddingModel } = await import('fastembed')
-  const cacheDir = process.env['FASTEMBED_CACHE_DIR'] ?? '/data/fastembed-cache'
+  const cacheDir =
+    process.env['FASTEMBED_CACHE_DIR'] ??
+    (existsSync('/data') ? '/data/fastembed-cache' : `${tmpdir()}/fastembed-cache`)
   _embedModel = await FlagEmbedding.init({ model: EmbeddingModel.AllMiniLML6V2, cacheDir })
   return _embedModel as {
     queryEmbed: (text: string) => Promise<number[]>

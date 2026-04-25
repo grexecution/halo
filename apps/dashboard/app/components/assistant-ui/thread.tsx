@@ -118,24 +118,28 @@ const ThreadScrollToBottom: FC = () => {
 const ThreadWelcome: FC = () => {
   return (
     <div className="aui-thread-welcome-root my-auto flex grow flex-col">
-      <div className="aui-thread-welcome-center flex w-full grow flex-col items-center justify-center gap-6">
+      <div className="aui-thread-welcome-center flex w-full grow flex-col items-center justify-center gap-8">
         {/* Avatar + greeting */}
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex size-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 via-blue-600 to-violet-600 shadow-lg shadow-blue-900/40">
-            <SparklesIcon className="size-8 text-white" />
+        <div className="flex flex-col items-center gap-5 animate-fade-in">
+          {/* Glow orb */}
+          <div className="relative">
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 blur-xl opacity-40 animate-breathe" />
+            <div className="relative flex size-20 items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-600 shadow-xl shadow-indigo-900/30">
+              <SparklesIcon className="size-9 text-white" />
+            </div>
           </div>
           <div className="text-center">
-            <h1 className="fade-in slide-in-from-bottom-1 animate-in fill-mode-both font-semibold text-2xl text-foreground duration-200">
-              Hey, I&apos;m Greg
+            <h1 className="fade-in slide-in-from-bottom-1 animate-in fill-mode-both font-bold text-3xl text-foreground duration-300 tracking-tight">
+              Hey, I&apos;m Halo
             </h1>
-            <p className="fade-in slide-in-from-bottom-1 animate-in fill-mode-both text-muted-foreground text-base delay-75 duration-200 mt-1">
-              Your autonomous AI agent. What should we tackle?
+            <p className="fade-in slide-in-from-bottom-1 animate-in fill-mode-both text-muted-foreground text-base delay-100 duration-300 mt-2 max-w-sm">
+              Your autonomous AI agent — here to think, act, and remember for you.
             </p>
           </div>
         </div>
 
         {/* Suggestions grid */}
-        <div className="w-full max-w-lg">
+        <div className="w-full max-w-lg animate-fade-in" style={{ animationDelay: '150ms' }}>
           <ThreadSuggestions />
         </div>
       </div>
@@ -180,7 +184,7 @@ const Composer: FC<{ agentPicker?: ReactNode }> = ({ agentPicker }) => {
         >
           <ComposerAttachments />
           <ComposerPrimitive.Input
-            placeholder="Message Greg…"
+            placeholder="Message Halo…"
             className="aui-composer-input max-h-40 min-h-[2.5rem] w-full resize-none bg-transparent px-1 py-1 text-sm outline-none placeholder:text-muted-foreground/60 leading-relaxed"
             rows={1}
             autoFocus
@@ -215,7 +219,7 @@ const ComposerAction: FC<{ agentPicker?: ReactNode }> = ({ agentPicker }) => {
             type="button"
             variant="default"
             size="icon"
-            className="aui-composer-send size-8 rounded-full bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition-all duration-150 hover:scale-105 disabled:opacity-40 disabled:hover:scale-100"
+            className="aui-composer-send size-8 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-md shadow-indigo-900/30 transition-all duration-150 hover:scale-105 hover:shadow-lg hover:shadow-indigo-900/40 disabled:opacity-40 disabled:hover:scale-100"
             aria-label="Send message"
           >
             <ArrowUpIcon className="aui-composer-send-icon size-4" />
@@ -228,7 +232,7 @@ const ComposerAction: FC<{ agentPicker?: ReactNode }> = ({ agentPicker }) => {
             type="button"
             variant="default"
             size="icon"
-            className="aui-composer-cancel size-8 rounded-full bg-blue-600 hover:bg-blue-500 text-white"
+            className="aui-composer-cancel size-8 rounded-full bg-gradient-to-br from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white"
             aria-label="Stop generating"
           >
             <SquareIcon className="aui-composer-cancel-icon size-3 fill-current" />
@@ -358,7 +362,7 @@ const UserMessage: FC = () => {
       <UserMessageAttachments />
 
       <div className="aui-user-message-content-wrapper relative col-start-2 min-w-0">
-        <div className="aui-user-message-content wrap-break-word peer rounded-2xl bg-muted/80 border border-border/40 px-4 py-2.5 text-foreground text-sm empty:hidden leading-relaxed">
+        <div className="aui-user-message-content wrap-break-word peer rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 px-4 py-2.5 text-white text-sm empty:hidden leading-relaxed shadow-md shadow-indigo-900/20">
           <MessagePrimitive.Parts />
         </div>
         <div className="aui-user-action-bar-wrapper absolute top-1/2 left-0 -translate-x-full -translate-y-1/2 pr-2 peer-empty:hidden">

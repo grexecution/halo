@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { CardGridSkeleton } from '../components/ui/skeleton'
-import { Plus, Pencil, Trash2, Bot, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Pencil, Trash2, Bot, ChevronDown, ChevronUp, SparklesIcon } from 'lucide-react'
 import {
   cn,
   Button,
@@ -361,9 +361,9 @@ function AgentDialog({
             {TOOL_NAMES.map((tool) => (
               <div
                 key={tool}
-                className="flex items-center justify-between bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-2"
+                className="flex items-center justify-between bg-muted/50 border border-border rounded-lg px-3 py-2"
               >
-                <span className="text-sm text-gray-300 capitalize">{tool}</span>
+                <span className="text-sm text-foreground capitalize">{tool}</span>
                 <Switch checked={form.tools[tool]} onChange={(v) => setTool(tool, v)} />
               </div>
             ))}
@@ -398,15 +398,25 @@ function AgentCard({ agent, isPrimary, availableModels, onEdit, onDelete }: Agen
   const primaryLabel = availableModels.find((m) => m.modelId === agent.model)?.name ?? agent.model
 
   return (
-    <Card data-testid={'agent-item-' + agent.handle} className="flex flex-col">
+    <Card
+      data-testid={'agent-item-' + agent.handle}
+      className="flex flex-col group transition-all duration-200 hover:shadow-card-hover hover:-translate-y-0.5"
+    >
       <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
+        <div className="flex items-start gap-3">
+          {/* Gradient avatar */}
+          <div className="relative shrink-0">
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 blur-md opacity-30 group-hover:opacity-50 transition-opacity" />
+            <div className="relative flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-md">
+              <SparklesIcon size={16} className="text-white" />
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-mono font-semibold text-blue-400">@{agent.handle}</span>
+              <span className="text-sm font-mono font-semibold text-primary">@{agent.handle}</span>
               {isPrimary && <Badge variant="info">Primary</Badge>}
             </div>
-            <p className="text-sm text-white mt-0.5">{agent.name}</p>
+            <p className="text-sm font-medium text-foreground mt-0.5">{agent.name}</p>
           </div>
           <Badge variant="muted" className="shrink-0 text-[10px]">
             {primaryLabel}
@@ -416,23 +426,27 @@ function AgentCard({ agent, isPrimary, availableModels, onEdit, onDelete }: Agen
 
       <CardContent className="flex-1 py-3 space-y-2">
         {agent.systemPrompt ? (
-          <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">{agent.systemPrompt}</p>
+          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+            {agent.systemPrompt}
+          </p>
         ) : (
-          <p className="text-xs text-gray-700 italic">No system prompt</p>
+          <p className="text-xs text-muted-foreground/50 italic">No system prompt</p>
         )}
 
         {agent.fallbackModels.length > 0 && (
           <div>
-            <p className="text-[10px] text-gray-600 uppercase tracking-wide mb-1">Fallbacks</p>
+            <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wide mb-1">
+              Fallbacks
+            </p>
             <div className="flex flex-wrap gap-1">
               {agent.fallbackModels.map((id, i) => {
                 const label = availableModels.find((m) => m.modelId === id)?.name ?? id
                 return (
                   <span
                     key={id}
-                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-gray-800 border border-gray-700 text-[10px] text-gray-400"
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-muted border border-border text-[10px] text-muted-foreground"
                   >
-                    <span className="text-blue-500 font-mono">#{i + 1}</span>
+                    <span className="text-primary font-mono">#{i + 1}</span>
                     {label}
                   </span>
                 )
@@ -467,7 +481,7 @@ function AgentCard({ agent, isPrimary, availableModels, onEdit, onDelete }: Agen
           size="sm"
           data-testid={'delete-' + agent.handle}
           onClick={() => onDelete(agent.handle)}
-          className="text-red-500 hover:text-red-400 hover:bg-red-900/20"
+          className="text-destructive hover:text-destructive hover:bg-destructive/10"
         >
           <Trash2 size={13} />
           Delete
@@ -595,7 +609,7 @@ export default function AgentsPage() {
   return (
     <main className="p-6 max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Agents</h1>
+        <h1 className="text-2xl font-bold text-foreground">Agents</h1>
         <Button data-testid="new-agent-button" onClick={openNew}>
           <Plus size={15} />
           New Agent
@@ -653,7 +667,12 @@ export default function AgentsPage() {
             <Button variant="outline" className="flex-1" onClick={() => setDeleteHandle(null)}>
               Cancel
             </Button>
-            <Button variant="destructive" className="flex-1" onClick={() => void confirmDelete()}>
+            <Button
+              data-testid="confirm-delete-button"
+              variant="destructive"
+              className="flex-1"
+              onClick={() => void confirmDelete()}
+            >
               Delete
             </Button>
           </div>

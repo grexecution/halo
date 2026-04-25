@@ -80,6 +80,9 @@ describe('F-012: Agents CRUD page', () => {
     render(<AgentsPage />)
     await waitFor(() => screen.getByTestId('agent-item-main'), { timeout: 3000 })
     fireEvent.click(screen.getByTestId('delete-main'))
+    // Confirm the delete via the confirmation dialog
+    await waitFor(() => screen.getByTestId('confirm-delete-button'), { timeout: 3000 })
+    fireEvent.click(screen.getByTestId('confirm-delete-button'))
     await waitFor(() => expect(screen.queryByTestId('agent-item-main')).toBeNull(), {
       timeout: 3000,
     })

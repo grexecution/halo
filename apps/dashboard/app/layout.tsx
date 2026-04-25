@@ -1,6 +1,14 @@
 import type { Metadata, Viewport } from 'next'
+import { Inter } from 'next/font/google'
 import './globals.css'
 import { AppShell } from './components/AppShell'
+import { ThemeProvider } from './components/ThemeProvider'
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Halo',
@@ -30,9 +38,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="flex min-h-screen bg-gray-900 text-gray-100" suppressHydrationWarning>
-        <AppShell>{children}</AppShell>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${inter.variable} font-sans flex min-h-screen bg-background text-foreground`}
+        suppressHydrationWarning
+      >
+        <ThemeProvider>
+          <AppShell>{children}</AppShell>
+        </ThemeProvider>
       </body>
     </html>
   )

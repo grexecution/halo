@@ -264,18 +264,18 @@ function Sidebar({
 
   if (collapsed) {
     return (
-      <aside className="flex flex-col h-full border-r border-gray-800 bg-gray-950 w-12 shrink-0">
+      <aside className="flex flex-col h-full border-r border-border bg-sidebar-bg w-12 shrink-0">
         <div className="flex flex-col items-center py-3 gap-3">
           <button
             onClick={onToggleCollapse}
-            className="p-1.5 rounded-md hover:bg-gray-800 text-gray-500 hover:text-gray-300 transition-colors"
+            className="p-1.5 rounded-md hover:bg-sidebar-item-hover text-sidebar-text hover:text-sidebar-text-active transition-colors"
             aria-label="Expand sidebar"
           >
             <ChevronRight size={14} />
           </button>
           <button
             onClick={onNew}
-            className="p-1.5 rounded-md hover:bg-gray-800 text-gray-500 hover:text-gray-300 transition-colors"
+            className="p-1.5 rounded-md hover:bg-sidebar-item-hover text-sidebar-text hover:text-sidebar-text-active transition-colors"
             aria-label="New chat"
           >
             <Plus size={14} />
@@ -286,27 +286,26 @@ function Sidebar({
   }
 
   return (
-    <aside className="flex flex-col h-full border-r border-gray-800 bg-gray-950">
+    <aside className="flex flex-col h-full border-r border-border bg-sidebar-bg">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-800">
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
         <div className="flex items-center gap-2">
-          <div className="flex size-5 items-center justify-center rounded-md bg-gradient-to-br from-blue-500 to-violet-600">
+          <div className="flex size-5 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-violet-600">
             <SparklesIcon size={10} className="text-white" />
           </div>
-          <span className="text-xs font-semibold text-gray-300">Greg</span>
-          <span className="sr-only">Chats</span>
+          <span className="text-xs font-semibold text-sidebar-text-active">Chats</span>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={onNew}
-            className="p-1 rounded-md hover:bg-gray-800 text-gray-500 hover:text-gray-300 transition-colors"
+            className="p-1 rounded-md hover:bg-sidebar-item-hover text-sidebar-text hover:text-sidebar-text-active transition-colors"
             aria-label="New chat"
           >
             <Plus size={13} />
           </button>
           <button
             onClick={onToggleCollapse}
-            className="p-1 rounded-md hover:bg-gray-800 text-gray-500 hover:text-gray-300 transition-colors"
+            className="p-1 rounded-md hover:bg-sidebar-item-hover text-sidebar-text hover:text-sidebar-text-active transition-colors"
             aria-label="Collapse sidebar"
           >
             <ChevronLeft size={13} />
@@ -315,18 +314,18 @@ function Sidebar({
       </div>
 
       {/* Search */}
-      <div className="px-2 py-2 border-b border-gray-800/60">
+      <div className="px-2 py-2 border-b border-border/60">
         <div className="relative">
           <Search
             size={11}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none"
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
           />
           <input
             type="search"
             placeholder="Search chats…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-gray-800/60 border border-gray-700/60 rounded-lg pl-7 pr-2.5 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-gray-600 transition-colors"
+            className="w-full bg-muted/40 border border-border/60 rounded-lg pl-7 pr-2.5 py-1.5 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all"
           />
         </div>
       </div>
@@ -339,16 +338,18 @@ function Sidebar({
           <div className="flex flex-col items-center justify-center h-40 gap-2 px-4 text-center">
             {search ? (
               <>
-                <Search size={18} className="text-gray-700" />
-                <p className="text-xs text-gray-600">No chats match &ldquo;{search}&rdquo;</p>
+                <Search size={18} className="text-muted-foreground/40" />
+                <p className="text-xs text-muted-foreground">
+                  No chats match &ldquo;{search}&rdquo;
+                </p>
               </>
             ) : (
               <>
-                <Bot size={22} className="text-gray-700" />
-                <p className="text-xs text-gray-600">No conversations yet</p>
+                <Bot size={22} className="text-muted-foreground/40" />
+                <p className="text-xs text-muted-foreground">No conversations yet</p>
                 <button
                   onClick={onNew}
-                  className="mt-1 text-xs text-blue-500 hover:text-blue-400 transition-colors"
+                  className="mt-1 text-xs text-primary hover:text-primary/80 transition-colors"
                 >
                   Start one →
                 </button>
@@ -358,7 +359,7 @@ function Sidebar({
         ) : (
           GROUP_ORDER.filter((g) => grouped.has(g)).map((group) => (
             <div key={group}>
-              <p className="px-3 py-1.5 text-[10px] font-semibold text-gray-600 uppercase tracking-widest">
+              <p className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-widest">
                 {group}
               </p>
               {grouped.get(group)!.map((s) => (
@@ -383,8 +384,8 @@ function Sidebar({
       </div>
 
       {/* Footer */}
-      <div className="px-3 py-2 border-t border-gray-800">
-        <p className="text-[10px] text-gray-700">
+      <div className="px-3 py-2 border-t border-border">
+        <p className="text-[10px] text-muted-foreground/50">
           {sessions.length} conversation{sessions.length !== 1 ? 's' : ''}
         </p>
       </div>
@@ -421,10 +422,10 @@ function SessionRow({
     <div
       onClick={() => onSelect(s.id)}
       className={cn(
-        'group flex items-center gap-2 px-2.5 py-2 cursor-pointer transition-colors rounded-lg mx-1.5 my-0.5',
+        'group flex items-center gap-2 px-2.5 py-2 cursor-pointer transition-all rounded-lg mx-1.5 my-0.5',
         activeId === s.id
-          ? 'bg-gray-800 text-white'
-          : 'text-gray-400 hover:bg-gray-900/80 hover:text-gray-200',
+          ? 'bg-sidebar-item-active text-sidebar-text-active border-l-2 border-primary'
+          : 'text-sidebar-text hover:bg-sidebar-item-hover hover:text-sidebar-text-active',
       )}
     >
       {editingId === s.id ? (
@@ -440,24 +441,30 @@ function SessionRow({
               if (e.key === 'Enter') onEditSave(s.id)
               if (e.key === 'Escape') onEditCancel()
             }}
-            className="flex-1 min-w-0 bg-gray-700 rounded px-2 py-0.5 text-xs text-white outline-none border border-gray-600 focus:border-blue-500"
+            className="flex-1 min-w-0 bg-muted rounded px-2 py-0.5 text-xs text-foreground outline-none border border-border focus:border-primary/60"
           />
           <button
             onClick={() => onEditSave(s.id)}
-            className="text-green-400 hover:text-green-300 p-0.5"
+            className="text-green-500 hover:text-green-400 p-0.5"
           >
             <Check size={11} />
           </button>
-          <button onClick={onEditCancel} className="text-gray-500 hover:text-gray-300 p-0.5">
+          <button
+            onClick={onEditCancel}
+            className="text-muted-foreground hover:text-foreground p-0.5"
+          >
             <X size={11} />
           </button>
         </div>
       ) : (
         <>
-          <MessageSquare size={11} className="shrink-0 text-gray-600 group-hover:text-gray-500" />
+          <MessageSquare
+            size={11}
+            className="shrink-0 text-muted-foreground/50 group-hover:text-muted-foreground"
+          />
           <span className="flex-1 min-w-0 text-xs truncate">{s.title || 'Untitled'}</span>
           {s.messageCount > 0 && (
-            <span className="shrink-0 text-[10px] text-gray-700 group-hover:hidden">
+            <span className="shrink-0 text-[10px] text-muted-foreground/50 group-hover:hidden">
               {s.messageCount}
             </span>
           )}
@@ -467,13 +474,13 @@ function SessionRow({
                 e.stopPropagation()
                 onEditStart(s.id, s.title)
               }}
-              className="p-1 rounded hover:bg-gray-700 text-gray-600 hover:text-gray-300 transition-colors"
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             >
               <PenLine size={10} />
             </button>
             <button
               onClick={(e) => onDelete(s.id, e)}
-              className="p-1 rounded hover:bg-gray-700 text-gray-600 hover:text-red-400 transition-colors"
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-red-400 transition-colors"
             >
               <Trash2 size={10} />
             </button>
@@ -499,34 +506,36 @@ function DeleteModal({
       onClick={onCancel}
     >
       <div
-        className="bg-gray-900 border border-gray-700/80 rounded-2xl p-5 w-80 shadow-2xl"
+        className="bg-card border border-border rounded-2xl p-5 w-80 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-sm font-semibold text-white mb-1">Delete conversation?</h3>
-        <p className="text-xs text-gray-400 mb-4 leading-relaxed">
+        <h3 className="text-sm font-semibold text-foreground mb-1">Delete conversation?</h3>
+        <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
           Remove it from the list while keeping it in the database for learning, or also purge any
           memories extracted from this conversation.
         </p>
         <div className="flex flex-col gap-2">
           <button
             onClick={() => onConfirm(false)}
-            className="w-full text-left px-3 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs text-white transition-colors"
+            className="w-full text-left px-3 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-xs text-foreground transition-colors"
           >
             <span className="font-medium">Remove from list</span>
-            <p className="text-gray-400 mt-0.5">Keeps messages + memories in DB for learning</p>
+            <p className="text-muted-foreground mt-0.5">
+              Keeps messages + memories in DB for learning
+            </p>
           </button>
           <button
             onClick={() => onConfirm(true)}
-            className="w-full text-left px-3 py-2.5 rounded-xl bg-red-950/60 hover:bg-red-900/60 border border-red-800/40 text-xs text-white transition-colors"
+            className="w-full text-left px-3 py-2.5 rounded-xl bg-destructive/10 hover:bg-destructive/20 border border-destructive/30 text-xs text-foreground transition-colors"
           >
-            <span className="font-medium text-red-300">Remove + purge memory</span>
-            <p className="text-red-400/70 mt-0.5">
+            <span className="font-medium text-destructive">Remove + purge memory</span>
+            <p className="text-destructive/70 mt-0.5">
               Also deletes memories tied to this conversation
             </p>
           </button>
           <button
             onClick={onCancel}
-            className="w-full px-3 py-2 rounded-xl text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            className="w-full px-3 py-2 rounded-xl text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             Cancel
           </button>
@@ -564,20 +573,20 @@ function AgentPicker({ agents, selectedAgent, onSelect }: AgentPickerProps) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700/60 text-[11px] text-gray-300 font-medium transition-colors"
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted hover:bg-muted/80 border border-border/60 text-[11px] text-foreground font-medium transition-colors"
       >
-        <User size={10} className="text-blue-400" />
+        <User size={10} className="text-primary" />
         <span className="max-w-[100px] truncate">{current.name}</span>
-        <span className="text-gray-500 text-[10px] truncate max-w-[80px]">
+        <span className="text-muted-foreground text-[10px] truncate max-w-[80px]">
           · {current.modelName ?? current.model}
         </span>
-        <ChevronDown size={9} className="text-gray-500" />
+        <ChevronDown size={9} className="text-muted-foreground" />
       </button>
 
       {open && (
-        <div className="absolute bottom-full mb-2 left-0 z-50 w-52 rounded-xl bg-gray-900 border border-gray-700/80 shadow-2xl overflow-hidden">
-          <div className="px-3 py-2 border-b border-gray-800">
-            <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">
+        <div className="absolute bottom-full mb-2 left-0 z-50 w-52 rounded-xl bg-card border border-border shadow-2xl overflow-hidden">
+          <div className="px-3 py-2 border-b border-border">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               Agent
             </p>
           </div>
@@ -590,22 +599,22 @@ function AgentPicker({ agents, selectedAgent, onSelect }: AgentPickerProps) {
                 setOpen(false)
               }}
               className={cn(
-                'w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-gray-800 transition-colors',
-                a.handle === selectedAgent && 'bg-gray-800/60',
+                'w-full flex items-start gap-2.5 px-3 py-2.5 text-left hover:bg-muted transition-colors',
+                a.handle === selectedAgent && 'bg-muted/60',
               )}
             >
-              <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-600 mt-0.5">
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 mt-0.5">
                 <SparklesIcon size={10} className="text-white" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-medium text-white truncate">{a.name}</p>
-                <p className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
+                <p className="text-xs font-medium text-foreground truncate">{a.name}</p>
+                <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
                   <Cpu size={8} />
                   <span className="truncate">{a.modelName ?? a.model}</span>
                 </p>
               </div>
               {a.handle === selectedAgent && (
-                <Check size={12} className="shrink-0 text-blue-400 mt-1 ml-auto" />
+                <Check size={12} className="shrink-0 text-primary mt-1 ml-auto" />
               )}
             </button>
           ))}
@@ -804,7 +813,7 @@ export default function ChatPage() {
       </div>
 
       {/* Thread area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#09090b]">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
         <RuntimeWrapper
           key={threadKey}
           adapter={adapter}

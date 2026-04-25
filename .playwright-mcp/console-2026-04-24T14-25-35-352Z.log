@@ -1,0 +1,10 @@
+[     375ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[    5020ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://95.216.190.206:3000/connectors:0
+[  210339ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://95.216.190.206:3000/api/approvals?status=pending:0
+[  210340ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://95.216.190.206:3000/api/runs?limit=20:0
+[  255110ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  255469ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  257061ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://95.216.190.206:3000/connectors:0
+[  373295ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  373454ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  375110ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ http://95.216.190.206:3000/connectors:0

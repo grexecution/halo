@@ -171,30 +171,33 @@ const ThreadSuggestionItem: FC = () => {
 
 const Composer: FC<{ agentPicker?: ReactNode }> = ({ agentPicker }) => {
   return (
-    <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col">
+    <ComposerPrimitive.Root className="aui-composer-root relative flex w-full flex-col gap-2">
+      {/* ── Input area with border ── */}
       <ComposerPrimitive.AttachmentDropzone asChild>
         <div
           data-slot="aui_composer-shell"
-          className="flex w-full flex-col gap-2 rounded-(--composer-radius) border border-border/80 bg-background p-(--composer-padding) shadow-sm transition-all duration-150 focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/15 focus-within:shadow-md data-[dragging=true]:border-ring data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/50"
+          className="flex w-full flex-col rounded-(--composer-radius) border border-border/80 bg-background px-3 pt-3 pb-2 shadow-sm transition-all duration-150 focus-within:border-ring/60 focus-within:ring-2 focus-within:ring-ring/15 focus-within:shadow-md data-[dragging=true]:border-ring data-[dragging=true]:border-dashed data-[dragging=true]:bg-accent/50"
         >
           <ComposerAttachments />
           <ComposerPrimitive.Input
             placeholder="Message Greg…"
-            className="aui-composer-input max-h-40 min-h-[2.5rem] w-full resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground/60 leading-relaxed"
+            className="aui-composer-input max-h-40 min-h-[2.5rem] w-full resize-none bg-transparent px-1 py-1 text-sm outline-none placeholder:text-muted-foreground/60 leading-relaxed"
             rows={1}
             autoFocus
             aria-label="Message input"
           />
-          <ComposerAction agentPicker={agentPicker} />
         </div>
       </ComposerPrimitive.AttachmentDropzone>
+
+      {/* ── Toolbar row below the input ── */}
+      <ComposerAction agentPicker={agentPicker} />
     </ComposerPrimitive.Root>
   )
 }
 
 const ComposerAction: FC<{ agentPicker?: ReactNode }> = ({ agentPicker }) => {
   return (
-    <div className="aui-composer-action-wrapper relative flex items-center justify-between">
+    <div className="aui-composer-action-wrapper flex items-center justify-between px-1">
       <div className="flex items-center gap-2">
         <ComposerAddAttachment />
         {agentPicker ?? (

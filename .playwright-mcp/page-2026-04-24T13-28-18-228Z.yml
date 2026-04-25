@@ -1,0 +1,118 @@
+- generic [ref=e1]:
+  - navigation [ref=e2]:
+    - link "Halo" [ref=e4] [cursor=pointer]:
+      - /url: /
+      - img [ref=e6]
+      - generic [ref=e8]: Halo
+    - list [ref=e10]:
+      - listitem [ref=e11]:
+        - link "Chat" [ref=e12] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e13]
+          - generic [ref=e15]: Chat
+      - listitem [ref=e16]:
+        - link "Agents" [ref=e17] [cursor=pointer]:
+          - /url: /agents
+          - img [ref=e18]
+          - generic [ref=e21]: Agents
+      - listitem [ref=e22]:
+        - link "Skills" [ref=e23] [cursor=pointer]:
+          - /url: /skills
+          - img [ref=e24]
+          - generic [ref=e27]: Skills
+      - listitem [ref=e28]:
+        - link "Goals & Cron" [ref=e29] [cursor=pointer]:
+          - /url: /cron-goals
+          - img [ref=e30]
+          - generic [ref=e34]: Goals & Cron
+      - listitem [ref=e35]:
+        - link "Runs" [ref=e36] [cursor=pointer]:
+          - /url: /runs
+          - img [ref=e37]
+          - generic [ref=e39]: Runs
+      - listitem [ref=e40]:
+        - link "Approvals" [ref=e41] [cursor=pointer]:
+          - /url: /approvals
+          - img [ref=e42]
+          - generic [ref=e46]: Approvals
+      - listitem [ref=e47]:
+        - link "Knowledge" [ref=e48] [cursor=pointer]:
+          - /url: /knowledge
+          - img [ref=e49]
+          - generic [ref=e51]: Knowledge
+      - listitem [ref=e52]:
+        - link "Memory" [ref=e53] [cursor=pointer]:
+          - /url: /memory
+          - img [ref=e54]
+          - generic [ref=e62]: Memory
+      - listitem [ref=e63]:
+        - link "Workspaces" [ref=e64] [cursor=pointer]:
+          - /url: /workspaces
+          - img [ref=e65]
+          - generic [ref=e68]: Workspaces
+      - listitem [ref=e69]:
+        - link "Connectors" [ref=e70] [cursor=pointer]:
+          - /url: /connectors
+          - img [ref=e71]
+          - generic [ref=e73]: Connectors
+      - listitem [ref=e74]:
+        - link "Logs" [ref=e75] [cursor=pointer]:
+          - /url: /logs
+          - img [ref=e76]
+          - generic [ref=e79]: Logs
+      - listitem [ref=e80]:
+        - link "Settings" [ref=e81] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e82]
+          - generic [ref=e85]: Settings
+    - generic [ref=e89]: local instance
+  - main [ref=e90]:
+    - generic [ref=e91]:
+      - generic [ref=e94]:
+        - heading "Workspaces" [level=1] [ref=e96]
+        - button "New" [active] [ref=e97] [cursor=pointer]:
+          - img [ref=e98]
+          - text: New
+      - generic [ref=e120]:
+        - heading "New Workspace" [level=2] [ref=e121]
+        - paragraph [ref=e122]: Choose a template to get started quickly — you can customise everything.
+        - generic [ref=e123]:
+          - button "🏢 Client 6 default fields GitHub, prod, staging, local start command" [ref=e124] [cursor=pointer]:
+            - img [ref=e126]
+            - generic [ref=e129]:
+              - generic [ref=e130]:
+                - generic [ref=e131]: 🏢 Client
+                - generic [ref=e132]: 6 default fields
+              - paragraph [ref=e133]: GitHub, prod, staging, local start command
+            - img [ref=e134]
+          - button "👤 Personal 5 default fields Name, timezone, goals, preferences" [ref=e136] [cursor=pointer]:
+            - img [ref=e138]
+            - generic [ref=e141]:
+              - generic [ref=e142]:
+                - generic [ref=e143]: 👤 Personal
+                - generic [ref=e144]: 5 default fields
+              - paragraph [ref=e145]: Name, timezone, goals, preferences
+            - img [ref=e146]
+          - button "📁 Project 5 default fields Repo, docs, CI/CD, deploy command" [ref=e148] [cursor=pointer]:
+            - img [ref=e150]
+            - generic [ref=e155]:
+              - generic [ref=e156]:
+                - generic [ref=e157]: 📁 Project
+                - generic [ref=e158]: 5 default fields
+              - paragraph [ref=e159]: Repo, docs, CI/CD, deploy command
+            - img [ref=e160]
+          - button "👥 Team 5 default fields Slack, Confluence, oncall rotation" [ref=e162] [cursor=pointer]:
+            - img [ref=e164]
+            - generic [ref=e169]:
+              - generic [ref=e170]:
+                - generic [ref=e171]: 👥 Team
+                - generic [ref=e172]: 5 default fields
+              - paragraph [ref=e173]: Slack, Confluence, oncall rotation
+            - img [ref=e174]
+          - button "📝 Custom Start from scratch with your own fields" [ref=e176] [cursor=pointer]:
+            - img [ref=e178]
+            - generic [ref=e180]:
+              - generic [ref=e182]: 📝 Custom
+              - paragraph [ref=e183]: Start from scratch with your own fields
+            - img [ref=e184]
+  - alert [ref=e118]

@@ -1,0 +1,107 @@
+- generic [ref=e1]:
+  - navigation [ref=e2]:
+    - link "Halo" [ref=e4] [cursor=pointer]:
+      - /url: /
+      - img [ref=e6]
+      - generic [ref=e8]: Halo
+    - list [ref=e10]:
+      - listitem [ref=e11]:
+        - link "Chat" [ref=e12] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e13]
+          - generic [ref=e15]: Chat
+      - listitem [ref=e16]:
+        - link "Agents" [ref=e17] [cursor=pointer]:
+          - /url: /agents
+          - img [ref=e18]
+          - generic [ref=e21]: Agents
+      - listitem [ref=e22]:
+        - link "Skills" [ref=e23] [cursor=pointer]:
+          - /url: /skills
+          - img [ref=e24]
+          - generic [ref=e27]: Skills
+      - listitem [ref=e28]:
+        - link "Goals & Cron" [ref=e29] [cursor=pointer]:
+          - /url: /cron-goals
+          - img [ref=e30]
+          - generic [ref=e34]: Goals & Cron
+      - listitem [ref=e35]:
+        - link "Runs" [ref=e36] [cursor=pointer]:
+          - /url: /runs
+          - img [ref=e37]
+          - generic [ref=e39]: Runs
+      - listitem [ref=e40]:
+        - link "Approvals" [ref=e41] [cursor=pointer]:
+          - /url: /approvals
+          - img [ref=e42]
+          - generic [ref=e46]: Approvals
+      - listitem [ref=e47]:
+        - link "Knowledge" [ref=e48] [cursor=pointer]:
+          - /url: /knowledge
+          - img [ref=e49]
+          - generic [ref=e51]: Knowledge
+      - listitem [ref=e52]:
+        - link "Memory" [ref=e53] [cursor=pointer]:
+          - /url: /memory
+          - img [ref=e54]
+          - generic [ref=e62]: Memory
+      - listitem [ref=e63]:
+        - link "Workspaces" [ref=e64] [cursor=pointer]:
+          - /url: /workspaces
+          - img [ref=e65]
+          - generic [ref=e68]: Workspaces
+      - listitem [ref=e69]:
+        - link "Connectors" [ref=e70] [cursor=pointer]:
+          - /url: /connectors
+          - img [ref=e71]
+          - generic [ref=e73]: Connectors
+      - listitem [ref=e74]:
+        - link "Logs" [ref=e75] [cursor=pointer]:
+          - /url: /logs
+          - img [ref=e76]
+          - generic [ref=e79]: Logs
+      - listitem [ref=e80]:
+        - link "Settings" [ref=e81] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e82]
+          - generic [ref=e85]: Settings
+    - generic [ref=e89]: local instance
+  - main [ref=e90]:
+    - generic [ref=e91]:
+      - complementary [ref=e93]:
+        - generic [ref=e94]:
+          - generic [ref=e95]:
+            - img [ref=e97]
+            - generic [ref=e100]: Greg
+            - generic [ref=e101]: Chats
+          - generic [ref=e102]:
+            - button "New chat" [ref=e103] [cursor=pointer]:
+              - img [ref=e104]
+            - button "Collapse sidebar" [ref=e105] [cursor=pointer]:
+              - img [ref=e106]
+        - generic [ref=e109]:
+          - img
+          - searchbox "Search chats…" [ref=e110]
+        - generic [ref=e147]:
+          - paragraph [ref=e148]: Today
+          - generic [ref=e149] [cursor=pointer]:
+            - img [ref=e150]
+            - generic [ref=e152]: Hello! What's 2+2? Reply in one sentence.
+            - generic [ref=e153]: "1"
+        - paragraph [ref=e119]: 1 conversation
+      - generic [ref=e123]:
+        - generic [ref=e154]:
+          - paragraph [ref=e158]: Hello! What's 2+2? Reply in one sentence.
+          - generic [ref=e160]:
+            - img [ref=e162]
+            - generic [ref=e167]: ●
+        - generic [ref=e138]:
+          - textbox "Message input" [active] [ref=e139]:
+            - /placeholder: Message Greg…
+          - generic [ref=e140]:
+            - button "Add Attachment" [ref=e142] [cursor=pointer]:
+              - img
+              - generic [ref=e143]: Add Attachment
+            - button "Stop generating" [ref=e169] [cursor=pointer]:
+              - img
+  - alert [ref=e144]

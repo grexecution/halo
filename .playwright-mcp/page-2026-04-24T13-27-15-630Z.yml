@@ -1,0 +1,252 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - link "Halo" [ref=e4] [cursor=pointer]:
+      - /url: /
+      - img [ref=e6]
+      - generic [ref=e8]: Halo
+    - list [ref=e10]:
+      - listitem [ref=e11]:
+        - link "Chat" [ref=e12] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e13]
+          - generic [ref=e15]: Chat
+      - listitem [ref=e16]:
+        - link "Agents" [ref=e17] [cursor=pointer]:
+          - /url: /agents
+          - img [ref=e18]
+          - generic [ref=e21]: Agents
+      - listitem [ref=e22]:
+        - link "Skills" [ref=e23] [cursor=pointer]:
+          - /url: /skills
+          - img [ref=e24]
+          - generic [ref=e27]: Skills
+      - listitem [ref=e28]:
+        - link "Goals & Cron" [ref=e29] [cursor=pointer]:
+          - /url: /cron-goals
+          - img [ref=e30]
+          - generic [ref=e34]: Goals & Cron
+      - listitem [ref=e35]:
+        - link "Runs" [ref=e36] [cursor=pointer]:
+          - /url: /runs
+          - img [ref=e37]
+          - generic [ref=e39]: Runs
+      - listitem [ref=e40]:
+        - link "Approvals" [ref=e41] [cursor=pointer]:
+          - /url: /approvals
+          - img [ref=e42]
+          - generic [ref=e46]: Approvals
+      - listitem [ref=e47]:
+        - link "Knowledge" [ref=e48] [cursor=pointer]:
+          - /url: /knowledge
+          - img [ref=e49]
+          - generic [ref=e51]: Knowledge
+      - listitem [ref=e52]:
+        - link "Memory" [ref=e53] [cursor=pointer]:
+          - /url: /memory
+          - img [ref=e54]
+          - generic [ref=e62]: Memory
+      - listitem [ref=e63]:
+        - link "Workspaces" [ref=e64] [cursor=pointer]:
+          - /url: /workspaces
+          - img [ref=e65]
+          - generic [ref=e68]: Workspaces
+      - listitem [ref=e69]:
+        - link "Connectors" [ref=e70] [cursor=pointer]:
+          - /url: /connectors
+          - img [ref=e71]
+          - generic [ref=e73]: Connectors
+      - listitem [ref=e74]:
+        - link "Logs" [ref=e75] [cursor=pointer]:
+          - /url: /logs
+          - img [ref=e76]
+          - generic [ref=e79]: Logs
+      - listitem [ref=e80]:
+        - link "Settings" [ref=e81] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e82]
+          - generic [ref=e85]: Settings
+    - generic [ref=e89]: local instance
+  - main [ref=e90]:
+    - generic [ref=e91]:
+      - generic [ref=e92]:
+        - button "AI Models" [ref=e185] [cursor=pointer]
+        - button "Plugins" [ref=e186] [cursor=pointer]
+        - button "MCPs" [ref=e187] [cursor=pointer]
+        - button "Skills4" [ref=e188] [cursor=pointer]
+      - generic [ref=e430]:
+        - complementary [ref=e431]:
+          - paragraph [ref=e433]: Categories
+          - list [ref=e434]:
+            - listitem [ref=e435]:
+              - button "⚡ All skills 23" [ref=e436] [cursor=pointer]:
+                - generic [ref=e437]: ⚡
+                - generic [ref=e438]: All skills
+                - generic [ref=e439]: "23"
+            - listitem [ref=e440]:
+              - button "✍️ Writing 2" [ref=e441] [cursor=pointer]:
+                - generic [ref=e442]: ✍️
+                - generic [ref=e443]: Writing
+                - generic [ref=e444]: "2"
+            - listitem [ref=e445]:
+              - button "💬 Communication 1" [ref=e446] [cursor=pointer]:
+                - generic [ref=e447]: 💬
+                - generic [ref=e448]: Communication
+                - generic [ref=e449]: "1"
+            - listitem [ref=e450]:
+              - button "💻 Coding 4" [ref=e451] [cursor=pointer]:
+                - generic [ref=e452]: 💻
+                - generic [ref=e453]: Coding
+                - generic [ref=e454]: "4"
+            - listitem [ref=e455]:
+              - button "🔬 Research 2" [ref=e456] [cursor=pointer]:
+                - generic [ref=e457]: 🔬
+                - generic [ref=e458]: Research
+                - generic [ref=e459]: "2"
+            - listitem [ref=e460]:
+              - button "⚡ Productivity 3" [ref=e461] [cursor=pointer]:
+                - generic [ref=e462]: ⚡
+                - generic [ref=e463]: Productivity
+                - generic [ref=e464]: "3"
+            - listitem [ref=e465]:
+              - button "📊 Data & Analysis 2" [ref=e466] [cursor=pointer]:
+                - generic [ref=e467]: 📊
+                - generic [ref=e468]: Data & Analysis
+                - generic [ref=e469]: "2"
+            - listitem [ref=e470]:
+              - button "🚀 DevOps 2" [ref=e471] [cursor=pointer]:
+                - generic [ref=e472]: 🚀
+                - generic [ref=e473]: DevOps
+                - generic [ref=e474]: "2"
+            - listitem [ref=e475]:
+              - button "📣 Marketing 2" [ref=e476] [cursor=pointer]:
+                - generic [ref=e477]: 📣
+                - generic [ref=e478]: Marketing
+                - generic [ref=e479]: "2"
+            - listitem [ref=e480]:
+              - button "🔎 Analysis 1" [ref=e481] [cursor=pointer]:
+                - generic [ref=e482]: 🔎
+                - generic [ref=e483]: Analysis
+                - generic [ref=e484]: "1"
+        - generic [ref=e485]:
+          - generic [ref=e486]:
+            - generic [ref=e487]:
+              - heading "Skills" [level=1] [ref=e488]
+              - button "New skill" [ref=e489] [cursor=pointer]
+            - searchbox "Search…" [ref=e490]
+          - generic [ref=e491]:
+            - generic [ref=e492]:
+              - paragraph [ref=e493]: Your skills (4)
+              - button "⚡ browser-research" [ref=e609] [cursor=pointer]:
+                - generic [ref=e610]: ⚡
+                - generic [ref=e611]: browser-research
+              - button "⚡ github Missing credentials" [ref=e612] [cursor=pointer]:
+                - generic [ref=e613]: ⚡
+                - generic [ref=e614]: github
+                - generic "Missing credentials" [ref=e616]
+              - button "⚡ shell-safe" [ref=e617] [cursor=pointer]:
+                - generic [ref=e618]: ⚡
+                - generic [ref=e619]: shell-safe
+              - button "⚡ telegram-send Missing credentials" [ref=e620] [cursor=pointer]:
+                - generic [ref=e621]: ⚡
+                - generic [ref=e622]: telegram-send
+                - generic "Missing credentials" [ref=e624]
+            - generic [ref=e510]:
+              - paragraph [ref=e511]: Built-in (19)
+              - button "✍️ Write Blog Post built-in" [ref=e625] [cursor=pointer]:
+                - generic [ref=e626]: ✍️
+                - generic [ref=e627]: Write Blog Post
+                - generic [ref=e629]: built-in
+              - button "💬 Draft Professional Email built-in" [ref=e630] [cursor=pointer]:
+                - generic [ref=e631]: 💬
+                - generic [ref=e632]: Draft Professional Email
+                - generic [ref=e634]: built-in
+              - button "✍️ Proofread & Edit built-in" [ref=e635] [cursor=pointer]:
+                - generic [ref=e636]: ✍️
+                - generic [ref=e637]: Proofread & Edit
+                - generic [ref=e639]: built-in
+              - button "💻 Code Review built-in" [ref=e640] [cursor=pointer]:
+                - generic [ref=e641]: 💻
+                - generic [ref=e642]: Code Review
+                - generic [ref=e644]: built-in
+              - button "💻 Debug & Fix built-in" [ref=e645] [cursor=pointer]:
+                - generic [ref=e646]: 💻
+                - generic [ref=e647]: Debug & Fix
+                - generic [ref=e649]: built-in
+              - button "💻 Refactor Code built-in" [ref=e650] [cursor=pointer]:
+                - generic [ref=e651]: 💻
+                - generic [ref=e652]: Refactor Code
+                - generic [ref=e654]: built-in
+              - button "💻 Write Tests built-in" [ref=e655] [cursor=pointer]:
+                - generic [ref=e656]: 💻
+                - generic [ref=e657]: Write Tests
+                - generic [ref=e659]: built-in
+              - button "🔬 Research Report built-in" [ref=e660] [cursor=pointer]:
+                - generic [ref=e661]: 🔬
+                - generic [ref=e662]: Research Report
+                - generic [ref=e664]: built-in
+              - button "🔬 Competitive Analysis built-in" [ref=e665] [cursor=pointer]:
+                - generic [ref=e666]: 🔬
+                - generic [ref=e667]: Competitive Analysis
+                - generic [ref=e669]: built-in
+              - button "⚡ Daily Standup built-in" [ref=e670] [cursor=pointer]:
+                - generic [ref=e671]: ⚡
+                - generic [ref=e672]: Daily Standup
+                - generic [ref=e674]: built-in
+              - button "⚡ Meeting Summary built-in" [ref=e675] [cursor=pointer]:
+                - generic [ref=e676]: ⚡
+                - generic [ref=e677]: Meeting Summary
+                - generic [ref=e679]: built-in
+              - button "⚡ Break Down Task built-in" [ref=e680] [cursor=pointer]:
+                - generic [ref=e681]: ⚡
+                - generic [ref=e682]: Break Down Task
+                - generic [ref=e684]: built-in
+              - button "📊 Analyze Data built-in" [ref=e685] [cursor=pointer]:
+                - generic [ref=e686]: 📊
+                - generic [ref=e687]: Analyze Data
+                - generic [ref=e689]: built-in
+              - button "📊 Write SQL built-in" [ref=e690] [cursor=pointer]:
+                - generic [ref=e691]: 📊
+                - generic [ref=e692]: Write SQL
+                - generic [ref=e694]: built-in
+              - button "🚀 Set Up CI/CD built-in" [ref=e695] [cursor=pointer]:
+                - generic [ref=e696]: 🚀
+                - generic [ref=e697]: Set Up CI/CD
+                - generic [ref=e699]: built-in
+              - button "🚀 Write Dockerfile built-in" [ref=e700] [cursor=pointer]:
+                - generic [ref=e701]: 🚀
+                - generic [ref=e702]: Write Dockerfile
+                - generic [ref=e704]: built-in
+              - button "📣 Write Social Post built-in" [ref=e705] [cursor=pointer]:
+                - generic [ref=e706]: 📣
+                - generic [ref=e707]: Write Social Post
+                - generic [ref=e709]: built-in
+              - button "📣 Landing Page Copy built-in" [ref=e710] [cursor=pointer]:
+                - generic [ref=e711]: 📣
+                - generic [ref=e712]: Landing Page Copy
+                - generic [ref=e714]: built-in
+              - button "🔎 Architecture Review built-in" [ref=e715] [cursor=pointer]:
+                - generic [ref=e716]: 🔎
+                - generic [ref=e717]: Architecture Review
+                - generic [ref=e719]: built-in
+        - generic [ref=e720]:
+          - generic [ref=e721]:
+            - generic [ref=e722]:
+              - generic [ref=e723]: ⚡
+              - generic [ref=e724]:
+                - generic [ref=e725]:
+                  - heading "github" [level=2] [ref=e726]
+                  - generic [ref=e727]: enabled
+                - paragraph [ref=e728]: Access GitHub repos, issues, pull requests, and CI. Use when the user asks about GitHub, wants to open PRs, read issues, check CI status, or push code.
+            - button "Close" [ref=e729] [cursor=pointer]: ✕
+          - generic [ref=e730]:
+            - generic [ref=e731]:
+              - button "Disable" [ref=e732] [cursor=pointer]
+              - button "Delete" [ref=e733] [cursor=pointer]
+            - generic [ref=e734]:
+              - heading "Credentials" [level=3] [ref=e735]
+              - generic [ref=e737]:
+                - generic [ref=e738]:
+                  - code [ref=e740]: GITHUB_TOKEN
+                  - generic [ref=e741]: Not set
+                - button "Connect" [ref=e742] [cursor=pointer]
+  - alert [ref=e184]

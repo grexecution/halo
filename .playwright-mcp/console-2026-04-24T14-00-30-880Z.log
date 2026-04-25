@@ -1,0 +1,29 @@
+[    1542ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[    7842ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[    9129ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[   10486ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[   12151ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[   13555ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[   14946ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[   16301ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[   17651ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[   19019ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[   20495ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[   21898ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[   23148ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[   86486ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  123698ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  179482ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  225799ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  237028ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  239375ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  275161ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  284043ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  291619ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  294297ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  297191ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  313526ms] [ERROR] Manifest: Line: 1, column: 1, Syntax error. @ http://95.216.190.206:3000/manifest.json:0
+[  978086ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://95.216.190.206:3000/api/approvals?status=pending:0
+[  978090ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://95.216.190.206:3000/api/runs?limit=20:0
+[  982990ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://95.216.190.206:3000/api/approvals?status=pending:0
+[  982991ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://95.216.190.206:3000/api/runs?limit=20:0

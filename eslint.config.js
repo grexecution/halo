@@ -78,6 +78,6 @@ export default [
     },
   },
   {
-    ignores: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/*.d.ts'],
+    ignores: ['**/node_modules/**', '**/dist/**', '**/.next/**', '**/*.d.ts', '**/public/sw.js'],
   },
 ]

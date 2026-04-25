@@ -1,0 +1,145 @@
+- generic [ref=e1]:
+  - navigation [ref=e2]:
+    - link "Halo" [ref=e4] [cursor=pointer]:
+      - /url: /
+      - img [ref=e6]
+      - generic [ref=e8]: Halo
+    - list [ref=e10]:
+      - listitem [ref=e11]:
+        - link "Chat" [ref=e12] [cursor=pointer]:
+          - /url: /chat
+          - img [ref=e13]
+          - generic [ref=e15]: Chat
+      - listitem [ref=e16]:
+        - link "Agents" [ref=e17] [cursor=pointer]:
+          - /url: /agents
+          - img [ref=e18]
+          - generic [ref=e21]: Agents
+      - listitem [ref=e22]:
+        - link "Skills" [ref=e23] [cursor=pointer]:
+          - /url: /skills
+          - img [ref=e24]
+          - generic [ref=e27]: Skills
+      - listitem [ref=e28]:
+        - link "Goals & Cron" [ref=e29] [cursor=pointer]:
+          - /url: /cron-goals
+          - img [ref=e30]
+          - generic [ref=e34]: Goals & Cron
+      - listitem [ref=e35]:
+        - link "Runs" [ref=e36] [cursor=pointer]:
+          - /url: /runs
+          - img [ref=e37]
+          - generic [ref=e39]: Runs
+      - listitem [ref=e40]:
+        - link "Approvals" [ref=e41] [cursor=pointer]:
+          - /url: /approvals
+          - img [ref=e42]
+          - generic [ref=e46]: Approvals
+      - listitem [ref=e47]:
+        - link "Knowledge" [ref=e48] [cursor=pointer]:
+          - /url: /knowledge
+          - img [ref=e49]
+          - generic [ref=e51]: Knowledge
+      - listitem [ref=e52]:
+        - link "Memory" [ref=e53] [cursor=pointer]:
+          - /url: /memory
+          - img [ref=e54]
+          - generic [ref=e62]: Memory
+      - listitem [ref=e63]:
+        - link "Workspaces" [ref=e64] [cursor=pointer]:
+          - /url: /workspaces
+          - img [ref=e65]
+          - generic [ref=e68]: Workspaces
+      - listitem [ref=e69]:
+        - link "Connectors" [ref=e70] [cursor=pointer]:
+          - /url: /connectors
+          - img [ref=e71]
+          - generic [ref=e73]: Connectors
+      - listitem [ref=e74]:
+        - link "Logs" [ref=e75] [cursor=pointer]:
+          - /url: /logs
+          - img [ref=e76]
+          - generic [ref=e79]: Logs
+      - listitem [ref=e80]:
+        - link "Cost" [ref=e81] [cursor=pointer]:
+          - /url: /cost
+          - img [ref=e82]
+          - generic [ref=e84]: Cost
+      - listitem [ref=e85]:
+        - link "Settings" [ref=e86] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e87]
+          - generic [ref=e90]: Settings
+    - generic [ref=e94]: local instance
+  - main [ref=e95]:
+    - main [ref=e96]:
+      - generic [ref=e97]:
+        - heading "Agents" [level=1] [ref=e98]
+        - button "New Agent" [active] [ref=e99] [cursor=pointer]:
+          - img [ref=e100]
+          - text: New Agent
+      - generic [ref=e116]:
+        - generic [ref=e118]:
+          - generic [ref=e119]:
+            - generic [ref=e120]:
+              - generic [ref=e121]: "@main"
+              - generic [ref=e122]: Primary
+            - paragraph [ref=e123]: Main Agent
+          - generic [ref=e124]: claude-sonnet-4-6
+        - paragraph [ref=e126]: You are a helpful AI assistant.
+        - generic [ref=e127]:
+          - button "Edit" [ref=e128] [cursor=pointer]:
+            - img [ref=e129]
+            - text: Edit
+          - button "Delete" [ref=e132] [cursor=pointer]:
+            - img [ref=e133]
+            - text: Delete
+      - generic [ref=e139]:
+        - generic [ref=e140]:
+          - generic [ref=e141]:
+            - heading "New Agent" [level=2] [ref=e142]
+            - paragraph [ref=e143]: Configure an AI agent with its model and capabilities.
+          - button [ref=e144] [cursor=pointer]:
+            - img [ref=e145]
+        - generic [ref=e149]:
+          - generic [ref=e150]:
+            - generic [ref=e151]: Handle
+            - textbox "Handle" [ref=e152]:
+              - /placeholder: my-agent
+          - generic [ref=e153]:
+            - generic [ref=e154]: Name
+            - textbox "Name" [ref=e155]:
+              - /placeholder: Agent display name
+          - generic [ref=e156]:
+            - generic [ref=e157]: Primary Model
+            - combobox "Primary Model" [ref=e158]:
+              - option "Llama 3.2 (local) · llama3.2 [ollama]" [selected]
+          - generic [ref=e159]:
+            - generic [ref=e160]: Fallback Models
+            - paragraph [ref=e161]: Used in order if the primary model fails or is unavailable.
+            - button "No fallbacks" [ref=e162] [cursor=pointer]:
+              - generic [ref=e163]: No fallbacks
+              - img [ref=e164]
+          - generic [ref=e166]:
+            - generic [ref=e167]: System Prompt
+            - textbox "System Prompt" [ref=e168]:
+              - /placeholder: You are a helpful AI assistant.
+          - generic [ref=e169]:
+            - generic [ref=e170]: Tools Enabled
+            - generic [ref=e171]:
+              - generic [ref=e172]:
+                - generic [ref=e173]: shell
+                - switch [ref=e174] [cursor=pointer]
+              - generic [ref=e176]:
+                - generic [ref=e177]: browser
+                - switch [ref=e178] [cursor=pointer]
+              - generic [ref=e180]:
+                - generic [ref=e181]: filesystem
+                - switch [ref=e182] [cursor=pointer]
+              - generic [ref=e184]:
+                - generic [ref=e185]: gui
+                - switch [ref=e186] [cursor=pointer]
+          - generic [ref=e188]:
+            - button "Cancel" [ref=e189] [cursor=pointer]
+            - button "Create Agent" [disabled] [ref=e190]
+  - alert [ref=e114]

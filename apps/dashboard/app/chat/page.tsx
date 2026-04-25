@@ -49,6 +49,7 @@ interface Agent {
   handle: string
   name: string
   model: string
+  modelName?: string
 }
 
 // ─── Date grouping ──────────────────────────────────────────────────────────
@@ -566,7 +567,10 @@ function AgentPicker({ agents, selectedAgent, onSelect }: AgentPickerProps) {
         className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-800 hover:bg-gray-700 border border-gray-700/60 text-[11px] text-gray-300 font-medium transition-colors"
       >
         <User size={10} className="text-blue-400" />
-        <span className="max-w-[80px] truncate">{current.name}</span>
+        <span className="max-w-[100px] truncate">{current.name}</span>
+        <span className="text-gray-500 text-[10px] truncate max-w-[80px]">
+          · {current.modelName ?? current.model}
+        </span>
         <ChevronDown size={9} className="text-gray-500" />
       </button>
 
@@ -597,7 +601,7 @@ function AgentPicker({ agents, selectedAgent, onSelect }: AgentPickerProps) {
                 <p className="text-xs font-medium text-white truncate">{a.name}</p>
                 <p className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
                   <Cpu size={8} />
-                  <span className="truncate">{a.model}</span>
+                  <span className="truncate">{a.modelName ?? a.model}</span>
                 </p>
               </div>
               {a.handle === selectedAgent && (
@@ -669,7 +673,7 @@ export default function ChatPage() {
       })
       .catch(() => {
         // fallback: use default greg agent
-        setAgents([{ handle: 'greg', name: 'Greg', model: 'llama3.2' }])
+        setAgents([{ handle: 'greg', name: 'Greg', model: 'llama3.2', modelName: 'llama3.2' }])
       })
   }, [])
 

@@ -6,6 +6,58 @@ import { getDb } from '../../lib/db'
 import { ALL_PLUGINS } from '@open-greg/connectors/plugins'
 import { getOllamaModels } from '../../lib/ollama'
 
+// ── Helper: derive a human-readable label from a raw model ID ────────────────
+// Examples:
+//   "kimi-k2.5"         → "K2.5"
+//   "kimi-k2-thinking"  → "K2 Thinking"
+//   "moonshot-v1-8k"    → "Moonshot 8K"
+//   "deepseek-chat"     → "Chat"
+//   "grok-4"            → "Grok 4"
+//   "mistral-large-latest" → "Large"
+function modelIdToLabel(modelId: string): string {
+  // Strip known prefix tokens that just duplicate the provider name
+  const prefixesToStrip = [
+    'moonshot-v1-',
+    'kimi-',
+    'deepseek-',
+    'mistral-',
+    'codestral-',
+    'open-mistral-',
+    'grok-',
+    'llama-',
+    'gemma',
+    'sonar-',
+    'command-',
+    'cerebras-',
+  ]
+
+  let label = modelId
+  for (const prefix of prefixesToStrip) {
+    if (label.startsWith(prefix)) {
+      label = label.slice(prefix.length)
+      break
+    }
+  }
+
+  // Remove trailing "-latest" or similar suffixes
+  label = label.replace(/-latest$/, '').replace(/-\d{4}-\d{2}-\d{2}$/, '')
+
+  // Title-case each hyphen-separated segment, keep dots and numbers
+  label = label
+    .split('-')
+    .map((seg) => {
+      // uppercase segment if it looks like an acronym (all alpha, ≤4 chars)
+      if (/^[a-z]{1,4}$/.test(seg)) return seg.toUpperCase()
+      // Otherwise capitalise first char
+      return seg.charAt(0).toUpperCase() + seg.slice(1)
+    })
+    .join(' ')
+
+  // Re-apply the prefix word if the stripped label is now ambiguous/very short
+  // (keep as-is — callers display it as "Plugin · Label")
+  return label
+}
+
 export interface ModelEntry {
   id: string
   name: string
@@ -66,6 +118,8 @@ export async function GET() {
   }
 
   // ── 4. Append connected AI plugins that expose an LLM endpoint ───────────────
+  // Each plugin emits one ModelEntry per model variant it supports, so agents
+  // can independently pick e.g. "Kimi · K2" vs "Kimi · Moonshot 128K".
   try {
     const db = getDb()
     const rows = db.prepare('SELECT plugin_id, fields FROM plugin_credentials').all() as Array<{
@@ -88,23 +142,35 @@ export async function GET() {
       const apiKey = credentials[llmMeta.apiKeyField ?? 'api_key'] ?? ''
       if (!apiKey) continue // no key — skip
 
-      const chosenModel =
-        credentials[llmMeta.modelField ?? 'model'] ?? llmMeta.defaultModels[0] ?? ''
+      // Collect all model variants: prefer the plugin field's select options,
+      // fall back to llmMeta.defaultModels.
+      const selectField = plugin.fields.find(
+        (f) => f.key === (llmMeta.modelField ?? 'model') && f.type === 'select',
+      )
+      const allVariants: string[] =
+        selectField?.options && selectField.options.length > 0
+          ? selectField.options
+          : llmMeta.defaultModels
 
-      // One entry per connected plugin using the selected/default model
-      const entryId = `plugin-${row.plugin_id}`
-      const alreadyInSettings = settings.llm.models.some((m) => m.id === entryId)
-      if (!alreadyInSettings) {
-        result.push({
-          id: entryId,
-          name: `${plugin.name}${chosenModel ? ` · ${chosenModel}` : ''}`,
-          provider: llmMeta.provider,
-          modelId: chosenModel,
-          available: true,
-          enabled: true,
-          limitTokensPerDay: 0,
-          limitCostPerDay: 0,
-        })
+      for (const variantModelId of allVariants) {
+        // Composite ID: "plugin-{pluginId}:{variantModelId}"
+        const entryId = `plugin-${row.plugin_id}:${variantModelId}`
+        const alreadyInSettings = settings.llm.models.some((m) => m.id === entryId)
+        if (!alreadyInSettings) {
+          // Build a human-readable variant label from the model ID.
+          // e.g. "kimi-k2.5" → "K2.5", "moonshot-v1-128k" → "Moonshot 128K"
+          const variantLabel = modelIdToLabel(variantModelId)
+          result.push({
+            id: entryId,
+            name: `${plugin.name} · ${variantLabel}`,
+            provider: llmMeta.provider,
+            modelId: variantModelId,
+            available: true,
+            enabled: true,
+            limitTokensPerDay: 0,
+            limitCostPerDay: 0,
+          })
+        }
       }
     }
   } catch {
@@ -121,9 +187,11 @@ export async function PATCH(req: Request) {
 
   const settings = readSettings()
 
-  // For plugin-backed models: update the plugin credentials if modelId changed
+  // For plugin-backed models: update the plugin credentials if modelId changed.
+  // ID format: "plugin-{pluginId}" (legacy) or "plugin-{pluginId}:{variantModelId}"
   if (body.id.startsWith('plugin-') && body.modelId) {
-    const pluginId = body.id.slice(7)
+    const afterPrefix = body.id.slice(7) // "{pluginId}" or "{pluginId}:{variantModelId}"
+    const pluginId = afterPrefix.includes(':') ? afterPrefix.split(':')[0]! : afterPrefix
     try {
       const db = getDb()
       const row = db
@@ -164,8 +232,10 @@ export async function PATCH(req: Request) {
     )
     writeSettings(settings)
   } else if (body.id.startsWith('plugin-')) {
-    // Plugin model not yet in settings — store its overrides (enabled, limits) there
-    const pluginId = body.id.slice(7)
+    // Plugin model not yet in settings — store its overrides (enabled, limits) there.
+    // Extract pluginId from composite "plugin-{pluginId}:{variantModelId}" or legacy "plugin-{pluginId}".
+    const afterPrefix = body.id.slice(7)
+    const pluginId = afterPrefix.includes(':') ? afterPrefix.split(':')[0]! : afterPrefix
     const plugin = ALL_PLUGINS.find((p) => p.id === pluginId)
     if (plugin?.llmMeta) {
       const chosenModel = body.modelId ?? plugin.llmMeta.defaultModels[0] ?? ''

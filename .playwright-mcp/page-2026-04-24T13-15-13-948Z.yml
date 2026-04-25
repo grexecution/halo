@@ -1,0 +1,21 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e7]: Halo
+      - generic [ref=e8]:
+        - blockquote [ref=e9]: "\"Your personal AI that never stops working.\""
+        - paragraph [ref=e10]: Self-hosted · Private · Autonomous
+      - generic [ref=e11]: Halo v0.1.0
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - heading "Set a new password" [level=1] [ref=e31]
+        - paragraph [ref=e16]: Choose a password you'll remember
+      - generic [ref=e32]:
+        - generic [ref=e33]:
+          - text: New password
+          - textbox "Min 8 characters" [active] [ref=e34]
+        - generic [ref=e35]:
+          - text: Confirm password
+          - textbox "Repeat password" [ref=e36]
+        - button "Set password & continue" [ref=e38] [cursor=pointer]
+  - alert [ref=e30]

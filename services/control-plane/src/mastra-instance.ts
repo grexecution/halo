@@ -13,6 +13,7 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { mkdirSync, existsSync, readFileSync } from 'node:fs'
 import { allMastraTools } from './mastra-tools.js'
+import { resolvePluginLlm } from './plugin-credentials.js'
 import type { AgentConfig } from '@open-greg/agent-core'
 
 const DIR = join(homedir(), '.open-greg')
@@ -192,18 +193,43 @@ const _agentCache = new Map<string, Agent>()
  * Falls back to the default model resolution if `cfg.model` is not recognised.
  */
 export function getAgentForConfig(cfg: AgentConfig): Agent {
-  const cached = _agentCache.get(cfg.id)
-  if (cached) return cached
+  // Plugin-backed agents are never cached: credentials can be updated in the
+  // dashboard without restarting the control-plane, so we rebuild on each call.
+  const isPluginModel = cfg.model.startsWith('plugin-')
+  if (!isPluginModel) {
+    const cached = _agentCache.get(cfg.id)
+    if (cached) return cached
+  }
 
-  // Resolve the model — cfg.model is the raw modelId string from the DB
-  // (e.g. "claude-haiku-4-5-20251001", "llama3.2", "kimi-k2.5")
+  // Resolve the model — cfg.model is the raw modelId string from the DB.
+  // Possible formats:
+  //   "claude-haiku-4-5-20251001"       → Anthropic direct
+  //   "gpt-4o"                           → OpenAI direct
+  //   "plugin-kimi:kimi-k2.5"            → plugin-backed LLM (Kimi, DeepSeek, Groq, …)
+  //   "llama3.2"                         → Ollama / any OpenAI-compatible fallback
   let model: ReturnType<typeof resolveModel>
   try {
     const anthropicKey = process.env['ANTHROPIC_API_KEY']
     const ollamaUrl =
       process.env['OLLAMA_BASE_URL'] ?? process.env['OLLAMA_URL'] ?? 'http://localhost:11434'
 
-    if (cfg.model.startsWith('claude-')) {
+    // ── Plugin-backed LLM (highest priority) ──────────────────────────────────
+    // Model IDs in this format are produced by the /api/models route when a
+    // user has connected an AI plugin (Kimi, DeepSeek, Groq, Mistral, xAI …).
+    // We read credentials from the shared SQLite DB and build an OpenAI-compat
+    // provider pointed at the plugin's baseUrl.
+    if (cfg.model.startsWith('plugin-')) {
+      const pluginLlm = resolvePluginLlm(cfg.model)
+      if (pluginLlm) {
+        model = createOpenAI({
+          baseURL: pluginLlm.baseUrl,
+          apiKey: pluginLlm.apiKey,
+        }).chat(pluginLlm.modelId)
+      } else {
+        // Plugin not connected or credentials missing — fall back to default
+        model = resolveModel()
+      }
+    } else if (cfg.model.startsWith('claude-')) {
       model = createAnthropic({ apiKey: anthropicKey! })(
         cfg.model as Parameters<ReturnType<typeof createAnthropic>>[0],
       )
@@ -232,6 +258,8 @@ export function getAgentForConfig(cfg: AgentConfig): Agent {
     memory: getMemory(),
   })
 
-  _agentCache.set(cfg.id, agent)
+  if (!isPluginModel) {
+    _agentCache.set(cfg.id, agent)
+  }
   return agent
 }

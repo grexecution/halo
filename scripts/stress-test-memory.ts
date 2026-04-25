@@ -46,20 +46,22 @@ let _embedModel: unknown = null
 
 async function getEmbedModel() {
   if (_embedModel)
-    return _embedModel as { queryEmbed: (texts: string[]) => AsyncIterable<Float32Array[]> }
+    return _embedModel as {
+      queryEmbed: (text: string) => Promise<number[]>
+      embed: (texts: string[]) => AsyncGenerator<number[][], void, unknown>
+    }
   const { FlagEmbedding, EmbeddingModel } = await import('fastembed')
   const cacheDir = process.env['FASTEMBED_CACHE_DIR'] ?? '/data/fastembed-cache'
   _embedModel = await FlagEmbedding.init({ model: EmbeddingModel.AllMiniLML6V2, cacheDir })
-  return _embedModel as { queryEmbed: (texts: string[]) => AsyncIterable<Float32Array[]> }
+  return _embedModel as {
+    queryEmbed: (text: string) => Promise<number[]>
+    embed: (texts: string[]) => AsyncGenerator<number[][], void, unknown>
+  }
 }
 
 async function embedQuery(text: string): Promise<number[]> {
   const model = await getEmbedModel()
-  const results: number[][] = []
-  for await (const batch of model.queryEmbed([text])) {
-    for (const vec of batch) results.push(Array.from(vec))
-  }
-  return results[0] ?? []
+  return Array.from(await model.queryEmbed(text))
 }
 
 // ---------------------------------------------------------------------------

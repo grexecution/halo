@@ -1,0 +1,19 @@
+{
+  "name": "@open-greg/scripts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed": "tsx seed-massive-history.ts",
+    "stress-test": "tsx stress-test-memory.ts"
+  },
+  "dependencies": {
+    "fastembed": "2.1.0",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

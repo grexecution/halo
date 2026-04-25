@@ -8,8 +8,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "db:migrate": "echo 'migrations not yet implemented'",
-    "db:seed": "echo 'seed not yet implemented'"
+    "db:migrate": "tsx src/index.ts --migrate-only",
+    "db:seed": "tsx ../../scripts/seed-massive-history.ts",
+    "db:stress-test": "tsx ../../scripts/stress-test-memory.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.71",

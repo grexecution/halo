@@ -380,6 +380,25 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(@types/node@22.19.17)(jsdom@29.0.2(@noble/hashes@2.2.0))
 
+  scripts:
+    dependencies:
+      fastembed:
+        specifier: 2.1.0
+        version: 2.1.0
+      pg:
+        specifier: ^8.20.0
+        version: 8.20.0
+    devDependencies:
+      '@types/pg':
+        specifier: ^8.20.0
+        version: 8.20.0
+      tsx:
+        specifier: ^4.19.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
   services/browser-service:
     dependencies:
       zod:

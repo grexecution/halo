@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         threadId: body.threadId,
         resourceId: body.resourceId ?? 'user',
       }),
-      signal: AbortSignal.timeout(120_000),
+      signal: AbortSignal.timeout(300_000),
     })
 
     if (resp.ok) {

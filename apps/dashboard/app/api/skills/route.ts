@@ -4,8 +4,7 @@ export const dynamic = 'force-dynamic'
  */
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-
-const CP = process.env['NEXT_PUBLIC_CONTROL_PLANE_URL'] ?? 'http://localhost:3001'
+import { CONTROL_PLANE_URL as CP } from '../../lib/env'
 
 export async function GET() {
   try {

@@ -142,15 +142,51 @@ export async function GET() {
       const apiKey = credentials[llmMeta.apiKeyField ?? 'api_key'] ?? ''
       if (!apiKey) continue // no key — skip
 
-      // Collect all model variants: prefer the plugin field's select options,
-      // fall back to llmMeta.defaultModels.
+      // For providers that support live model listing, fetch dynamically.
+      // This ensures new models (GPT-4.5, o4-mini, etc.) appear automatically.
+      let liveModels: string[] | null = null
+      if (llmMeta.baseUrl && apiKey) {
+        try {
+          const modelsRes = await fetch(`${llmMeta.baseUrl}/models`, {
+            headers: { Authorization: `Bearer ${apiKey}` },
+            signal: AbortSignal.timeout(4000),
+          })
+          if (modelsRes.ok) {
+            const modelsJson = (await modelsRes.json()) as { data?: Array<{ id: string }> }
+            if (modelsJson.data && Array.isArray(modelsJson.data)) {
+              // Filter to chat-capable models only (exclude embeddings, tts, whisper, etc.)
+              liveModels = modelsJson.data
+                .map((m) => m.id)
+                .filter(
+                  (id) =>
+                    !id.includes('embed') &&
+                    !id.includes('tts') &&
+                    !id.includes('whisper') &&
+                    !id.includes('dall-e') &&
+                    !id.includes('babbage') &&
+                    !id.includes('davinci') &&
+                    !id.includes('-instruct') &&
+                    !id.includes('ada') &&
+                    !id.includes('curie') &&
+                    !id.startsWith('ft:'),
+                )
+                .sort()
+            }
+          }
+        } catch {
+          // Live fetch failed — fall back to static list
+        }
+      }
+
+      // Use live models if fetched, otherwise fall back to plugin field options or defaults.
       const selectField = plugin.fields.find(
         (f) => f.key === (llmMeta.modelField ?? 'model') && f.type === 'select',
       )
       const allVariants: string[] =
-        selectField?.options && selectField.options.length > 0
+        liveModels ??
+        (selectField?.options && selectField.options.length > 0
           ? selectField.options
-          : llmMeta.defaultModels
+          : llmMeta.defaultModels)
 
       for (const variantModelId of allVariants) {
         // Composite ID: "plugin-{pluginId}:{variantModelId}"

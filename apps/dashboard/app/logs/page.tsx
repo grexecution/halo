@@ -107,10 +107,10 @@ export default function LogsPage() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-white">Logs</h1>
-          {loading && <RefreshCw size={14} className="text-gray-600 animate-spin" />}
+          <h1 className="text-2xl font-bold text-foreground">Logs</h1>
+          {loading && <RefreshCw size={14} className="text-muted-foreground animate-spin" />}
           {lastFetch && !loading && (
-            <span className="text-xs text-gray-600">updated {lastFetch}</span>
+            <span className="text-xs text-muted-foreground">updated {lastFetch}</span>
           )}
         </div>
 

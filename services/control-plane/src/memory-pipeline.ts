@@ -64,6 +64,25 @@ export interface HealthTrendBucket {
 }
 
 // ---------------------------------------------------------------------------
+// Helper: map a Postgres row to a ScoredMemory
+// ---------------------------------------------------------------------------
+
+function mapMemoryRow(r: Record<string, unknown>): ScoredMemory {
+  return {
+    id: r.id as string,
+    content: r.content as string,
+    source: r.source as string,
+    ...(r.source_id != null ? { sourceId: r.source_id as string } : {}),
+    type: r.type as string,
+    tags: Array.isArray(r.tags) ? (r.tags as string[]) : [],
+    metadata: (r.metadata as Record<string, unknown>) ?? {},
+    createdAt: (r.created_at as Date).toISOString(),
+    updatedAt: (r.updated_at as Date).toISOString(),
+    score: parseFloat(r.score as string),
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Query type detection
 // ---------------------------------------------------------------------------
 
@@ -357,18 +376,7 @@ export class MemoryPipeline {
       [query, vecStr, limit],
     )
 
-    return rows.map((r: Record<string, unknown>) => ({
-      id: r.id as string,
-      content: r.content as string,
-      source: r.source as string,
-      ...(r.source_id != null ? { sourceId: r.source_id as string } : {}),
-      type: r.type as string,
-      tags: Array.isArray(r.tags) ? (r.tags as string[]) : [],
-      metadata: (r.metadata as Record<string, unknown>) ?? {},
-      createdAt: (r.created_at as Date).toISOString(),
-      updatedAt: (r.updated_at as Date).toISOString(),
-      score: parseFloat(r.score as string),
-    }))
+    return rows.map(mapMemoryRow)
   }
 
   /**
@@ -386,18 +394,7 @@ export class MemoryPipeline {
       [query, limit],
     )
 
-    return rows.map((r: Record<string, unknown>) => ({
-      id: r.id as string,
-      content: r.content as string,
-      source: r.source as string,
-      ...(r.source_id != null ? { sourceId: r.source_id as string } : {}),
-      type: r.type as string,
-      tags: Array.isArray(r.tags) ? (r.tags as string[]) : [],
-      metadata: (r.metadata as Record<string, unknown>) ?? {},
-      createdAt: (r.created_at as Date).toISOString(),
-      updatedAt: (r.updated_at as Date).toISOString(),
-      score: parseFloat(r.score as string),
-    }))
+    return rows.map(mapMemoryRow)
   }
 
   // ── Health trend queries ────────────────────────────────────────────────────

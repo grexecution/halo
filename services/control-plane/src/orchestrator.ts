@@ -27,6 +27,18 @@ const CLOUD_MEMORY_BUDGET = 8_000 // cloud models (GPT-4.1, Claude — large con
 const OLLAMA_MEMORY_BUDGET = 500 // local 4096-token models — strict cap
 const CHARS_PER_TOKEN = 4 // rough estimate for token counting
 
+const HEALTH_METRIC_PATTERNS: [RegExp, string][] = [
+  [/heart rate|hrv/i, 'heart_rate'],
+  [/steps/i, 'steps'],
+  [/sleep/i, 'sleep_hours'],
+  [/weight/i, 'weight'],
+  [/vo2/i, 'vo2max'],
+]
+
+function detectHealthMetric(query: string): string {
+  return HEALTH_METRIC_PATTERNS.find(([p]) => p.test(query))?.[1] ?? 'heart_rate'
+}
+
 /**
  * Build the memory context section to inject into the system prompt.
  * Routes to the appropriate tier based on query type:
@@ -54,17 +66,7 @@ async function buildMemorySection(query: string, isSmallCtx: boolean): Promise<s
 
     // Tier 3: Health trend (structured SQL aggregate — no vector search needed)
     if (qtype === 'health') {
-      const metric = /heart rate|hrv/i.test(query)
-        ? 'heart_rate'
-        : /steps/i.test(query)
-          ? 'steps'
-          : /sleep/i.test(query)
-            ? 'sleep_hours'
-            : /weight/i.test(query)
-              ? 'weight'
-              : /vo2/i.test(query)
-                ? 'vo2max'
-                : 'heart_rate'
+      const metric = detectHealthMetric(query)
       const trend = await pipeline.healthTrendQuery({ metric, period: 'month', span: 60 })
       if (trend.length > 0) {
         const summary = pipeline.formatHealthTrend(trend, metric, '')

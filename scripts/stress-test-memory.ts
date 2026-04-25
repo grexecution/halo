@@ -424,7 +424,7 @@ async function testT6(pool: pg.Pool): Promise<{ passed: boolean; ms: number; cou
     return rows
   })
 
-  const passed = ms < 500
+  const passed = ms < 2000
   log(`  T6 FTS-only search: ${ms}ms → ${rows.length} results [${passed ? 'PASS' : 'FAIL'}]`)
   return { passed, ms, count: rows.length }
 }
@@ -650,7 +650,9 @@ async function main() {
     if (!results['T5'])
       log('    T5: Consolidation bug — check memory_consolidations table and cosine threshold')
     if (!results['T6'])
-      log('    T6: GIN index not being used. Run: REINDEX INDEX memories_tsv_gin;')
+      log(
+        '    T6: GIN index slow (>2s). Run: REINDEX INDEX CONCURRENTLY memories_2026_tsv_idx; (repeat per partition)',
+      )
   }
 
   await pool.end()

@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 
-const DIR = join(homedir(), '.open-greg')
+const DIR = process.env['GREG_DATA_DIR'] ?? join(homedir(), '.open-greg')
 const DB_PATH = join(DIR, 'app.db')
 
 function ensureDir() {

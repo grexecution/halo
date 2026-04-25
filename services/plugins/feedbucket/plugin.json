@@ -1,0 +1,56 @@
+{
+  "name": "feedbucket",
+  "description": "Feedbucket — visual feedback tool. Fetch projects, feedback items with screenshots, and create new items.",
+  "version": "1.0.0",
+  "auth": {
+    "type": "api_key",
+    "credentialKey": "FEEDBUCKET_API_KEY"
+  },
+  "tools": [
+    {
+      "name": "feedbucket.list_projects",
+      "description": "List all Feedbucket projects",
+      "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+      }
+    },
+    {
+      "name": "feedbucket.get_feedback",
+      "description": "Get feedback items for a project, including screenshots and comments",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "The Feedbucket project ID" },
+          "status": {
+            "type": "string",
+            "enum": ["open", "resolved", "all"],
+            "description": "Filter by status"
+          },
+          "limit": { "type": "number", "description": "Max items to return (default 20)" }
+        },
+        "required": ["projectId"]
+      }
+    },
+    {
+      "name": "feedbucket.create_item",
+      "description": "Create a new feedback item in a Feedbucket project",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "projectId": { "type": "string", "description": "The Feedbucket project ID" },
+          "title": { "type": "string", "description": "Feedback title" },
+          "description": { "type": "string", "description": "Detailed description" },
+          "type": {
+            "type": "string",
+            "enum": ["bug", "improvement", "question"],
+            "description": "Feedback type"
+          }
+        },
+        "required": ["projectId", "title"]
+      }
+    }
+  ],
+  "handler": "handler.js"
+}

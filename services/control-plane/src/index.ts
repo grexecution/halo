@@ -25,7 +25,10 @@ import {
 import type { ChannelId } from '@open-greg/messaging'
 import { skillLoader } from './skill-loader.js'
 import { startHeartbeat, stopHeartbeat } from './heartbeat.js'
-import { initMemoryPipeline } from './memory-pipeline.js'
+import { initMemoryPipeline, getMemoryPipeline } from './memory-pipeline.js'
+import { parseImportFile } from './memory-import.js'
+import type { ImportFormat } from './memory-import.js'
+import { pluginLoader } from './plugin-loader.js'
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -720,6 +723,159 @@ app.post('/api/update/apply', async (_, reply) => {
 })
 
 // ----------------------------------------------------------------
+// Memory — Import
+// ----------------------------------------------------------------
+
+/**
+ * POST /api/memory/import
+ * Accepts raw file content + format hint in JSON body.
+ * Body: { content: string, format?: 'chatgpt'|'claude'|'telegram'|'whatsapp'|'json'|'csv'|'auto' }
+ */
+app.post<{
+  Body: { content: string; format?: string; filename?: string }
+}>('/api/memory/import', async (req, reply) => {
+  const pipeline = getMemoryPipeline()
+  if (!pipeline) {
+    return reply.code(503).send({ error: 'Memory pipeline not available — DATABASE_URL not set' })
+  }
+
+  const { content, format: rawFormat, filename } = req.body
+  if (!content) return reply.code(400).send({ error: 'content is required' })
+
+  // Auto-detect format from filename if not specified
+  let format = (rawFormat ?? 'auto') as ImportFormat
+  if (format === 'auto' && filename) {
+    if (filename.endsWith('.txt')) format = 'whatsapp'
+    else if (filename.endsWith('.csv')) format = 'csv'
+  }
+
+  const { entries, format: detectedFormat, error } = parseImportFile(content, format)
+  if (error) return reply.code(400).send({ error: `Parse error: ${error}` })
+  if (!entries.length) return reply.code(400).send({ error: 'No entries found in file' })
+
+  let inserted = 0
+  let failed = 0
+  for (const entry of entries) {
+    try {
+      await pipeline.upsertMemory(entry, 5)
+      inserted++
+    } catch {
+      failed++
+    }
+  }
+
+  return {
+    ok: true,
+    detectedFormat,
+    total: entries.length,
+    inserted,
+    failed,
+    message: `Imported ${inserted} memories from ${detectedFormat}. Embeddings queued for background processing.`,
+  }
+})
+
+// ----------------------------------------------------------------
+// Memory — Export
+// ----------------------------------------------------------------
+
+/**
+ * GET /api/memory/export
+ * Streams all memories as JSON or CSV.
+ * Query: format=json|csv, source=..., type=..., since=ISO-date, limit=N
+ */
+app.get<{
+  Querystring: { format?: string; source?: string; type?: string; since?: string; limit?: string }
+}>('/api/memory/export', async (req, reply) => {
+  const pipeline = getMemoryPipeline()
+  if (!pipeline) {
+    return reply.code(503).send({ error: 'Memory pipeline not available — DATABASE_URL not set' })
+  }
+
+  const { format = 'json', source, type, since, limit: limitStr } = req.query
+  const limit = limitStr ? Math.min(Number(limitStr), 100_000) : 100_000
+
+  const rows = await pipeline.exportMemories({
+    ...(source != null ? { source } : {}),
+    ...(type != null ? { type } : {}),
+    ...(since != null ? { since } : {}),
+    limit,
+  })
+
+  if (format === 'csv') {
+    reply.header('Content-Type', 'text/csv; charset=utf-8')
+    reply.header('Content-Disposition', 'attachment; filename="halo-memories.csv"')
+    const header = 'id,source,type,content,tags,created_at\n'
+    const lines = rows.map((r) =>
+      [
+        r.id,
+        r.source,
+        r.type,
+        `"${r.content.replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+        `"${(r.tags ?? []).join(';')}"`,
+        r.createdAt,
+      ].join(','),
+    )
+    return reply.send(header + lines.join('\n'))
+  }
+
+  // JSON
+  reply.header('Content-Type', 'application/json')
+  reply.header('Content-Disposition', 'attachment; filename="halo-memories.json"')
+  return reply.send(
+    JSON.stringify(
+      {
+        exported_at: new Date().toISOString(),
+        count: rows.length,
+        memories: rows.map((r) => ({
+          id: r.id,
+          source: r.source,
+          type: r.type,
+          content: r.content,
+          tags: r.tags,
+          created_at: r.createdAt,
+          updated_at: r.updatedAt,
+        })),
+      },
+      null,
+      2,
+    ),
+  )
+})
+
+// ----------------------------------------------------------------
+// Plugins
+// ----------------------------------------------------------------
+
+/** GET /api/plugins — list all discovered plugins */
+app.get('/api/plugins', async () => ({
+  plugins: pluginLoader.list().map((p) => ({
+    name: p.name,
+    description: p.description,
+    version: p.version,
+    credentialSet: p.credentialSet,
+    authType: p.auth.type,
+    credentialKey: p.auth.credentialKey,
+    tools: p.tools.map((t) => t.name),
+  })),
+}))
+
+/** POST /api/plugins/:name/credential — set API key for a plugin */
+app.post<{
+  Params: { name: string }
+  Body: { value: string }
+}>('/api/plugins/:name/credential', async (req, reply) => {
+  const { name } = req.params
+  const { value } = req.body
+  if (!value) return reply.code(400).send({ error: 'value is required' })
+  try {
+    await pluginLoader.setCredential(name, value)
+    return { ok: true, plugin: name }
+  } catch (err) {
+    return reply.code(404).send({ error: String(err) })
+  }
+})
+
+// ----------------------------------------------------------------
 // Start
 // ----------------------------------------------------------------
 
@@ -730,6 +886,9 @@ applyEnvFromSettings()
 
 // Bootstrap bundled skills + start file watcher
 skillLoader.init()
+
+// Auto-discover and load plugins from services/plugins/
+await pluginLoader.init()
 
 // Best-effort DBOS init — gracefully degrades if Postgres not available
 await initDBOS()

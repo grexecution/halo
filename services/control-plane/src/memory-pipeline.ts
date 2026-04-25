@@ -637,6 +637,68 @@ export class MemoryPipeline {
       }
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // Export
+  // ---------------------------------------------------------------------------
+
+  async exportMemories(opts: {
+    source?: string
+    type?: string
+    since?: string
+    limit?: number
+  }): Promise<MemoryEntry[]> {
+    const conditions: string[] = []
+    const params: unknown[] = []
+    let p = 1
+
+    if (opts.source) {
+      conditions.push(`source = $${p++}`)
+      params.push(opts.source)
+    }
+    if (opts.type) {
+      conditions.push(`type = $${p++}`)
+      params.push(opts.type)
+    }
+    if (opts.since) {
+      conditions.push(`created_at >= $${p++}`)
+      params.push(opts.since)
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+    const limitClause = `LIMIT $${p}`
+    params.push(opts.limit ?? 100_000)
+
+    const { rows } = await this.pool.query<{
+      id: string
+      content: string
+      source: string
+      source_id: string | null
+      type: string
+      tags: string[]
+      metadata: Record<string, unknown>
+      created_at: string
+      updated_at: string
+    }>(
+      `SELECT id, content, source, source_id, type, tags, metadata, created_at, updated_at
+       FROM memories ${where} ORDER BY created_at DESC ${limitClause}`,
+      params,
+    )
+
+    return rows.map((r) => ({
+      id: r.id,
+      content: r.content,
+      source: r.source,
+      ...(r.source_id != null ? { sourceId: r.source_id } : {}),
+      type: r.type,
+      tags: r.tags ?? [],
+      metadata: (r.metadata as Record<string, unknown>) ?? {},
+      createdAt:
+        typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),
+      updatedAt:
+        typeof r.updated_at === 'string' ? r.updated_at : new Date(r.updated_at).toISOString(),
+    }))
+  }
 }
 
 function sleep(ms: number): Promise<void> {

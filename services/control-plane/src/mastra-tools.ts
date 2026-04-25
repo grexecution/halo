@@ -593,3 +593,7 @@ export const allMastraTools = {
   connect_skill: connectSkillTool,
   notify_user: notifyUserTool,
 }
+
+// OpenAI-compatible tool set — excludes computer_use which uses Anthropic-only
+// coordinate tuple schemas that OpenAI rejects with invalid_function_parameters.
+export const openAiSafeTools = (({ computer_use: _cu, ...rest }) => rest)(allMastraTools)

@@ -12,7 +12,7 @@ import { createOpenAI } from '@ai-sdk/openai'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { mkdirSync, existsSync, readFileSync } from 'node:fs'
-import { allMastraTools } from './mastra-tools.js'
+import { allMastraTools, openAiSafeTools } from './mastra-tools.js'
 import { resolvePluginLlm } from './plugin-credentials.js'
 import type { AgentConfig } from '@open-greg/agent-core'
 
@@ -273,7 +273,17 @@ export function getAgentForConfig(cfg: AgentConfig): Agent {
     // - Tool schemas add 1000+ tokens, blowing the 4096 ctx limit
     // - llama3.2 tool-call template causes 500 errors on Ollama
     // - Memory init blocks for 30-60s on first call
-    tools: isSmallCtx ? {} : allMastraTools,
+    // OpenAI and plugin-backed OpenAI-compatible models reject computer_use tool
+    // (Anthropic-specific coordinate tuple schema). Use the safe subset for those.
+    tools: isSmallCtx
+      ? {}
+      : isPluginModel ||
+          cfg.model.startsWith('gpt-') ||
+          cfg.model.startsWith('o1') ||
+          cfg.model.startsWith('o3') ||
+          cfg.model.startsWith('o4')
+        ? openAiSafeTools
+        : allMastraTools,
     ...(isSmallCtx ? {} : { memory: getMemory() }),
   })
 

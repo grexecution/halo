@@ -177,14 +177,16 @@ app.post<{
   const t0 = Date.now()
   try {
     const toolCalls: Array<{ toolId: string; args: unknown; result: unknown }> = []
+    let chunkCount = 0
+    const agentCfg = body.agentConfig ?? {
+      id: 'greg',
+      handle: 'greg',
+      systemPrompt: '',
+      model: 'auto',
+      timezone: process.env['TZ'] ?? 'UTC',
+    }
     await orchestrator.runTurn({
-      agent: body.agentConfig ?? {
-        id: 'greg',
-        handle: 'greg',
-        systemPrompt: '',
-        model: 'auto',
-        timezone: process.env['TZ'] ?? 'UTC',
-      },
+      agent: agentCfg,
       message: body.message,
       history: body.history?.map((m) => ({
         role: m.role as 'user' | 'assistant' | 'system',
@@ -193,7 +195,10 @@ app.post<{
       })),
       threadId: body.threadId ?? 'default',
       resourceId: body.resourceId ?? 'user',
-      onChunk: (chunk) => send({ type: 'chunk', text: chunk }),
+      onChunk: (chunk) => {
+        chunkCount++
+        send({ type: 'chunk', text: chunk })
+      },
       onToolCall: (name, args) => {
         toolCalls.push({ toolId: name, args, result: {} })
         emitLog({
@@ -206,6 +211,50 @@ app.post<{
         send({ type: 'tool', name, args })
       },
     })
+
+    // If zero chunks were emitted the configured model failed silently (e.g. invalid
+    // plugin API key). Fall back to the default Ollama agent and try once more so
+    // the user always gets a response instead of a blank message.
+    if (chunkCount === 0 && agentCfg.model && agentCfg.model !== 'auto') {
+      emitLog({
+        level: 'warn',
+        agentId: 'greg',
+        message: `model "${agentCfg.model}" produced no output — falling back to default model`,
+        durationMs: Date.now() - t0,
+      })
+      // Notify client so the user understands what happened
+      send({
+        type: 'chunk',
+        text: `⚠️ *Note: the configured model (${agentCfg.model}) failed to respond — using the default model instead.*\n\n`,
+      })
+      chunkCount++
+      await orchestrator.runTurn({
+        agent: {
+          id: 'greg',
+          handle: 'greg',
+          systemPrompt: agentCfg.systemPrompt ?? '',
+          model: 'auto',
+          timezone: agentCfg.timezone ?? 'UTC',
+        },
+        message: body.message,
+        history: body.history?.map((m) => ({
+          role: m.role as 'user' | 'assistant' | 'system',
+          content: m.content,
+          timestamp: m.timestamp ?? new Date().toISOString(),
+        })),
+        threadId: body.threadId ?? 'default',
+        resourceId: body.resourceId ?? 'user',
+        onChunk: (chunk) => {
+          chunkCount++
+          send({ type: 'chunk', text: chunk })
+        },
+        onToolCall: (name, args) => {
+          toolCalls.push({ toolId: name, args, result: {} })
+          send({ type: 'tool', name, args })
+        },
+      })
+    }
+
     emitLog({
       level: 'info',
       agentId: 'greg',

@@ -43,7 +43,7 @@ describe('F-018: Settings page', () => {
   it('renders tabs including Permissions and Telemetry', () => {
     render(<SettingsPage />)
     expect(screen.getByText('Permissions')).toBeDefined()
-    expect(screen.getByText('Telemetry')).toBeDefined()
+    expect(screen.getByText('Privacy')).toBeDefined()
   })
 
   it('shows sudo toggle on Permissions tab', () => {
@@ -90,19 +90,19 @@ describe('F-018: Settings page', () => {
 
   it('renders telemetry toggle', () => {
     render(<SettingsPage />)
-    clickTab('Telemetry')
+    clickTab('Privacy')
     expect(screen.getByTestId('telemetry-toggle')).toBeDefined()
   })
 
   it('renders otel endpoint input field', () => {
     render(<SettingsPage />)
-    clickTab('Telemetry')
+    clickTab('Privacy')
     expect(screen.getByTestId('otel-endpoint')).toBeDefined()
   })
 
   it('telemetry disabled by default', () => {
     render(<SettingsPage />)
-    clickTab('Telemetry')
+    clickTab('Privacy')
     const btn = screen
       .getByTestId('telemetry-toggle')
       .querySelector('button[role="switch"]') as HTMLButtonElement

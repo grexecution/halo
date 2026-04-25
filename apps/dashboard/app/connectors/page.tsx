@@ -107,11 +107,11 @@ const SKILL_CATEGORY_ICONS: Record<SkillCategory, ReactNode> = {
 }
 
 const STATUS_BADGE: Record<string, string> = {
-  official: 'bg-blue-900/50 text-blue-300 border border-blue-700',
+  official: 'bg-primary/10 text-primary border border-blue-700',
   verified: 'bg-green-900/50 text-green-300 border border-green-700',
   beta: 'bg-yellow-900/50 text-yellow-300 border border-yellow-700',
   community: 'bg-purple-900/50 text-purple-300 border border-purple-700',
-  planned: 'bg-gray-800 text-gray-500 border border-gray-700',
+  planned: 'bg-muted text-muted-foreground border border-border',
 }
 
 const MODEL_PLUGINS = ALL_PLUGINS.filter((p) => p.category === 'ai')
@@ -182,7 +182,7 @@ function GenericModal({
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
         {fields.map((field) => (
           <div key={field.key}>
-            <label className="block text-sm text-gray-300 mb-1">
+            <label className="block text-sm text-foreground mb-1">
               {field.label}
               {field.required && <span className="text-red-400 ml-1">*</span>}
             </label>
@@ -202,7 +202,7 @@ function GenericModal({
               <textarea
                 rows={5}
                 placeholder={field.placeholder}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 resize-y"
+                className="w-full bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder-gray-600 focus:outline-none focus:border-primary resize-y"
                 value={values[field.key] ?? ''}
                 onChange={(e) => setValues((v) => ({ ...v, [field.key]: e.target.value }))}
               />
@@ -219,7 +219,7 @@ function GenericModal({
                 href={field.helpUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-blue-400 hover:underline mt-1 inline-block"
+                className="text-xs text-primary hover:underline mt-1 inline-block"
               >
                 How to get this →
               </a>
@@ -232,7 +232,7 @@ function GenericModal({
             href={footerLink.href}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-gray-500 hover:text-gray-300 transition-colors block"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors block"
           >
             {footerLink.label} →
           </a>
@@ -273,19 +273,19 @@ function ModelCard({
   const isLocal = provider.connectionType === 'credentials'
   return (
     <div
-      className={`bg-gray-900 border rounded-xl p-4 flex flex-col gap-3 transition-all ${connected ? 'border-green-700/60 shadow-sm shadow-green-900/20' : 'border-gray-800 hover:border-gray-700'}`}
+      className={`bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all ${connected ? 'border-green-700/60 shadow-sm shadow-green-900/20' : 'border-border hover:border-border'}`}
     >
       <div className="flex items-center gap-3">
         <div
-          className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${connected ? 'bg-green-900/40 border border-green-800' : 'bg-gray-800 border border-gray-700'}`}
+          className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${connected ? 'bg-green-900/40 border border-green-800' : 'bg-muted border border-border'}`}
         >
-          <div className="size-8 rounded-lg bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300">
+          <div className="size-8 rounded-lg bg-gray-700 flex items-center justify-center text-xs font-bold text-foreground">
             {provider.name.slice(0, 2).toUpperCase()}
           </div>
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-white text-sm">{provider.name}</span>
+            <span className="font-semibold text-foreground text-sm">{provider.name}</span>
             {connected && (
               <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-900/40 text-green-400 border border-green-800 shrink-0">
                 active
@@ -293,24 +293,24 @@ function ModelCard({
             )}
           </div>
           <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="text-xs text-gray-500">{isLocal ? 'Local' : 'API key'}</span>
-            <span className="text-gray-700">·</span>
+            <span className="text-xs text-muted-foreground">{isLocal ? 'Local' : 'API key'}</span>
+            <span className="text-muted-foreground/40">·</span>
             <span
-              className={`text-xs ${provider.status === 'official' ? 'text-blue-400' : 'text-purple-400'}`}
+              className={`text-xs ${provider.status === 'official' ? 'text-primary' : 'text-purple-400'}`}
             >
               {provider.status}
             </span>
           </div>
         </div>
       </div>
-      <p className="text-gray-500 text-xs leading-relaxed">{provider.description}</p>
+      <p className="text-muted-foreground text-xs leading-relaxed">{provider.description}</p>
       <div className="flex gap-2 mt-auto">
         {provider.docsUrl && (
           <a
             href={provider.docsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
+            className="px-2.5 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-gray-600 transition-colors"
           >
             Docs
           </a>
@@ -325,7 +325,7 @@ function ModelCard({
         ) : (
           <button
             onClick={() => onConnect(provider)}
-            className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors font-medium"
+            className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-foreground transition-colors font-medium"
           >
             {isLocal ? 'Configure' : 'Add key'}
           </button>
@@ -345,18 +345,18 @@ function ModelsTab({ connected, onConnect, onDisconnect }: ModelsTabProps) {
   const customPlugin = MODEL_PLUGINS.find((p) => p.id === 'custom_openai_compatible')
   return (
     <div className="flex-1 overflow-auto">
-      <div className="sticky top-0 bg-gray-950/90 backdrop-blur border-b border-gray-800 px-6 py-4 z-10">
+      <div className="sticky top-0 bg-sidebar-bg/90 backdrop-blur border-b border-border px-6 py-4 z-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-white">AI Models</h1>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <h1 className="text-xl font-bold text-foreground">AI Models</h1>
+            <p className="text-sm text-muted-foreground mt-0.5">
               {connected.size} provider{connected.size !== 1 ? 's' : ''} configured
             </p>
           </div>
           {customPlugin && (
             <button
               onClick={() => onConnect(customPlugin)}
-              className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 hover:border-gray-600 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg bg-muted hover:bg-muted/80 text-foreground border border-border hover:border-gray-600 transition-colors"
             >
               <span className="text-lg leading-none">+</span>Custom server
             </button>
@@ -365,7 +365,7 @@ function ModelsTab({ connected, onConnect, onDisconnect }: ModelsTabProps) {
       </div>
       <div className="px-6 py-5 space-y-8">
         <section>
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
             Cloud Providers
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -382,7 +382,7 @@ function ModelsTab({ connected, onConnect, onDisconnect }: ModelsTabProps) {
         </section>
         {local.length > 0 && (
           <section>
-            <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
+            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
               Local / Self-Hosted
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -398,10 +398,10 @@ function ModelsTab({ connected, onConnect, onDisconnect }: ModelsTabProps) {
             </div>
           </section>
         )}
-        <section className="border border-dashed border-gray-700 rounded-xl p-5 flex items-center justify-between gap-4">
+        <section className="border border-dashed border-border rounded-xl p-5 flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-gray-300">Need a provider not listed?</p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-sm font-medium text-foreground">Need a provider not listed?</p>
+            <p className="text-xs text-muted-foreground mt-1">
               Add any OpenAI-compatible server — LM Studio, vLLM, llama.cpp, Jan, or custom
               endpoint.
             </p>
@@ -409,7 +409,7 @@ function ModelsTab({ connected, onConnect, onDisconnect }: ModelsTabProps) {
           {customPlugin && (
             <button
               onClick={() => onConnect(customPlugin)}
-              className="shrink-0 px-4 py-2 text-sm rounded-lg bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 transition-colors"
+              className="shrink-0 px-4 py-2 text-sm rounded-lg bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors"
             >
               Add custom
             </button>
@@ -463,19 +463,21 @@ function PluginCard({
   const isPlanned = plugin.status === 'planned'
   return (
     <div
-      className={`bg-gray-900 border rounded-xl p-4 flex flex-col gap-3 transition-all ${connected ? 'border-green-700/60 shadow-sm shadow-green-900/20' : 'border-gray-800 hover:border-gray-700'} ${isPlanned ? 'opacity-50' : ''}`}
+      className={`bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all ${connected ? 'border-green-700/60 shadow-sm shadow-green-900/20' : 'border-border hover:border-border'} ${isPlanned ? 'opacity-50' : ''}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-white text-sm truncate">{plugin.name}</span>
+            <span className="font-medium text-foreground text-sm truncate">{plugin.name}</span>
             {connected && (
               <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-green-900/40 text-green-400 border border-green-800">
                 ✓
               </span>
             )}
           </div>
-          <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{plugin.description}</p>
+          <p className="text-muted-foreground text-xs leading-relaxed line-clamp-2">
+            {plugin.description}
+          </p>
         </div>
         <span
           className={`shrink-0 text-xs px-1.5 py-0.5 rounded-full font-medium ${STATUS_BADGE[plugin.status]}`}
@@ -488,7 +490,7 @@ function PluginCard({
           href={plugin.docsUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs text-blue-400 hover:underline"
+          className="text-xs text-primary hover:underline"
         >
           Docs →
         </a>
@@ -505,7 +507,7 @@ function PluginCard({
           ) : (
             <button
               onClick={() => onConnect(plugin)}
-              className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors font-medium"
+              className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-foreground transition-colors font-medium"
             >
               Connect
             </button>
@@ -529,22 +531,22 @@ function CustomPluginCard({
 }) {
   return (
     <div
-      className={`bg-gray-900 border rounded-xl p-4 flex flex-col gap-3 transition-all ${connected ? 'border-green-700/60' : 'border-gray-700 border-dashed hover:border-gray-600'}`}
+      className={`bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all ${connected ? 'border-green-700/60' : 'border-border border-dashed hover:border-gray-600'}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-white text-sm truncate">{plugin.name}</span>
+            <span className="font-medium text-foreground text-sm truncate">{plugin.name}</span>
             {connected && (
               <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-green-900/40 text-green-400 border border-green-800">
                 ✓
               </span>
             )}
-            <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">
+            <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">
               custom
             </span>
           </div>
-          <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">
+          <p className="text-muted-foreground text-xs leading-relaxed line-clamp-2">
             {plugin.description || 'No description'}
           </p>
         </div>
@@ -554,13 +556,13 @@ function CustomPluginCard({
           href={plugin.docs_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs text-blue-400 hover:underline"
+          className="text-xs text-primary hover:underline"
         >
           Docs →
         </a>
       )}
       {plugin.usage_note && (
-        <p className="text-xs text-gray-600 italic line-clamp-2">{plugin.usage_note}</p>
+        <p className="text-xs text-muted-foreground/60 italic line-clamp-2">{plugin.usage_note}</p>
       )}
       <div className="flex gap-2">
         {connected ? (
@@ -573,14 +575,14 @@ function CustomPluginCard({
         ) : (
           <button
             onClick={() => onConnect(plugin)}
-            className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors font-medium"
+            className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-foreground transition-colors font-medium"
           >
             Connect
           </button>
         )}
         <button
           onClick={() => onDelete(plugin.id)}
-          className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-500 hover:text-red-400 hover:border-red-800 transition-colors"
+          className="px-2.5 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-red-400 hover:border-red-800 transition-colors"
         >
           Delete
         </button>
@@ -623,30 +625,34 @@ function PluginsTab({
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      <aside className="w-48 shrink-0 border-r border-gray-800 bg-gray-950 overflow-y-auto">
-        <div className="p-3 border-b border-gray-800">
-          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Categories</p>
+      <aside className="w-48 shrink-0 border-r border-border bg-sidebar-bg overflow-y-auto">
+        <div className="p-3 border-b border-border">
+          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
+            Categories
+          </p>
         </div>
         <ul className="py-2">
           <li>
             <button
               onClick={() => setActiveCategory('all')}
-              className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === 'all' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}`}
+              className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === 'all' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
             >
               <Plug size={14} />
               <span>All plugins</span>
-              <span className="ml-auto text-xs text-gray-600">{OTHER_PLUGINS.length}</span>
+              <span className="ml-auto text-xs text-muted-foreground/60">
+                {OTHER_PLUGINS.length}
+              </span>
             </button>
           </li>
           {categories.map((cat) => (
             <li key={cat}>
               <button
                 onClick={() => setActiveCategory(cat)}
-                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === cat ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}`}
+                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === cat ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
               >
                 <span>{CATEGORY_ICONS[cat]}</span>
                 <span className="truncate">{CATEGORY_LABELS[cat]}</span>
-                <span className="ml-auto text-xs text-gray-600">
+                <span className="ml-auto text-xs text-muted-foreground/60">
                   {categoryMap.get(cat)?.length ?? 0}
                 </span>
               </button>
@@ -655,11 +661,11 @@ function PluginsTab({
         </ul>
       </aside>
       <div className="flex-1 overflow-auto">
-        <div className="sticky top-0 bg-gray-950/90 backdrop-blur border-b border-gray-800 px-6 py-4 z-10">
+        <div className="sticky top-0 bg-sidebar-bg/90 backdrop-blur border-b border-border px-6 py-4 z-10">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="text-xl font-bold text-white">Plugins</h1>
-              <p className="text-sm text-gray-500 mt-0.5">
+              <h1 className="text-xl font-bold text-foreground">Plugins</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
                 {connectedCount} of {OTHER_PLUGINS.filter((p) => p.status !== 'planned').length}{' '}
                 connected
               </p>
@@ -670,11 +676,11 @@ function PluginsTab({
                 placeholder="Search plugins…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 w-56"
+                className="bg-muted border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder-gray-600 focus:outline-none focus:border-primary w-56"
               />
               <button
                 onClick={onCreateCustomPlugin}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 hover:border-gray-600 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-muted hover:bg-muted/80 text-foreground border border-border hover:border-gray-600 transition-colors"
               >
                 <span>+</span> Custom
               </button>
@@ -684,9 +690,9 @@ function PluginsTab({
         <div className="px-6 py-5 space-y-8">
           {customPlugins.length > 0 && (
             <section>
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Wrench size={14} /> Custom Plugins{' '}
-                <span className="text-gray-700 font-normal normal-case tracking-normal">
+                <span className="text-muted-foreground/40 font-normal normal-case tracking-normal">
                   ({customPlugins.length})
                 </span>
               </h2>
@@ -704,14 +710,14 @@ function PluginsTab({
             </section>
           )}
           {filtered.length === 0 && (
-            <p className="text-gray-500 text-sm">No plugins match your search.</p>
+            <p className="text-muted-foreground text-sm">No plugins match your search.</p>
           )}
           {Array.from(grouped.entries()).map(([cat, plugins]) => (
             <section key={cat}>
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <span>{CATEGORY_ICONS[cat]}</span>
                 {CATEGORY_LABELS[cat]}{' '}
-                <span className="text-gray-700 font-normal normal-case tracking-normal">
+                <span className="text-muted-foreground/40 font-normal normal-case tracking-normal">
                   ({plugins.length})
                 </span>
               </h2>
@@ -796,12 +802,12 @@ function McpCard({
   const hasEnv = (server.env ?? []).length > 0
   return (
     <div
-      className={`bg-gray-900 border rounded-xl p-4 flex flex-col gap-3 transition-all ${installed ? 'border-green-700/60 shadow-sm shadow-green-900/20' : 'border-gray-800 hover:border-gray-700'}`}
+      className={`bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all ${installed ? 'border-green-700/60 shadow-sm shadow-green-900/20' : 'border-border hover:border-border'}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="font-semibold text-white text-sm">{server.name}</span>
+            <span className="font-semibold text-foreground text-sm">{server.name}</span>
             {installed && (
               <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-900/40 text-green-400 border border-green-800">
                 installed
@@ -813,7 +819,7 @@ function McpCard({
               {server.status}
             </span>
           </div>
-          <p className="text-gray-500 text-xs leading-relaxed">{server.description}</p>
+          <p className="text-muted-foreground text-xs leading-relaxed">{server.description}</p>
         </div>
       </div>
       {server.tools.length > 0 && (
@@ -821,13 +827,13 @@ function McpCard({
           {server.tools.slice(0, 4).map((t) => (
             <span
               key={t}
-              className="text-xs px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 font-mono"
+              className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground font-mono"
             >
               {t}
             </span>
           ))}
           {server.tools.length > 4 && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-800 text-gray-500">
+            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
               +{server.tools.length - 4}
             </span>
           )}
@@ -839,7 +845,7 @@ function McpCard({
             href={server.docsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
+            className="px-2.5 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-gray-600 transition-colors"
           >
             Docs
           </a>
@@ -849,7 +855,7 @@ function McpCard({
             href={server.githubUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-2.5 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 transition-colors"
+            className="px-2.5 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-gray-600 transition-colors"
           >
             GitHub
           </a>
@@ -864,7 +870,7 @@ function McpCard({
         ) : (
           <button
             onClick={() => onInstall(server)}
-            className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors font-medium"
+            className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-foreground transition-colors font-medium"
           >
             {hasEnv ? 'Configure & Install' : 'Install'}
           </button>
@@ -953,30 +959,32 @@ function McpsTab({ installed, onInstall, onUninstall }: McpsTabProps) {
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      <aside className="w-48 shrink-0 border-r border-gray-800 bg-gray-950 overflow-y-auto">
-        <div className="p-3 border-b border-gray-800">
-          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Categories</p>
+      <aside className="w-48 shrink-0 border-r border-border bg-sidebar-bg overflow-y-auto">
+        <div className="p-3 border-b border-border">
+          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
+            Categories
+          </p>
         </div>
         <ul className="py-2">
           <li>
             <button
               onClick={() => setActiveCategory('all')}
-              className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === 'all' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}`}
+              className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === 'all' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
             >
               <Monitor size={14} />
               <span>All servers</span>
-              <span className="ml-auto text-xs text-gray-600">{MCP_SERVERS.length}</span>
+              <span className="ml-auto text-xs text-muted-foreground/60">{MCP_SERVERS.length}</span>
             </button>
           </li>
           {categories.map((cat) => (
             <li key={cat}>
               <button
                 onClick={() => setActiveCategory(cat)}
-                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === cat ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}`}
+                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === cat ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
               >
                 <span>{MCP_CATEGORY_ICONS[cat]}</span>
                 <span className="truncate">{MCP_CATEGORY_LABELS[cat]}</span>
-                <span className="ml-auto text-xs text-gray-600">
+                <span className="ml-auto text-xs text-muted-foreground/60">
                   {categoryMap.get(cat)?.length ?? 0}
                 </span>
               </button>
@@ -985,11 +993,11 @@ function McpsTab({ installed, onInstall, onUninstall }: McpsTabProps) {
         </ul>
       </aside>
       <div className="flex-1 overflow-auto">
-        <div className="sticky top-0 bg-gray-950/90 backdrop-blur border-b border-gray-800 px-6 py-4 z-10">
+        <div className="sticky top-0 bg-sidebar-bg/90 backdrop-blur border-b border-border px-6 py-4 z-10">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h1 className="text-xl font-bold text-white">MCP Servers</h1>
-              <p className="text-sm text-gray-500 mt-0.5">
+              <h1 className="text-xl font-bold text-foreground">MCP Servers</h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
                 {installed.length} installed · give agents new tools
               </p>
             </div>
@@ -1010,10 +1018,10 @@ function McpsTab({ installed, onInstall, onUninstall }: McpsTabProps) {
         <div className="px-6 py-5 space-y-8">
           {Array.from(grouped.entries()).map(([cat, servers]) => (
             <section key={cat}>
-              <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <span>{MCP_CATEGORY_ICONS[cat]}</span>
                 {MCP_CATEGORY_LABELS[cat]}{' '}
-                <span className="text-gray-700 font-normal normal-case tracking-normal">
+                <span className="text-muted-foreground/40 font-normal normal-case tracking-normal">
                   ({servers.length})
                 </span>
               </h2>
@@ -1030,16 +1038,16 @@ function McpsTab({ installed, onInstall, onUninstall }: McpsTabProps) {
               </div>
             </section>
           ))}
-          <section className="border border-dashed border-gray-700 rounded-xl p-5 flex items-center justify-between gap-4">
+          <section className="border border-dashed border-border rounded-xl p-5 flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-medium text-gray-300">Don't see the MCP you need?</p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-sm font-medium text-foreground">Don't see the MCP you need?</p>
+              <p className="text-xs text-muted-foreground mt-1">
                 Add any MCP server by npm package name or remote SSE/HTTP URL. Browse{' '}
                 <a
                   href="https://www.pulsemcp.com/servers"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline"
+                  className="text-primary hover:underline"
                 >
                   PulseMCP
                 </a>{' '}
@@ -1048,7 +1056,7 @@ function McpsTab({ installed, onInstall, onUninstall }: McpsTabProps) {
                   href="https://github.com/wong2/awesome-mcp-servers"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline"
+                  className="text-primary hover:underline"
                 >
                   Awesome MCP Servers
                 </a>
@@ -1057,7 +1065,7 @@ function McpsTab({ installed, onInstall, onUninstall }: McpsTabProps) {
             </div>
             <button
               onClick={() => setShowCustom(true)}
-              className="shrink-0 px-4 py-2 text-sm rounded-lg bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 transition-colors"
+              className="shrink-0 px-4 py-2 text-sm rounded-lg bg-muted hover:bg-muted/80 text-foreground border border-border transition-colors"
             >
               Add custom
             </button>
@@ -1213,33 +1221,33 @@ function SkillDetailPanel({
   return (
     <div className="flex flex-col h-full overflow-y-auto">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 p-5 border-b border-gray-800">
+      <div className="flex items-start justify-between gap-4 p-5 border-b border-border">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-gray-800 text-gray-400 shrink-0">
+          <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted text-muted-foreground shrink-0">
             {SKILL_CATEGORY_ICONS[category] ?? <Zap size={16} />}
           </span>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-base font-semibold text-white truncate">{name}</h2>
+              <h2 className="text-base font-semibold text-foreground truncate">{name}</h2>
               {!isUser && (
-                <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-blue-900/40 text-blue-300 border border-blue-800">
+                <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-blue-900/40 text-primary border border-blue-800">
                   built-in
                 </span>
               )}
               {isUser && (
                 <span
-                  className={`shrink-0 text-xs px-1.5 py-0.5 rounded-full border ${enabled ? 'bg-green-900/40 text-green-300 border-green-800' : 'bg-gray-800 text-gray-500 border-gray-700'}`}
+                  className={`shrink-0 text-xs px-1.5 py-0.5 rounded-full border ${enabled ? 'bg-green-900/40 text-green-300 border-green-800' : 'bg-muted text-muted-foreground border-border'}`}
                 >
                   {enabled ? 'enabled' : 'disabled'}
                 </span>
               )}
             </div>
-            <p className="text-gray-500 text-sm mt-0.5">{description}</p>
+            <p className="text-muted-foreground text-sm mt-0.5">{description}</p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="shrink-0 text-gray-600 hover:text-gray-300 leading-none"
+          className="shrink-0 text-muted-foreground/60 hover:text-foreground leading-none"
           aria-label="Close"
         >
           <X size={16} />
@@ -1252,14 +1260,14 @@ function SkillDetailPanel({
           <div className="flex gap-2">
             <button
               onClick={() => onToggle && onToggle(item.skill.name, !enabled)}
-              className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${enabled ? 'border-green-800 bg-green-900/30 text-green-300 hover:bg-green-900/50' : 'border-gray-700 bg-gray-800 text-gray-400 hover:text-white'}`}
+              className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${enabled ? 'border-green-800 bg-green-900/30 text-green-300 hover:bg-green-900/50' : 'border-border bg-muted text-muted-foreground hover:text-foreground'}`}
             >
               {enabled ? 'Disable' : 'Enable'}
             </button>
             {onDelete && (
               <button
                 onClick={() => setConfirmDelete(true)}
-                className="px-3 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-500 hover:text-red-400 hover:border-red-800 transition-colors"
+                className="px-3 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-red-400 hover:border-red-800 transition-colors"
               >
                 Delete
               </button>
@@ -1269,7 +1277,7 @@ function SkillDetailPanel({
                 href={docsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="ml-auto px-3 py-1.5 text-xs rounded-lg border border-gray-700 text-gray-400 hover:text-white transition-colors"
+                className="ml-auto px-3 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
               >
                 Docs ↗
               </a>
@@ -1279,8 +1287,8 @@ function SkillDetailPanel({
 
         {/* Credentials section (user skills only) */}
         {isUser && requiresEnv.length > 0 && (
-          <div className="rounded-xl border border-gray-800 bg-gray-900/60 p-4">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          <div className="rounded-xl border border-border bg-card/60 p-4">
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
               Credentials
             </h3>
             <div className="flex flex-col gap-2">
@@ -1290,8 +1298,10 @@ function SkillDetailPanel({
                     <span
                       className={`h-2 w-2 rounded-full shrink-0 ${c.set ? 'bg-green-500' : 'bg-amber-500'}`}
                     />
-                    <code className="text-sm text-gray-300">{c.key}</code>
-                    <span className="text-xs text-gray-600">{c.set ? 'Connected' : 'Not set'}</span>
+                    <code className="text-sm text-foreground">{c.key}</code>
+                    <span className="text-xs text-muted-foreground/60">
+                      {c.set ? 'Connected' : 'Not set'}
+                    </span>
                   </div>
                   {!c.set && (
                     <button
@@ -1300,7 +1310,7 @@ function SkillDetailPanel({
                         setCredValue('')
                         setCredError(null)
                       }}
-                      className="px-2.5 py-1 text-xs rounded-lg border border-blue-800 bg-blue-900/30 text-blue-300 hover:bg-blue-900/50 transition-colors"
+                      className="px-2.5 py-1 text-xs rounded-lg border border-blue-800 bg-blue-900/30 text-primary hover:bg-primary/10 transition-colors"
                     >
                       Connect
                     </button>
@@ -1309,9 +1319,9 @@ function SkillDetailPanel({
               ))}
             </div>
             {connectingKey && (
-              <div className="mt-3 rounded-lg border border-dashed border-gray-700 p-3">
-                <p className="mb-2 text-xs text-gray-500">
-                  Value for <code className="font-mono text-gray-300">{connectingKey}</code>
+              <div className="mt-3 rounded-lg border border-dashed border-border p-3">
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Value for <code className="font-mono text-foreground">{connectingKey}</code>
                 </p>
                 <div className="flex gap-2">
                   <Input
@@ -1350,20 +1360,20 @@ function SkillDetailPanel({
         {/* Example trigger */}
         {exampleTrigger && (
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
               Example
             </p>
-            <p className="text-sm text-gray-400 italic">&ldquo;{exampleTrigger}&rdquo;</p>
+            <p className="text-sm text-muted-foreground italic">&ldquo;{exampleTrigger}&rdquo;</p>
           </div>
         )}
 
         {/* Prompt body */}
         {prompt && (
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               {isUser ? 'Instructions / Prompt' : 'System Prompt'}
             </p>
-            <pre className="whitespace-pre-wrap rounded-xl bg-gray-900 border border-gray-800 p-4 font-mono text-xs text-gray-400 leading-relaxed overflow-auto max-h-80">
+            <pre className="whitespace-pre-wrap rounded-xl bg-card border border-border p-4 font-mono text-xs text-muted-foreground leading-relaxed overflow-auto max-h-80">
               {prompt}
             </pre>
           </div>
@@ -1375,7 +1385,7 @@ function SkillDetailPanel({
             href={docsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-blue-400 hover:text-blue-300 underline"
+            className="text-xs text-primary hover:text-primary underline"
           >
             Documentation ↗
           </a>
@@ -1509,9 +1519,9 @@ function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill, onRefresh }: Skil
     return (
       <button
         onClick={() => setSelected(item)}
-        className={`w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-colors ${isSelected ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}`}
+        className={`w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-colors ${isSelected ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
       >
-        <span className="flex items-center shrink-0 text-gray-500">
+        <span className="flex items-center shrink-0 text-muted-foreground">
           {SKILL_CATEGORY_ICONS[category] ?? <Zap size={14} />}
         </span>
         <span className="flex-1 text-sm truncate">{s.name}</span>
@@ -1519,8 +1529,12 @@ function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill, onRefresh }: Skil
           {hasMissingCreds && (
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500" title="Missing credentials" />
           )}
-          {item.kind === 'user' && !enabled && <span className="text-xs text-gray-600">off</span>}
-          {item.kind === 'builtin' && <span className="text-xs text-gray-700">built-in</span>}
+          {item.kind === 'user' && !enabled && (
+            <span className="text-xs text-muted-foreground/60">off</span>
+          )}
+          {item.kind === 'builtin' && (
+            <span className="text-xs text-muted-foreground/40">built-in</span>
+          )}
         </div>
       </button>
     )
@@ -1534,19 +1548,21 @@ function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill, onRefresh }: Skil
   return (
     <div className="flex flex-1 overflow-hidden">
       {/* Left: category sidebar */}
-      <aside className="w-44 shrink-0 border-r border-gray-800 bg-gray-950 overflow-y-auto">
-        <div className="p-3 border-b border-gray-800">
-          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">Categories</p>
+      <aside className="w-44 shrink-0 border-r border-border bg-sidebar-bg overflow-y-auto">
+        <div className="p-3 border-b border-border">
+          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">
+            Categories
+          </p>
         </div>
         <ul className="py-2">
           <li>
             <button
               onClick={() => setActiveCategory('all')}
-              className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === 'all' ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}`}
+              className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === 'all' ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
             >
               <Zap size={14} />
               <span>All skills</span>
-              <span className="ml-auto text-xs text-gray-600">
+              <span className="ml-auto text-xs text-muted-foreground/60">
                 {DEFAULT_SKILLS.length + userSkills.length}
               </span>
             </button>
@@ -1555,11 +1571,11 @@ function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill, onRefresh }: Skil
             <li key={cat}>
               <button
                 onClick={() => setActiveCategory(cat)}
-                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === cat ? 'bg-gray-800 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/60'}`}
+                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === cat ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
               >
                 <span>{SKILL_CATEGORY_ICONS[cat]}</span>
                 <span className="truncate">{SKILL_CATEGORY_LABELS[cat]}</span>
-                <span className="ml-auto text-xs text-gray-600">
+                <span className="ml-auto text-xs text-muted-foreground/60">
                   {categoryMap.get(cat)?.length ?? 0}
                 </span>
               </button>
@@ -1569,14 +1585,14 @@ function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill, onRefresh }: Skil
       </aside>
 
       {/* Middle: skill list */}
-      <div className="w-64 shrink-0 border-r border-gray-800 flex flex-col overflow-hidden">
+      <div className="w-64 shrink-0 border-r border-border flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="sticky top-0 bg-gray-950/90 backdrop-blur border-b border-gray-800 px-3 py-3 z-10">
+        <div className="sticky top-0 bg-sidebar-bg/90 backdrop-blur border-b border-border px-3 py-3 z-10">
           <div className="flex items-center gap-2 mb-2">
-            <h1 className="text-sm font-bold text-white flex-1">Skills</h1>
+            <h1 className="text-sm font-bold text-foreground flex-1">Skills</h1>
             <button
               onClick={() => setShowCreate(true)}
-              className="flex items-center gap-1 px-2 py-1 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-foreground transition-colors"
             >
               New skill
             </button>
@@ -1592,7 +1608,7 @@ function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill, onRefresh }: Skil
         <div className="flex-1 overflow-y-auto px-2 py-2">
           {filteredUser.length > 0 && (
             <div className="mb-3">
-              <p className="px-3 py-1 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <p className="px-3 py-1 text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">
                 Your skills ({filteredUser.length})
               </p>
               {filteredUser.map((s) => (
@@ -1602,7 +1618,7 @@ function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill, onRefresh }: Skil
           )}
           {filteredBuiltin.length > 0 && (
             <div>
-              <p className="px-3 py-1 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <p className="px-3 py-1 text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider">
                 Built-in ({filteredBuiltin.length})
               </p>
               {filteredBuiltin.map((s) => (
@@ -1611,13 +1627,15 @@ function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill, onRefresh }: Skil
             </div>
           )}
           {allItems.length === 0 && (
-            <p className="px-3 py-4 text-xs text-gray-600">No skills match your search.</p>
+            <p className="px-3 py-4 text-xs text-muted-foreground/60">
+              No skills match your search.
+            </p>
           )}
         </div>
       </div>
 
       {/* Right: detail panel */}
-      <div className="flex-1 overflow-hidden bg-gray-950">
+      <div className="flex-1 overflow-hidden bg-sidebar-bg">
         {selected ? (
           <SkillDetailPanel
             item={selected}
@@ -1634,7 +1652,7 @@ function SkillsTab({ userSkills, onCreateSkill, onDeleteSkill, onRefresh }: Skil
             onRefresh={onRefresh}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-gray-600">
+          <div className="flex h-full items-center justify-center text-sm text-muted-foreground/60">
             Select a skill to view details
           </div>
         )}
@@ -1722,10 +1740,10 @@ export default function ConnectorsPage() {
       const mcpsData = (await mcpsRes.json()) as { mcps: InstalledMcp[] }
       const skillsData = (await skillsRes.json()) as { skills: UserSkillDef[] }
       const customPluginsData = (await customPluginsRes.json()) as { plugins: CustomPluginDef[] }
-      setConnected(new Set(pluginsData.connected))
-      setInstalledMcps(mcpsData.mcps)
-      setUserSkills(skillsData.skills)
-      setCustomPlugins(customPluginsData.plugins)
+      setConnected(new Set(pluginsData.connected ?? []))
+      setInstalledMcps(mcpsData.mcps ?? [])
+      setUserSkills(skillsData.skills ?? [])
+      setCustomPlugins(customPluginsData.plugins ?? [])
     } catch {
       /* ignore */
     } finally {
@@ -1879,10 +1897,10 @@ export default function ConnectorsPage() {
     return (
       <div className="flex flex-col h-full">
         {/* Tab bar skeleton */}
-        <div className="flex items-end gap-0 border-b border-gray-800 px-6 bg-gray-950 shrink-0 py-3">
+        <div className="flex items-end gap-0 border-b border-border px-6 bg-sidebar-bg shrink-0 py-3">
           {['Models', 'Plugins', 'MCPs', 'Skills'].map((t) => (
             <div key={t} className="px-5 py-1">
-              <div className="h-3 w-14 rounded bg-gray-800/60 animate-pulse" />
+              <div className="h-3 w-14 rounded bg-muted/50 animate-pulse" />
             </div>
           ))}
         </div>
@@ -1890,20 +1908,17 @@ export default function ConnectorsPage() {
         <div className="flex-1 overflow-auto p-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: 9 }).map((_, i) => (
-              <div
-                key={i}
-                className="rounded-xl border border-gray-800 p-4 space-y-3 animate-pulse"
-              >
+              <div key={i} className="rounded-xl border border-border p-4 space-y-3 animate-pulse">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-gray-800/60" />
+                  <div className="h-10 w-10 rounded-lg bg-muted/50" />
                   <div className="space-y-1 flex-1">
-                    <div className="h-4 w-1/2 rounded bg-gray-800/60" />
+                    <div className="h-4 w-1/2 rounded bg-muted/50" />
                     <div className="h-3 w-1/3 rounded bg-gray-700/40" />
                   </div>
                 </div>
-                <div className="h-3 w-full rounded bg-gray-800/60" />
+                <div className="h-3 w-full rounded bg-muted/50" />
                 <div className="h-3 w-3/4 rounded bg-gray-700/40" />
-                <div className="h-8 w-24 rounded-lg bg-gray-800/60 mt-2" />
+                <div className="h-8 w-24 rounded-lg bg-muted/50 mt-2" />
               </div>
             ))}
           </div>
@@ -1941,16 +1956,16 @@ export default function ConnectorsPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Tab bar */}
-      <div className="flex items-end gap-0 border-b border-gray-800 px-6 bg-gray-950 shrink-0">
+      <div className="flex items-end gap-0 border-b border-border px-6 bg-sidebar-bg shrink-0">
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${tab === t.id ? 'border-blue-500 text-white' : 'border-transparent text-gray-400 hover:text-white'}`}
+            className={`px-5 py-3 text-sm font-medium border-b-2 transition-colors ${tab === t.id ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
           >
             {t.label}
             {t.badge !== undefined && (
-              <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-blue-900/50 text-blue-300">
+              <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
                 {t.badge}
               </span>
             )}

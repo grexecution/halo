@@ -97,40 +97,40 @@ describe('F-015: Cron & Goals page', () => {
 
   it('renders cron jobs section on tab click', async () => {
     render(<CronGoalsPage />)
-    fireEvent.click(screen.getByText('Cron Jobs'))
+    fireEvent.click(screen.getByText('Schedules'))
     await waitFor(() => expect(screen.getByTestId('cron-section')).toBeDefined(), { timeout: 3000 })
   })
 
   it('shows cron job names', async () => {
     render(<CronGoalsPage />)
-    fireEvent.click(screen.getByText('Cron Jobs'))
+    fireEvent.click(screen.getByText('Schedules'))
     await waitFor(() => screen.getByText('daily-summary'), { timeout: 3000 })
     expect(screen.getByText('weekly-report')).toBeDefined()
   })
 
   it('shows cron schedule expression', async () => {
     render(<CronGoalsPage />)
-    fireEvent.click(screen.getByText('Cron Jobs'))
+    fireEvent.click(screen.getByText('Schedules'))
     await waitFor(() => screen.getByText('0 9 * * *'), { timeout: 3000 })
   })
 
   it('active job toggle reflects true state', async () => {
     render(<CronGoalsPage />)
-    fireEvent.click(screen.getByText('Cron Jobs'))
+    fireEvent.click(screen.getByText('Schedules'))
     await waitFor(() => screen.getByTestId('toggle-j1'), { timeout: 3000 })
     expect(screen.getByTestId('toggle-j1').getAttribute('aria-checked')).toBe('true')
   })
 
   it('inactive job toggle reflects false state', async () => {
     render(<CronGoalsPage />)
-    fireEvent.click(screen.getByText('Cron Jobs'))
+    fireEvent.click(screen.getByText('Schedules'))
     await waitFor(() => screen.getByTestId('toggle-j2'), { timeout: 3000 })
     expect(screen.getByTestId('toggle-j2').getAttribute('aria-checked')).toBe('false')
   })
 
   it('toggling active job to inactive updates aria-checked', async () => {
     render(<CronGoalsPage />)
-    fireEvent.click(screen.getByText('Cron Jobs'))
+    fireEvent.click(screen.getByText('Schedules'))
     await waitFor(() => screen.getByTestId('toggle-j1'), { timeout: 3000 })
     const toggle = screen.getByTestId('toggle-j1')
     fireEvent.click(toggle)

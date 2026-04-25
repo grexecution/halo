@@ -37,7 +37,7 @@ const AUTOMATE_NAV = [
   { href: '/tasks', label: 'Tasks', icon: CheckSquare },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays },
   { href: '/approvals', label: 'Approvals', icon: ShieldCheck, badge: true },
-  { href: '/runs', label: 'Runs', icon: Activity },
+  { href: '/runs', label: 'Activity', icon: Activity },
 ]
 
 const CONNECT_NAV = [
@@ -48,7 +48,7 @@ const CONNECT_NAV = [
 
 const SYSTEM_NAV = [
   { href: '/logs', label: 'Logs', icon: Terminal },
-  { href: '/cost', label: 'Cost', icon: BarChart3 },
+  { href: '/cost', label: 'Usage & Cost', icon: BarChart3 },
   { href: '/settings', label: 'Settings', icon: SlidersHorizontal },
 ]
 
@@ -173,7 +173,7 @@ export function Sidebar() {
       {/* Nav sections */}
       <div className="flex-1 overflow-y-auto py-3 px-2 space-y-3">
         <NavSection
-          label="Workspace"
+          label="Work"
           items={WORKSPACE_NAV}
           pathname={pathname}
           pendingApprovals={pendingApprovals}
@@ -185,7 +185,7 @@ export function Sidebar() {
           pendingApprovals={pendingApprovals}
         />
         <NavSection
-          label="Connect"
+          label="Integrations"
           items={CONNECT_NAV}
           pathname={pathname}
           pendingApprovals={pendingApprovals}

@@ -253,7 +253,7 @@ function CronDialog({ open, initial, onClose, onSave }: CronDialogProps) {
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={!form.name.trim() || !form.schedule.trim()}>
-            {initial ? 'Save Changes' : 'Add Job'}
+            {initial ? 'Save Changes' : 'New Schedule'}
           </Button>
         </div>
       </div>
@@ -596,7 +596,7 @@ function CronJobsTab() {
   }
 
   async function handleDelete(job: CronJob) {
-    if (!window.confirm(`Delete cron job "${job.name}"?`)) return
+    if (!window.confirm(`Delete schedule "${job.name}"?`)) return
     const prev = jobs
     setJobs(jobs.filter((j) => j.id !== job.id))
     try {
@@ -623,10 +623,10 @@ function CronJobsTab() {
   return (
     <div data-testid="cron-section" className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-foreground">Cron Jobs</h1>
+        <h1 className="text-xl font-semibold text-foreground">Schedules</h1>
         <Button size="sm" onClick={openAdd}>
           <Plus size={14} />
-          Add Job
+          New Schedule
         </Button>
       </div>
 
@@ -643,12 +643,12 @@ function CronJobsTab() {
       ) : jobs.length === 0 ? (
         <EmptyState
           icon={<Clock size={36} />}
-          title="No cron jobs yet"
-          description="Schedule automated tasks to run on a recurring basis"
+          title="No schedules yet"
+          description="Set Halo to run automatically — daily summaries, weekly reports, and more"
           action={
             <Button size="sm" onClick={openAdd}>
               <Plus size={14} />
-              Add Job
+              New Schedule
             </Button>
           }
         />
@@ -747,7 +747,7 @@ export default function CronGoalsPage() {
       <Tabs defaultValue="goals">
         <TabsList>
           <TabsTrigger value="goals">Goals</TabsTrigger>
-          <TabsTrigger value="crons">Cron Jobs</TabsTrigger>
+          <TabsTrigger value="crons">Schedules</TabsTrigger>
         </TabsList>
         <TabsContent value="goals">
           <GoalsTab />

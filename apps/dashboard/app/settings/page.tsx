@@ -713,9 +713,9 @@ function TelemetryTab({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Telemetry</h2>
+          <h2 className="text-sm font-semibold text-foreground">Privacy & Analytics</h2>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Observability and tracing configuration.
+            Control what data Halo sends and where it goes. Nothing leaves your server by default.
           </p>
         </div>
         <SaveButton onSave={onSave} saved={saved} />
@@ -739,18 +739,17 @@ function TelemetryTab({
                 htmlFor="telemetry-toggle-sw"
                 className="text-sm text-foreground font-medium cursor-pointer"
               >
-                Enable OpenTelemetry
+                Send usage data to my monitoring tool
               </label>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Sends traces and metrics to an OpenTelemetry-compatible backend (e.g. Jaeger,
-                Grafana Tempo, Honeycomb). No data is sent to Anthropic or third parties — only to
-                the endpoint you configure below.
+                Forwards performance data to a tool like Grafana or Jaeger that you control. Nothing
+                is sent to Anthropic or any third party.
               </p>
             </div>
           </div>
 
           <div>
-            <Label htmlFor="otel-endpoint">OTel Endpoint URL</Label>
+            <Label htmlFor="otel-endpoint">Monitoring endpoint URL</Label>
             <Input
               id="otel-endpoint"
               data-testid="otel-endpoint"
@@ -1029,7 +1028,7 @@ function TunnelSection() {
             </>
           ) : (
             <p className="text-xs text-muted-foreground">
-              Tunnel not running — dashboard accessible at localhost:3000 only
+              Remote access is off — Halo is only accessible on this device
             </p>
           )}
         </div>
@@ -1052,9 +1051,9 @@ function TunnelSection() {
         <div className="flex items-start gap-3 p-4 bg-yellow-900/20 border border-yellow-800/40 rounded-xl">
           <AlertTriangle size={15} className="text-yellow-500 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-foreground mb-1">cloudflared not installed</p>
+            <p className="text-sm font-medium text-foreground mb-1">One-time setup needed</p>
             <p className="text-xs text-muted-foreground mb-2">
-              Install to expose the dashboard publicly.
+              Run this command in your terminal to enable remote access:
             </p>
             <div className="bg-card rounded-lg p-3 flex items-center gap-2">
               <Terminal size={12} className="text-muted-foreground/70 flex-shrink-0" />
@@ -1319,7 +1318,7 @@ function ExposeTab() {
         <div className="flex items-center gap-2">
           <Globe size={15} className="text-muted-foreground" />
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
-            Public tunnel
+            Access from anywhere
           </h2>
         </div>
         <Card>
@@ -1398,14 +1397,14 @@ function BuildHealthTab() {
       <div className="flex items-center gap-2">
         <Activity size={15} className="text-muted-foreground" />
         <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
-          Build Health
+          System Health
         </h2>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Regressions</CardTitle>
-          <CardDescription>Last 20 regression events from feature test history</CardDescription>
+          <CardTitle>Recent Issues</CardTitle>
+          <CardDescription>Any problems detected in the last 20 automated checks</CardDescription>
         </CardHeader>
         <CardContent>
           <div data-testid="regressions-section">
@@ -1435,8 +1434,8 @@ function BuildHealthTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Nightly Runs</CardTitle>
-          <CardDescription>Last 7 days of CI runs</CardDescription>
+          <CardTitle>Nightly Checks</CardTitle>
+          <CardDescription>Automated health checks run each night</CardDescription>
         </CardHeader>
         <CardContent>
           <div data-testid="nightly-section">
@@ -1477,12 +1476,12 @@ function BuildHealthTab() {
 
       <Card>
         <CardHeader>
-          <CardTitle>STUCK.md Files</CardTitle>
-          <CardDescription>Active blockers flagged by the agent</CardDescription>
+          <CardTitle>Blocked Tasks</CardTitle>
+          <CardDescription>Tasks Halo flagged as needing your attention</CardDescription>
         </CardHeader>
         <CardContent>
           <div data-testid="stuck-section">
-            <p className="text-xs text-muted-foreground/70">No STUCK.md files found</p>
+            <p className="text-xs text-muted-foreground/70">No blocked tasks — all good!</p>
           </div>
         </CardContent>
       </Card>
@@ -1511,15 +1510,8 @@ function AboutTab() {
           </div>
           <Separator />
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Runtime</span>
+            <span className="text-xs text-muted-foreground">Engine</span>
             <span className="text-xs text-foreground/80">Node.js</span>
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Platform</span>
-            <span className="text-xs text-foreground/80 font-mono">
-              {typeof navigator !== 'undefined' ? navigator.platform : 'unknown'}
-            </span>
           </div>
         </CardContent>
       </Card>
@@ -1757,7 +1749,7 @@ export default function SettingsPage() {
         <div className="mb-6">
           <h1 className="text-lg font-semibold text-foreground">Settings</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Configure open-greg agent behavior and integrations.
+            Customize how Halo behaves, what it can access, and how it connects to other tools.
           </p>
         </div>
 
@@ -1766,11 +1758,11 @@ export default function SettingsPage() {
             <TabsTrigger value="models">Models</TabsTrigger>
             <TabsTrigger value="messaging">Messaging</TabsTrigger>
             <TabsTrigger value="memory">Memory</TabsTrigger>
-            <TabsTrigger value="vision-voice">Vision and Voice</TabsTrigger>
+            <TabsTrigger value="vision-voice">Voice & Vision</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
-            <TabsTrigger value="telemetry">Telemetry</TabsTrigger>
-            <TabsTrigger value="expose">Expose</TabsTrigger>
-            <TabsTrigger value="build-health">Build Health</TabsTrigger>
+            <TabsTrigger value="telemetry">Privacy</TabsTrigger>
+            <TabsTrigger value="expose">Remote Access</TabsTrigger>
+            <TabsTrigger value="build-health">Health</TabsTrigger>
             <TabsTrigger value="updates">Updates</TabsTrigger>
             <TabsTrigger value="about">About</TabsTrigger>
           </TabsList>

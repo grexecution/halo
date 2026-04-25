@@ -411,7 +411,7 @@ function AgentCard({ agent, isPrimary, availableModels, onEdit, onDelete }: Agen
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-mono font-semibold text-primary">@{agent.handle}</span>
+              <span className="text-xs font-mono text-muted-foreground/60">@{agent.handle}</span>
               {isPrimary && <Badge variant="info">Primary</Badge>}
             </div>
             <p className="text-sm font-medium text-foreground mt-0.5">{agent.name}</p>
@@ -428,13 +428,13 @@ function AgentCard({ agent, isPrimary, availableModels, onEdit, onDelete }: Agen
             {agent.systemPrompt}
           </p>
         ) : (
-          <p className="text-xs text-muted-foreground/50 italic">No system prompt</p>
+          <p className="text-xs text-muted-foreground/50 italic">No instructions set</p>
         )}
 
         {agent.fallbackModels.length > 0 && (
           <div>
             <p className="text-[10px] text-muted-foreground/60 uppercase tracking-wide mb-1">
-              Fallbacks
+              Backup models
             </p>
             <div className="flex flex-wrap gap-1">
               {agent.fallbackModels.map((id, i) => {
@@ -455,11 +455,19 @@ function AgentCard({ agent, isPrimary, availableModels, onEdit, onDelete }: Agen
 
         {enabledTools.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {enabledTools.map((t) => (
-              <Badge key={t} variant="default" className="text-[10px]">
-                {t}
-              </Badge>
-            ))}
+            {enabledTools.map((t) => {
+              const TOOL_LABELS: Record<string, string> = {
+                shell: 'Terminal',
+                browser: 'Web Browser',
+                filesystem: 'Files',
+                gui: 'Desktop',
+              }
+              return (
+                <Badge key={t} variant="default" className="text-[10px]">
+                  {TOOL_LABELS[t] ?? t}
+                </Badge>
+              )
+            })}
           </div>
         )}
       </CardContent>

@@ -485,6 +485,7 @@ export default function AgentsPage() {
   const [availableModels, setAvailableModels] = useState<AvailableModel[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null)
+  const [deleteHandle, setDeleteHandle] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/agents')
@@ -569,9 +570,14 @@ export default function AgentsPage() {
   }
 
   async function handleDelete(handle: string) {
-    if (!window.confirm('Delete agent @' + handle + '?')) return
-    await fetch('/api/agents/' + handle, { method: 'DELETE' })
-    setAgents((prev) => prev.filter((a) => a.handle !== handle))
+    setDeleteHandle(handle)
+  }
+
+  async function confirmDelete() {
+    if (!deleteHandle) return
+    await fetch('/api/agents/' + deleteHandle, { method: 'DELETE' })
+    setAgents((prev) => prev.filter((a) => a.handle !== deleteHandle))
+    setDeleteHandle(null)
   }
 
   const existingHandles = agents.map((a) => a.handle)
@@ -634,6 +640,25 @@ export default function AgentsPage() {
         onClose={() => setDialogOpen(false)}
         onSave={handleSave}
       />
+
+      {deleteHandle && (
+        <Dialog
+          open
+          title="Delete agent"
+          description={`Delete @${deleteHandle}? This cannot be undone.`}
+          onClose={() => setDeleteHandle(null)}
+          className="max-w-sm"
+        >
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" className="flex-1" onClick={() => setDeleteHandle(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" className="flex-1" onClick={() => void confirmDelete()}>
+              Delete
+            </Button>
+          </div>
+        </Dialog>
+      )}
     </main>
   )
 }

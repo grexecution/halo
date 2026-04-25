@@ -660,7 +660,8 @@ export default function ChatPage() {
     fetch('/api/agents')
       .then((r) => r.json())
       .then((data: unknown) => {
-        const agentList = data as Agent[]
+        const d = data as { agents?: Agent[] } | Agent[]
+        const agentList = Array.isArray(d) ? d : ((d as { agents?: Agent[] }).agents ?? [])
         if (agentList.length > 0) {
           setAgents(agentList)
           setSelectedAgent(agentList[0]!.handle)

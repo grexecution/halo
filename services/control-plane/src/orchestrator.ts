@@ -52,38 +52,53 @@ export class AgentOrchestrator {
   async runTurn(opts: RunTurnOptions): Promise<TurnResult> {
     const { agent, message, history = [], onChunk, onToolCall, threadId, resourceId } = opts
 
+    // Detect small-context local models (Ollama) — skip heavy prompt injection to
+    // stay under the 4096 ctx limit. Cloud/plugin models get full context.
+    const m = agent.model ?? 'auto'
+    const isSmallCtx =
+      m !== 'auto' &&
+      !m.startsWith('plugin-') &&
+      !m.startsWith('claude-') &&
+      !m.startsWith('gpt-') &&
+      !m.startsWith('o1') &&
+      !m.startsWith('o3')
+
     // Inject timezone + date into system context
     const basePrompt = buildSystemPrompt(agent.systemPrompt, agent.timezone)
 
-    // Inject user profile if available
-    const profile = loadSettings().userProfile ?? {}
-    const profileLines: string[] = []
-    if (profile.name) profileLines.push(`The user's name is ${profile.name}.`)
-    if (profile.occupation) profileLines.push(`They work as: ${profile.occupation}.`)
-    if (profile.timezone) profileLines.push(`Their timezone is ${profile.timezone}.`)
-    if (profile.customNotes) profileLines.push(`Notes about this user: ${profile.customNotes}`)
-    if (profile.connectedServices?.length)
-      profileLines.push(`Connected services: ${profile.connectedServices.join(', ')}.`)
+    let userProfileSection = ''
+    let journalSection = ''
+    let skillsSection = ''
+    let userModelSection = ''
 
-    const userProfileSection =
-      profileLines.length > 0 ? `\n\n--- User profile ---\n${profileLines.join('\n')}` : ''
+    if (!isSmallCtx) {
+      // Inject user profile if available
+      const profile = loadSettings().userProfile ?? {}
+      const profileLines: string[] = []
+      if (profile.name) profileLines.push(`The user's name is ${profile.name}.`)
+      if (profile.occupation) profileLines.push(`They work as: ${profile.occupation}.`)
+      if (profile.timezone) profileLines.push(`Their timezone is ${profile.timezone}.`)
+      if (profile.customNotes) profileLines.push(`Notes about this user: ${profile.customNotes}`)
+      if (profile.connectedServices?.length)
+        profileLines.push(`Connected services: ${profile.connectedServices.join(', ')}.`)
+      if (profileLines.length > 0)
+        userProfileSection = `\n\n--- User profile ---\n${profileLines.join('\n')}`
 
-    // Inject journal (last 3 days of conversation history — the "long memory" layer)
-    const journalContent = readRecentJournal(3)
-    const journalSection = journalContent
-      ? `\n\n--- Recent conversation history (journal) ---\n${journalContent}`
-      : ''
+      // Inject journal (last 3 days of conversation history — the "long memory" layer)
+      const journalContent = readRecentJournal(3)
+      if (journalContent)
+        journalSection = `\n\n--- Recent conversation history (journal) ---\n${journalContent}`
 
-    // Inject skills block (credential-aware, built fresh each turn)
-    await skillLoader.injectCredentials()
-    const skillsBlock = await skillLoader.buildPromptBlock()
-    const skillsSection = skillsBlock ? `\n\n--- Skills ---\n${skillsBlock}` : ''
+      // Inject skills block (credential-aware, built fresh each turn)
+      await skillLoader.injectCredentials()
+      const skillsBlock = await skillLoader.buildPromptBlock()
+      if (skillsBlock) skillsSection = `\n\n--- Skills ---\n${skillsBlock}`
 
-    // Inject learned user preferences from UserModel
-    const userModelBlock = userModelStore.buildPromptBlock({ includeDrift: true })
-    const userModelSection = userModelBlock
-      ? `\n\n--- Learned user preferences ---\n${userModelBlock}`
-      : ''
+      // Inject learned user preferences from UserModel
+      const userModelBlock = userModelStore.buildPromptBlock({ includeDrift: true })
+      if (userModelBlock)
+        userModelSection = `\n\n--- Learned user preferences ---\n${userModelBlock}`
+    }
 
     const contextualPrompt = `${basePrompt}${userProfileSection}${journalSection}${userModelSection}${skillsSection}`
 
@@ -97,9 +112,12 @@ export class AgentOrchestrator {
     const stuckDetector = new StuckLoopDetector()
     const toolCallLog: Array<{ toolCall: string }> = []
 
-    // Build message list for Mastra (history + current)
+    // Build message list for Mastra (history + current).
+    // For small-context models, cap history at the last 6 messages to stay
+    // well under the 4096 token context window.
+    const historySlice = isSmallCtx ? history.slice(-6) : history
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
-      ...history.map((m) => ({
+      ...historySlice.map((m) => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,
       })),

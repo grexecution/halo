@@ -72,6 +72,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     )
     .all(id, userMsgId) as MessageRow[]
 
+  // Detect if we're using a small-context local model (Ollama) — skip heavy memory
+  // injection to stay well under the 4096 ctx window. Plugin models (Kimi, etc.)
+  // and cloud models have large contexts and get the full memory context.
+  const agentModel = agentRow?.model ?? 'auto'
+  const isSmallCtxModel =
+    !agentModel.startsWith('plugin-') &&
+    !agentModel.startsWith('claude-') &&
+    !agentModel.startsWith('gpt-') &&
+    !agentModel.startsWith('o1') &&
+    !agentModel.startsWith('o3') &&
+    agentModel !== 'auto'
+
   // Build system context
   const systemParts: string[] = []
 
@@ -90,19 +102,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     systemParts.push(`### Active Workspace Context\n\n${wsBlock}`)
   }
 
-  const ctx = await getMemory()
-    .getContext({ threadId: id, resourceId: 'user' })
-    .catch(() => null)
-  if (ctx?.systemMessage) systemParts.push(`### Memory & Working Context\n\n${ctx.systemMessage}`)
-  if (ctx?.otherThreadsContext)
-    systemParts.push(`### Related Context\n\n${ctx.otherThreadsContext}`)
+  // Only fetch Mastra memory context for large-context models
+  if (!isSmallCtxModel) {
+    const ctx = await getMemory()
+      .getContext({ threadId: id, resourceId: 'user' })
+      .catch(() => null)
+    if (ctx?.systemMessage) systemParts.push(`### Memory & Working Context\n\n${ctx.systemMessage}`)
+    if (ctx?.otherThreadsContext)
+      systemParts.push(`### Related Context\n\n${ctx.otherThreadsContext}`)
+  }
   systemParts.push(AGENT_ACTIONS_PROMPT)
+
+  // For small-context models, only send the last 6 messages to stay under ctx limit
+  const historyToSend = isSmallCtxModel ? priorMessages.slice(-6) : priorMessages
 
   const historyForLLM: Array<{ role: string; content: string }> = []
   if (systemParts.length > 0) {
     historyForLLM.push({ role: 'system', content: systemParts.join('\n\n---\n\n') })
   }
-  historyForLLM.push(...priorMessages.map(({ role, content }) => ({ role, content })))
+  historyForLLM.push(...historyToSend.map(({ role, content }) => ({ role, content })))
 
   const encoder = new TextEncoder()
 

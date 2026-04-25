@@ -244,7 +244,33 @@ If there's anything worth surfacing — something you noticed, a task that's due
 
 let cronIntervalId: ReturnType<typeof setInterval> | null = null
 let heartbeatIntervalId: ReturnType<typeof setInterval> | null = null
+let ollamaWarmIntervalId: ReturnType<typeof setInterval> | null = null
 let orchestratorRef: AgentOrchestrator | null = null
+
+/**
+ * Ping Ollama to keep the model loaded in RAM.
+ * Sends an empty keep_alive request — no generation, no tokens burned.
+ */
+async function warmOllama(): Promise<void> {
+  const ollamaUrl =
+    process.env['OLLAMA_BASE_URL'] ?? process.env['OLLAMA_URL'] ?? 'http://localhost:11434'
+  const model = process.env['OLLAMA_MODEL'] ?? 'llama3.2'
+  try {
+    await fetch(`${ollamaUrl}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, prompt: '', keep_alive: '25m' }),
+      signal: AbortSignal.timeout(10_000),
+    })
+    emitLog({
+      level: 'info',
+      agentId: 'system',
+      message: `[heartbeat] ollama keepalive sent (${model})`,
+    })
+  } catch {
+    // non-fatal — ollama may not be running
+  }
+}
 
 /**
  * Start the heartbeat scheduler.
@@ -254,6 +280,10 @@ export function startHeartbeat(heartbeatIntervalMinutes = 30): void {
   if (cronIntervalId) return // already running
 
   orchestratorRef = new AgentOrchestrator()
+
+  // Warm Ollama immediately on startup, then every 20 minutes
+  void warmOllama()
+  ollamaWarmIntervalId = setInterval(() => void warmOllama(), 20 * 60 * 1000)
 
   // Cron tick: every 60 seconds
   cronIntervalId = setInterval(() => {
@@ -269,7 +299,7 @@ export function startHeartbeat(heartbeatIntervalMinutes = 30): void {
   emitLog({
     level: 'info',
     agentId: 'system',
-    message: `[heartbeat] started — cron tick every 60s, check-in every ${heartbeatIntervalMinutes}m`,
+    message: `[heartbeat] started — cron tick every 60s, check-in every ${heartbeatIntervalMinutes}m, ollama keepalive every 20m`,
   })
 }
 
@@ -281,6 +311,10 @@ export function stopHeartbeat(): void {
   if (heartbeatIntervalId) {
     clearInterval(heartbeatIntervalId)
     heartbeatIntervalId = null
+  }
+  if (ollamaWarmIntervalId) {
+    clearInterval(ollamaWarmIntervalId)
+    ollamaWarmIntervalId = null
   }
   orchestratorRef = null
 }

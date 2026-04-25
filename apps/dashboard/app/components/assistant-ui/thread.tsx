@@ -19,9 +19,10 @@ import {
   ComposerPrimitive,
   ErrorPrimitive,
   MessagePrimitive,
-  SuggestionPrimitive,
   ThreadPrimitive,
   useAuiState,
+  useComposerRuntime,
+  useThreadRuntime,
 } from '@assistant-ui/react'
 import {
   ArrowDownIcon,
@@ -140,33 +141,41 @@ const ThreadWelcome: FC = () => {
 
         {/* Suggestions grid */}
         <div className="w-full max-w-lg animate-fade-in" style={{ animationDelay: '150ms' }}>
-          <ThreadSuggestions />
+          <ThreadSuggestionsPanel />
         </div>
       </div>
     </div>
   )
 }
 
-const ThreadSuggestions: FC = () => {
-  return (
-    <div className="aui-thread-welcome-suggestions grid w-full @md:grid-cols-2 gap-2 pb-4">
-      <ThreadPrimitive.Suggestions>{() => <ThreadSuggestionItem />}</ThreadPrimitive.Suggestions>
-    </div>
-  )
-}
+const STATIC_SUGGESTIONS = [
+  { title: 'What did I work on this week?', description: 'Summarize recent activity from memory' },
+  { title: "How's my health trend?", description: 'Analyze stored health metrics' },
+  { title: 'What are my current goals?', description: 'List active automations and goals' },
+  { title: 'Summarize my recent emails', description: 'From connected Gmail or inbox' },
+]
 
-const ThreadSuggestionItem: FC = () => {
+const ThreadSuggestionsPanel: FC = () => {
+  const composerRuntime = useComposerRuntime()
+  const threadRuntime = useThreadRuntime()
+
+  function send(text: string) {
+    composerRuntime.setText(text)
+    threadRuntime.composer.send()
+  }
+
   return (
-    <div className="aui-thread-welcome-suggestion-display fade-in slide-in-from-bottom-2 @md:nth-[n+3]:block nth-[n+3]:hidden animate-in fill-mode-both duration-200">
-      <SuggestionPrimitive.Trigger send asChild>
-        <Button
-          variant="ghost"
-          className="aui-thread-welcome-suggestion h-auto w-full @md:flex-col flex-wrap items-start justify-start gap-1 rounded-2xl border border-border/60 bg-background/60 hover:bg-muted/80 hover:border-border px-4 py-3 text-left text-sm transition-all duration-150 backdrop-blur-sm"
+    <div className="grid w-full grid-cols-2 gap-2 pb-4">
+      {STATIC_SUGGESTIONS.map((s) => (
+        <button
+          key={s.title}
+          onClick={() => send(s.title)}
+          className="flex flex-col items-start gap-0.5 rounded-2xl border border-border/60 bg-background/60 hover:bg-muted/80 hover:border-border px-4 py-3 text-left text-sm transition-all duration-150 backdrop-blur-sm"
         >
-          <SuggestionPrimitive.Title className="aui-thread-welcome-suggestion-text-1 font-medium text-foreground" />
-          <SuggestionPrimitive.Description className="aui-thread-welcome-suggestion-text-2 text-muted-foreground text-xs empty:hidden" />
-        </Button>
-      </SuggestionPrimitive.Trigger>
+          <span className="font-medium text-foreground text-sm">{s.title}</span>
+          <span className="text-muted-foreground text-xs">{s.description}</span>
+        </button>
+      ))}
     </div>
   )
 }

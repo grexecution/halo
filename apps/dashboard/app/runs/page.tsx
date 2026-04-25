@@ -44,19 +44,19 @@ interface RunStats {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  running: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+  running: 'bg-blue-500/15 text-primary border-primary/30',
   completed: 'bg-green-500/15 text-green-400 border-green-500/30',
   failed: 'bg-red-500/15 text-red-400 border-red-500/30',
-  aborted: 'bg-gray-500/15 text-gray-400 border-gray-500/30',
+  aborted: 'bg-gray-500/15 text-muted-foreground border-gray-500/30',
 }
 
 const TRIGGER_ICONS: Record<string, ReactNode> = {
-  chat: <MessageSquare size={14} className="text-gray-400" />,
-  goal: <Target size={14} className="text-gray-400" />,
-  cron: <Clock size={14} className="text-gray-400" />,
-  telegram: <Smartphone size={14} className="text-gray-400" />,
-  discord: <Smartphone size={14} className="text-gray-400" />,
-  default: <Zap size={14} className="text-gray-400" />,
+  chat: <MessageSquare size={14} className="text-muted-foreground" />,
+  goal: <Target size={14} className="text-muted-foreground" />,
+  cron: <Clock size={14} className="text-muted-foreground" />,
+  telegram: <Smartphone size={14} className="text-muted-foreground" />,
+  discord: <Smartphone size={14} className="text-muted-foreground" />,
+  default: <Zap size={14} className="text-muted-foreground" />,
 }
 
 function fmtDuration(ms: number | null) {
@@ -100,12 +100,14 @@ export default function RunsPage() {
   const agentIds = [...new Set(runs.map((r) => r.agentId))]
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 p-6">
+    <div className="min-h-screen bg-background text-foreground p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-white">Agent Runs</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Execution history, costs, and tool traces</p>
+          <h1 className="text-xl font-semibold text-foreground">Agent Runs</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Execution history, costs, and tool traces
+          </p>
         </div>
         <Button variant="outline" size="sm" onClick={load}>
           <RefreshCw size={14} />
@@ -124,9 +126,9 @@ export default function RunsPage() {
             { label: 'Failed', value: stats.failed },
             { label: 'Total cost', value: fmtCost(stats.total_cost) },
           ].map((s) => (
-            <div key={s.label} className="bg-gray-900 rounded-xl p-4 border border-gray-800">
-              <div className="text-xs text-gray-500 mb-1">{s.label}</div>
-              <div className="text-xl font-semibold text-white">{s.value}</div>
+            <div key={s.label} className="bg-card rounded-xl p-4 border border-border">
+              <div className="text-xs text-muted-foreground mb-1">{s.label}</div>
+              <div className="text-xl font-semibold text-foreground">{s.value}</div>
             </div>
           ))}
         </div>
@@ -139,8 +141,8 @@ export default function RunsPage() {
             onClick={() => setAgentFilter('')}
             className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
               agentFilter === ''
-                ? 'border-blue-500 text-blue-400 bg-blue-500/10'
-                : 'border-gray-700 text-gray-500 hover:text-gray-300'
+                ? 'border-primary text-primary bg-primary/10'
+                : 'border-border text-muted-foreground hover:text-foreground/80'
             }`}
           >
             All agents
@@ -151,8 +153,8 @@ export default function RunsPage() {
               onClick={() => setAgentFilter(id)}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
                 agentFilter === id
-                  ? 'border-blue-500 text-blue-400 bg-blue-500/10'
-                  : 'border-gray-700 text-gray-500 hover:text-gray-300'
+                  ? 'border-primary text-primary bg-primary/10'
+                  : 'border-border text-muted-foreground hover:text-foreground/80'
               }`}
             >
               @{id}
@@ -173,13 +175,10 @@ export default function RunsPage() {
       ) : (
         <div className="space-y-2">
           {runs.map((run) => (
-            <div
-              key={run.id}
-              className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden"
-            >
+            <div key={run.id} className="bg-card border border-border rounded-xl overflow-hidden">
               {/* Row */}
               <button
-                className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-gray-800/50 transition-colors"
+                className="w-full text-left px-4 py-3 flex items-center gap-3 hover:bg-muted/50 transition-colors"
                 onClick={() => setExpanded(expanded === run.id ? null : run.id)}
               >
                 <span className="flex-shrink-0">
@@ -192,36 +191,36 @@ export default function RunsPage() {
                     >
                       {run.status}
                     </span>
-                    <span className="text-xs text-gray-500">@{run.agentId}</span>
-                    <span className="text-xs text-gray-600">·</span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-muted-foreground">@{run.agentId}</span>
+                    <span className="text-xs text-muted-foreground/60">·</span>
+                    <span className="text-xs text-muted-foreground">
                       {new Date(run.startedAt).toLocaleString()}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-300 truncate mt-0.5">{run.input}</p>
+                  <p className="text-sm text-foreground/80 truncate mt-0.5">{run.input}</p>
                 </div>
-                <div className="text-right flex-shrink-0 text-xs text-gray-500 space-y-0.5">
+                <div className="text-right flex-shrink-0 text-xs text-muted-foreground space-y-0.5">
                   <div>{fmtDuration(run.durationMs)}</div>
                   <div>{fmtCost(run.costUsd)}</div>
                   {run.toolCalls.length > 0 && (
-                    <div className="text-blue-400">{run.toolCalls.length} tools</div>
+                    <div className="text-primary">{run.toolCalls.length} tools</div>
                   )}
                 </div>
-                <span className="text-gray-600 ml-1">
+                <span className="text-muted-foreground/60 ml-1">
                   {expanded === run.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 </span>
               </button>
 
               {/* Expanded detail */}
               {expanded === run.id && (
-                <div className="border-t border-gray-800 px-4 py-3 space-y-3">
+                <div className="border-t border-border px-4 py-3 space-y-3">
                   {run.output && (
                     <div>
-                      <div className="text-xs text-gray-500 mb-1">Output</div>
-                      <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">
+                      <div className="text-xs text-muted-foreground mb-1">Output</div>
+                      <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
                         {run.output.slice(0, 1000)}
                         {run.output.length > 1000 && (
-                          <span className="text-gray-600"> …[truncated]</span>
+                          <span className="text-muted-foreground/60"> …[truncated]</span>
                         )}
                       </p>
                     </div>
@@ -236,18 +235,18 @@ export default function RunsPage() {
 
                   {run.toolCalls.length > 0 && (
                     <div>
-                      <div className="text-xs text-gray-500 mb-2">
+                      <div className="text-xs text-muted-foreground mb-2">
                         Tool calls ({run.toolCalls.length})
                       </div>
                       <div className="space-y-1.5">
                         {run.toolCalls.map((tc, i) => (
                           <div
                             key={i}
-                            className="bg-gray-800/60 rounded-lg px-3 py-2 text-xs font-mono"
+                            className="bg-muted/60 rounded-lg px-3 py-2 text-xs font-mono"
                           >
-                            <span className="text-blue-400">{tc.toolId}</span>
+                            <span className="text-primary">{tc.toolId}</span>
                             {tc.args !== undefined && (
-                              <span className="text-gray-500 ml-2">
+                              <span className="text-muted-foreground ml-2">
                                 {JSON.stringify(tc.args).slice(0, 120)}
                               </span>
                             )}
@@ -257,13 +256,13 @@ export default function RunsPage() {
                     </div>
                   )}
 
-                  <div className="flex gap-4 text-xs text-gray-600">
+                  <div className="flex gap-4 text-xs text-muted-foreground/60">
                     <span>Tokens: {run.tokenCount.toLocaleString()}</span>
                     <span>Cost: {fmtCost(run.costUsd)}</span>
                     {run.chatId && (
                       <a
                         href={`/chat?id=${run.chatId}`}
-                        className="text-blue-400 hover:text-blue-300"
+                        className="text-primary hover:text-primary/80"
                       >
                         View chat →
                       </a>

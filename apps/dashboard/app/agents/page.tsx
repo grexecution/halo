@@ -103,13 +103,13 @@ function FallbackPicker({ primaryModel, selected, models, onChange }: FallbackPi
   return (
     <div>
       <Label>Fallback Models</Label>
-      <p className="text-[11px] text-gray-500 mb-1">
+      <p className="text-[11px] text-muted-foreground mb-1">
         Used in order if the primary model fails or is unavailable.
       </p>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-300 hover:border-gray-500 transition-colors"
+        className="w-full flex items-center justify-between px-3 py-2 text-sm bg-muted border border-border rounded-lg text-foreground/80 hover:border-border/80 transition-colors"
       >
         <span>
           {selected.length === 0
@@ -122,9 +122,9 @@ function FallbackPicker({ primaryModel, selected, models, onChange }: FallbackPi
       </button>
 
       {open && (
-        <div className="mt-1 border border-gray-700 rounded-lg bg-gray-900 divide-y divide-gray-800 max-h-48 overflow-y-auto">
+        <div className="mt-1 border border-border rounded-lg bg-card divide-y divide-border max-h-48 overflow-y-auto">
           {candidates.length === 0 ? (
-            <p className="text-xs text-gray-500 px-3 py-2">
+            <p className="text-xs text-muted-foreground px-3 py-2">
               No other models configured. Add models in Settings → Models.
             </p>
           ) : (
@@ -135,20 +135,20 @@ function FallbackPicker({ primaryModel, selected, models, onChange }: FallbackPi
                 <label
                   key={m.modelId}
                   className={cn(
-                    'flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-800/60 transition-colors',
+                    'flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/60 transition-colors',
                     idx === 0 && 'rounded-t-lg',
                     idx === candidates.length - 1 && 'rounded-b-lg',
                   )}
                 >
                   <input
                     type="checkbox"
-                    className="accent-blue-500"
+                    className="accent-primary"
                     checked={checked}
                     onChange={() => toggle(m.modelId)}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white truncate">{m.name}</p>
-                    <p className="text-[11px] text-gray-500 font-mono truncate">
+                    <p className="text-sm text-foreground truncate">{m.name}</p>
+                    <p className="text-[11px] text-muted-foreground font-mono truncate">
                       {m.subModelId ?? m.modelId}
                     </p>
                   </div>
@@ -156,9 +156,7 @@ function FallbackPicker({ primaryModel, selected, models, onChange }: FallbackPi
                     <Badge variant="muted" className="text-[10px] capitalize">
                       {m.provider}
                     </Badge>
-                    {checked && (
-                      <span className="text-[10px] text-blue-400 font-mono">#{rank}</span>
-                    )}
+                    {checked && <span className="text-[10px] text-primary font-mono">#{rank}</span>}
                   </div>
                 </label>
               )
@@ -174,14 +172,14 @@ function FallbackPicker({ primaryModel, selected, models, onChange }: FallbackPi
             return (
               <span
                 key={id}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-800 border border-gray-700 text-[11px] text-gray-300"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted border border-border text-[11px] text-foreground/80"
               >
-                <span className="text-blue-400 font-mono">#{i + 1}</span>
+                <span className="text-primary font-mono">#{i + 1}</span>
                 {m?.name ?? id}
                 <button
                   type="button"
                   onClick={() => toggle(id)}
-                  className="ml-0.5 text-gray-500 hover:text-red-400"
+                  className="ml-0.5 text-muted-foreground hover:text-red-400"
                 >
                   x
                 </button>
@@ -408,7 +406,7 @@ function AgentCard({ agent, isPrimary, availableModels, onEdit, onDelete }: Agen
           <div className="relative shrink-0">
             <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 blur-md opacity-30 group-hover:opacity-50 transition-opacity" />
             <div className="relative flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 shadow-md">
-              <SparklesIcon size={16} className="text-white" />
+              <SparklesIcon size={16} className="text-foreground" />
             </div>
           </div>
           <div className="flex-1 min-w-0">

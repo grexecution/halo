@@ -441,8 +441,17 @@ async function main() {
       let p = 1
       for (const line of batch) {
         const parts = line.split('\t')
+        const p1 = p++,
+          p2 = p++,
+          p3 = p++,
+          p4 = p++,
+          p5 = p++,
+          p6 = p++,
+          p7 = p++,
+          p8 = p++,
+          p9 = p++
         values.push(
-          `($${p++},$${p++},$${p++},$${p++},$${p++},$${p++}::jsonb,$${p++}::jsonb,$${p++},$${p++})`,
+          `($${p1},$${p2},$${p3},$${p4},$${p5},ARRAY(SELECT jsonb_array_elements_text($${p6}::jsonb)),$${p7}::jsonb,$${p8},$${p9})`,
         )
         params.push(...parts)
       }

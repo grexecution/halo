@@ -482,9 +482,9 @@ async function main() {
 
   // ── Health metrics ─────────────────────────────────────────────────────────
 
-  process.stdout.write(`\nSeeding health metrics (5 years daily data)...\n`)
+  process.stdout.write(`\nSeeding health metrics (20 years daily data)...\n`)
 
-  const HEALTH_DAYS = 1825 // 5 years
+  const HEALTH_DAYS = 7300 // 20 years → 240 monthly buckets (> 200 needed for T4)
   let healthRows = 0
 
   for (let dayOffset = 1; dayOffset <= HEALTH_DAYS; dayOffset++) {

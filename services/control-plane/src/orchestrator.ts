@@ -21,11 +21,90 @@ import {
   MASTRA_RESOURCE_ID_KEY,
 } from '@mastra/core/request-context'
 import { getMemoryPipeline, detectQueryType, extractFactKey } from './memory-pipeline.js'
+import { parsePluginModelId } from './plugin-credentials.js'
+import { globalCostTracker } from './cost-stats.js'
 
 // Token budgets for memory injection
 const CLOUD_MEMORY_BUDGET = 8_000 // cloud models (GPT-4.1, Claude — large context)
 const OLLAMA_MEMORY_BUDGET = 500 // local 4096-token models — strict cap
 const CHARS_PER_TOKEN = 4 // rough estimate for token counting
+
+const MODEL_PRICING_PER_1M_TOKENS_USD: Record<string, { input: number; output: number }> = {
+  // Anthropic
+  'claude-haiku-4-5-20251001': { input: 0.8, output: 4.0 },
+  'claude-sonnet-4-6': { input: 3.0, output: 15.0 },
+  'claude-opus-4-7': { input: 15.0, output: 75.0 },
+  // OpenAI
+  'gpt-4.1': { input: 2.0, output: 8.0 },
+  'gpt-4.1-mini': { input: 0.4, output: 1.6 },
+  'gpt-4o': { input: 5.0, output: 15.0 },
+  'gpt-4o-mini': { input: 0.15, output: 0.6 },
+  o1: { input: 15.0, output: 60.0 },
+  o3: { input: 10.0, output: 40.0 },
+  'o4-mini': { input: 1.1, output: 4.4 },
+}
+
+interface ModelTrackingInfo {
+  modelId: string
+  provider: string
+  isLocalModel: boolean
+}
+
+interface UsageLike {
+  totalTokens?: number | undefined
+  inputTokens?: number | undefined
+  outputTokens?: number | undefined
+}
+
+function resolveAutoModel(): ModelTrackingInfo {
+  const hasAnthropic = Boolean(process.env['ANTHROPIC_API_KEY'])
+  if (hasAnthropic) {
+    return {
+      modelId: process.env['ANTHROPIC_MODEL'] ?? 'claude-haiku-4-5-20251001',
+      provider: 'anthropic',
+      isLocalModel: false,
+    }
+  }
+  return {
+    modelId: process.env['OLLAMA_MODEL'] ?? 'llama3.2',
+    provider: 'ollama',
+    isLocalModel: true,
+  }
+}
+
+function resolveModelTrackingInfo(agentModel: string): ModelTrackingInfo {
+  if (agentModel === 'auto') return resolveAutoModel()
+
+  const plugin = parsePluginModelId(agentModel)
+  if (plugin) {
+    return {
+      modelId: plugin.variantModelId,
+      provider: plugin.pluginId,
+      isLocalModel: false,
+    }
+  }
+
+  if (agentModel.startsWith('claude-')) {
+    return { modelId: agentModel, provider: 'anthropic', isLocalModel: false }
+  }
+  if (agentModel.startsWith('gpt-') || agentModel.startsWith('o1') || agentModel.startsWith('o3')) {
+    return { modelId: agentModel, provider: 'openai', isLocalModel: false }
+  }
+  return { modelId: agentModel, provider: 'ollama', isLocalModel: true }
+}
+
+function estimateUsageCostUsd(modelInfo: ModelTrackingInfo, usage: UsageLike): number {
+  if (modelInfo.isLocalModel) return 0
+
+  const pricing = MODEL_PRICING_PER_1M_TOKENS_USD[modelInfo.modelId]
+  if (!pricing) return 0
+
+  const inputTokens = usage.inputTokens ?? 0
+  const outputTokens = usage.outputTokens ?? Math.max(0, (usage.totalTokens ?? 0) - inputTokens)
+  const inputCost = (inputTokens / 1_000_000) * pricing.input
+  const outputCost = (outputTokens / 1_000_000) * pricing.output
+  return inputCost + outputCost
+}
 
 const HEALTH_METRIC_PATTERNS: [RegExp, string][] = [
   [/heart rate|hrv/i, 'heart_rate'],
@@ -128,6 +207,7 @@ export class AgentOrchestrator {
 
   async runTurn(opts: RunTurnOptions): Promise<TurnResult> {
     const { agent, message, history = [], onChunk, onToolCall, threadId, resourceId } = opts
+    const modelInfo = resolveModelTrackingInfo(agent.model ?? 'auto')
 
     // Detect small-context local models (Ollama) — skip heavy prompt injection to
     // stay under the 4096 ctx limit. Cloud/plugin models get full context.
@@ -251,7 +331,18 @@ export class AgentOrchestrator {
 
       const usage = await stream.usage
       if (usage) {
-        budget.checkAndConsume({ tokens: usage.totalTokens ?? 0 })
+        const costUsd = estimateUsageCostUsd(modelInfo, usage)
+        budget.checkAndConsume({ tokens: usage.totalTokens ?? 0, costUsd })
+        globalCostTracker.record({
+          sessionId: opts.sessionId ?? threadId ?? 'default',
+          agentId: agent.id,
+          modelId: modelInfo.modelId,
+          provider: modelInfo.provider,
+          isLocalModel: modelInfo.isLocalModel,
+          tokens: usage.totalTokens ?? 0,
+          costUsd,
+          timestamp: new Date().toISOString(),
+        })
       }
 
       const turnResult: TurnResult = {
@@ -273,7 +364,18 @@ export class AgentOrchestrator {
       const result = await mastraAgent.generate(messages, mastraOpts)
 
       if (result.usage) {
-        budget.checkAndConsume({ tokens: result.usage.totalTokens ?? 0 })
+        const costUsd = estimateUsageCostUsd(modelInfo, result.usage)
+        budget.checkAndConsume({ tokens: result.usage.totalTokens ?? 0, costUsd })
+        globalCostTracker.record({
+          sessionId: opts.sessionId ?? threadId ?? 'default',
+          agentId: agent.id,
+          modelId: modelInfo.modelId,
+          provider: modelInfo.provider,
+          isLocalModel: modelInfo.isLocalModel,
+          tokens: result.usage.totalTokens ?? 0,
+          costUsd,
+          timestamp: new Date().toISOString(),
+        })
       }
 
       const text = result.text ?? ''

@@ -24,6 +24,15 @@ interface ToolCostSummary {
   totalCostUsd: number
 }
 
+interface ModelCostSummary {
+  modelId: string
+  provider: string
+  isLocalModel: boolean
+  totalCalls: number
+  totalTokens: number
+  totalCostUsd: number
+}
+
 interface DailyCostSummary {
   date: string
   totalCostUsd: number
@@ -33,6 +42,7 @@ interface DailyCostSummary {
 interface CostStatsReport {
   sessions: SessionCostSummary[]
   tools: ToolCostSummary[]
+  models: ModelCostSummary[]
   dailyTrend: DailyCostSummary[]
   totalCostUsd: number
   totalTokens: number
@@ -223,6 +233,47 @@ export default function CostPage() {
                     <td className="p-3 text-right text-gray-300">{fmtK(t.totalTokens)}</td>
                     <td className="p-3 text-right text-white font-medium">
                       {fmt$(t.totalCostUsd)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </section>
+
+      {/* Usage by model */}
+      <section>
+        <h2 className="text-lg font-semibold text-white mb-3">Usage by model</h2>
+        <div
+          data-testid="model-usage-table"
+          className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden"
+        >
+          {!stats || (stats.models ?? []).length === 0 ? (
+            <p className="p-4 text-gray-600 text-sm">No model usage data yet.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-800 text-gray-500">
+                  <th className="p-3 text-left">Model</th>
+                  <th className="p-3 text-left">Provider</th>
+                  <th className="p-3 text-right">Calls</th>
+                  <th className="p-3 text-right">Tokens</th>
+                  <th className="p-3 text-right">Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(stats.models ?? []).map((m) => (
+                  <tr
+                    key={`${m.provider}:${m.modelId}`}
+                    className="border-b border-gray-800/50 hover:bg-gray-800/40"
+                  >
+                    <td className="p-3 font-mono text-indigo-300">{m.modelId}</td>
+                    <td className="p-3 text-gray-300">{m.provider}</td>
+                    <td className="p-3 text-right text-gray-300">{m.totalCalls}</td>
+                    <td className="p-3 text-right text-gray-300">{fmtK(m.totalTokens)}</td>
+                    <td className="p-3 text-right text-white font-medium">
+                      {m.isLocalModel ? 'local (no cost)' : fmt$(m.totalCostUsd)}
                     </td>
                   </tr>
                 ))}

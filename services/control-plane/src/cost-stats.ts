@@ -17,6 +17,9 @@ export interface CostEvent {
   sessionId: string
   agentId: string
   toolId?: string
+  modelId?: string
+  provider?: string
+  isLocalModel?: boolean
   tokens: number
   costUsd: number
   timestamp: string
@@ -44,9 +47,19 @@ export interface DailyCostSummary {
   totalTokens: number
 }
 
+export interface ModelCostSummary {
+  modelId: string
+  provider: string
+  isLocalModel: boolean
+  totalCalls: number
+  totalTokens: number
+  totalCostUsd: number
+}
+
 export interface CostStatsReport {
   sessions: SessionCostSummary[]
   tools: ToolCostSummary[]
+  models: ModelCostSummary[]
   dailyTrend: DailyCostSummary[]
   totalCostUsd: number
   totalTokens: number
@@ -125,14 +138,39 @@ export class CostTracker {
       }
     }
 
+    // Model aggregation
+    const modelMap = new Map<string, ModelCostSummary>()
+    for (const e of recent) {
+      if (!e.modelId) continue
+      const provider = e.provider ?? 'unknown'
+      const isLocalModel = e.isLocalModel ?? false
+      const key = `${provider}:${e.modelId}:${isLocalModel ? 'local' : 'cloud'}`
+      const existing = modelMap.get(key)
+      if (existing) {
+        existing.totalCalls += 1
+        existing.totalTokens += e.tokens
+        existing.totalCostUsd += e.costUsd
+      } else {
+        modelMap.set(key, {
+          modelId: e.modelId,
+          provider,
+          isLocalModel,
+          totalCalls: 1,
+          totalTokens: e.tokens,
+          totalCostUsd: e.costUsd,
+        })
+      }
+    }
+
     const sessions = Array.from(sessionMap.values()).sort((a, b) => b.totalCostUsd - a.totalCostUsd)
     const tools = Array.from(toolMap.values()).sort((a, b) => b.totalCostUsd - a.totalCostUsd)
+    const models = Array.from(modelMap.values()).sort((a, b) => b.totalTokens - a.totalTokens)
     const dailyTrend = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date))
 
     const totalCostUsd = recent.reduce((s, e) => s + e.costUsd, 0)
     const totalTokens = recent.reduce((s, e) => s + e.tokens, 0)
 
-    return { sessions, tools, dailyTrend, totalCostUsd, totalTokens }
+    return { sessions, tools, models, dailyTrend, totalCostUsd, totalTokens }
   }
 
   reset(): void {

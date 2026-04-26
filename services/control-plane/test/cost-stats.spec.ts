@@ -28,6 +28,7 @@ describe('F-208: CostTracker', () => {
     expect(stats.totalTokens).toBe(0)
     expect(stats.sessions).toHaveLength(0)
     expect(stats.tools).toHaveLength(0)
+    expect(stats.models).toHaveLength(0)
     expect(stats.dailyTrend).toHaveLength(0)
   })
 
@@ -113,5 +114,52 @@ describe('F-208: CostTracker', () => {
     const stats = tracker.getStats()
     expect(stats.totalTokens).toBe(0)
     expect(stats.sessions).toHaveLength(0)
+  })
+
+  it('groups events by model and preserves local-model markers', () => {
+    tracker.record(
+      makeEvent({
+        modelId: 'claude-sonnet-4-6',
+        provider: 'anthropic',
+        isLocalModel: false,
+        tokens: 500,
+        costUsd: 0.02,
+      }),
+    )
+    tracker.record(
+      makeEvent({
+        modelId: 'llama3.2',
+        provider: 'ollama',
+        isLocalModel: true,
+        tokens: 700,
+        costUsd: 0,
+      }),
+    )
+    tracker.record(
+      makeEvent({
+        modelId: 'claude-sonnet-4-6',
+        provider: 'anthropic',
+        isLocalModel: false,
+        tokens: 300,
+        costUsd: 0.01,
+      }),
+    )
+
+    const stats = tracker.getStats()
+    expect(stats.models).toHaveLength(2)
+
+    const claude = stats.models.find((m) => m.modelId === 'claude-sonnet-4-6')!
+    expect(claude.provider).toBe('anthropic')
+    expect(claude.isLocalModel).toBe(false)
+    expect(claude.totalCalls).toBe(2)
+    expect(claude.totalTokens).toBe(800)
+    expect(claude.totalCostUsd).toBeCloseTo(0.03)
+
+    const local = stats.models.find((m) => m.modelId === 'llama3.2')!
+    expect(local.provider).toBe('ollama')
+    expect(local.isLocalModel).toBe(true)
+    expect(local.totalCalls).toBe(1)
+    expect(local.totalTokens).toBe(700)
+    expect(local.totalCostUsd).toBe(0)
   })
 })

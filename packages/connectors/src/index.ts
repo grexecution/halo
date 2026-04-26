@@ -1,3 +1,5 @@
+import { randomBytes, createHash } from 'node:crypto'
+
 export type ConnectorStatus = 'active' | 'inactive' | 'error'
 
 export interface ConnectorMeta {
@@ -99,6 +101,18 @@ export function createOAuthFlow(config: OAuthConfig): OAuthFlow {
       }
     },
   }
+}
+
+/** Generate a PKCE code_verifier + code_challenge pair (S256 method) */
+export function generatePKCE(): { codeVerifier: string; codeChallenge: string } {
+  const codeVerifier = randomBytes(32).toString('base64url')
+  const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url')
+  return { codeVerifier, codeChallenge }
+}
+
+/** Generate a secure random state token for CSRF protection */
+export function generateOAuthState(): string {
+  return randomBytes(24).toString('hex')
 }
 
 export interface RateLimiter {

@@ -29,6 +29,7 @@ import { initMemoryPipeline, getMemoryPipeline } from './memory-pipeline.js'
 import { parseImportFile } from './memory-import.js'
 import type { ImportFormat } from './memory-import.js'
 import { pluginLoader } from './plugin-loader.js'
+import { globalCostTracker } from './cost-stats.js'
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -49,6 +50,15 @@ app.get('/health', async () => ({
   status: 'ok',
   timestamp: new Date().toISOString(),
 }))
+
+// GET /api/cost-stats — aggregate token/cost usage by session, tool, and model
+app.get<{ Querystring: { days?: string } }>('/api/cost-stats', async (req, reply) => {
+  const days = Number(req.query.days ?? '7')
+  if (!Number.isFinite(days) || days <= 0) {
+    return reply.code(400).send({ error: 'days must be a positive number' })
+  }
+  return globalCostTracker.getStats({ days })
+})
 
 // GET /api/logs — query the in-memory ring buffer
 app.get<{

@@ -19,6 +19,10 @@
     "./skills": {
       "import": "./src/skills.ts",
       "types": "./src/skills.ts"
+    },
+    "./oauth-configs": {
+      "import": "./src/oauth-configs.ts",
+      "types": "./src/oauth-configs.ts"
     }
   },
   "scripts": {

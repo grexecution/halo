@@ -56,16 +56,15 @@ describe('F-013: Connectors page', () => {
     })
   })
 
-  it('Plugins tab shows category sidebar and Connect buttons', async () => {
+  it('Plugins tab shows category sidebar and Google Workspace card', async () => {
     render(<ConnectorsPage />)
     await waitFor(() => expect(screen.getByText('Plugins')).toBeDefined())
     fireEvent.click(screen.getByText('Plugins'))
     await waitFor(() => {
       expect(screen.getByText('Categories')).toBeDefined()
       expect(screen.getByText('All plugins')).toBeDefined()
-      expect(screen.getByText('Gmail')).toBeDefined()
-      const btns = screen.getAllByText('Connect')
-      expect(btns.length).toBeGreaterThan(0)
+      expect(screen.getAllByText('Google Workspace').length).toBeGreaterThan(0)
+      expect(screen.getByText('Sign in with Google')).toBeDefined()
     })
   })
 

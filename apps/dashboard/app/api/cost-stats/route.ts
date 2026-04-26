@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       sessions: [],
       tools: [],
+      models: [],
       dailyTrend: [],
       totalCostUsd: 0,
       totalTokens: 0,

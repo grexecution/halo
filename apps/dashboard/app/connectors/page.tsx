@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import type { ReactNode } from 'react'
 import {
   Building2,
@@ -30,6 +30,8 @@ import {
   Layers,
   X,
   Loader2,
+  CheckCircle2,
+  ExternalLink,
 } from 'lucide-react'
 import { Select } from '@/app/components/ui/select'
 import { Dialog } from '@/app/components/ui/dialog'
@@ -56,6 +58,7 @@ import {
   type Skill,
   type SkillCategory,
 } from '@open-greg/connectors/skills'
+import { PLUGIN_TO_PROVIDER, GOOGLE_PLUGIN_IDS } from '@open-greg/connectors/oauth-configs'
 
 // ── Shared ────────────────────────────────────────────────────────────────────
 
@@ -251,6 +254,198 @@ function GenericModal({
   )
 }
 
+// ── OAuth setup modal (enter client_id/secret before starting OAuth) ───────────
+
+interface OAuthSetupModalProps {
+  plugin: Plugin
+  redirectUri: string
+  onClose: () => void
+  onStart: (clientId: string, clientSecret: string) => Promise<void>
+}
+
+function OAuthSetupModal({ plugin, redirectUri, onClose, onStart }: OAuthSetupModalProps) {
+  const [clientId, setClientId] = useState('')
+  const [clientSecret, setClientSecret] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!clientId.trim()) {
+      setError('Client ID is required')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      await onStart(clientId.trim(), clientSecret.trim())
+    } catch (err) {
+      setError(String(err))
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog
+      open
+      title={`Connect ${plugin.name}`}
+      description="Enter your OAuth app credentials, then click Connect."
+      onClose={onClose}
+      className="max-w-lg"
+    >
+      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+        <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
+          <p className="font-medium text-foreground">
+            Redirect URI — paste this into your OAuth app:
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 font-mono text-primary break-all">{redirectUri}</code>
+            <button
+              type="button"
+              onClick={() => void navigator.clipboard.writeText(redirectUri)}
+              className="shrink-0 px-2 py-1 rounded border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm text-foreground mb-1">
+            Client ID <span className="text-red-400">*</span>
+          </label>
+          <Input
+            type="text"
+            placeholder="e.g. 123456789-abc.apps.googleusercontent.com"
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-sm text-foreground mb-1">Client Secret</label>
+          <Input
+            type="password"
+            placeholder="OAuth client secret"
+            value={clientSecret}
+            onChange={(e) => setClientSecret(e.target.value)}
+          />
+        </div>
+        {plugin.setupUrl && (
+          <a
+            href={plugin.setupUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+          >
+            <ExternalLink size={11} /> Get credentials
+          </a>
+        )}
+        {error && <p className="text-red-400 text-sm">{error}</p>}
+        <div className="flex gap-3 pt-2">
+          <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={saving} className="flex-1">
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            {saving ? 'Opening…' : 'Connect →'}
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  )
+}
+
+// ── Google Workspace card ─────────────────────────────────────────────────────
+
+const GOOGLE_FEATURE_LABELS: Record<string, string> = {
+  gmail: 'Gmail',
+  google_calendar: 'Calendar',
+  google_drive: 'Drive',
+  google_docs: 'Docs',
+  google_sheets: 'Sheets',
+}
+
+function GoogleWorkspaceCard({
+  connected,
+  onConnectGoogle,
+  onDisconnectGoogle,
+}: {
+  connected: Set<string>
+  onConnectGoogle: () => void
+  onDisconnectGoogle: (pluginId: string) => void
+}) {
+  const anyConnected = Array.from(GOOGLE_PLUGIN_IDS).some((id) => connected.has(id))
+
+  return (
+    <div
+      className={`bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all col-span-full sm:col-span-2 ${anyConnected ? 'border-green-700/60 shadow-sm shadow-green-900/20' : 'border-border'}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-medium text-foreground text-sm">Google Workspace</span>
+            {anyConnected && (
+              <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-green-900/40 text-green-400 border border-green-800 flex items-center gap-1">
+                <CheckCircle2 size={10} /> Connected
+              </span>
+            )}
+          </div>
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            One Google login for Gmail, Calendar, Drive, Docs, and Sheets.
+          </p>
+        </div>
+        <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full font-medium bg-primary/10 text-primary border border-blue-700">
+          official
+        </span>
+      </div>
+
+      {anyConnected && (
+        <div className="flex flex-wrap gap-2">
+          {Array.from(GOOGLE_PLUGIN_IDS).map((id) => {
+            const isOn = connected.has(id)
+            return (
+              <div
+                key={id}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs border ${isOn ? 'border-green-700/60 bg-green-900/20 text-green-300' : 'border-border text-muted-foreground'}`}
+              >
+                {isOn && <CheckCircle2 size={10} />}
+                {GOOGLE_FEATURE_LABELS[id] ?? id}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <div className="flex gap-2 mt-auto">
+        <a
+          href="https://console.cloud.google.com/apis/credentials"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-2.5 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-gray-600 transition-colors"
+        >
+          Docs
+        </a>
+        {anyConnected ? (
+          <button
+            onClick={() => {
+              for (const id of GOOGLE_PLUGIN_IDS) onDisconnectGoogle(id)
+            }}
+            className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-red-800 text-red-400 hover:bg-red-900/30 transition-colors"
+          >
+            Disconnect Google
+          </button>
+        ) : (
+          <button
+            onClick={onConnectGoogle}
+            className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-foreground transition-colors font-medium flex items-center justify-center gap-1.5"
+          >
+            Sign in with Google
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── AI Models tab ─────────────────────────────────────────────────────────────
 
 interface ModelsTabProps {
@@ -426,6 +621,8 @@ interface PluginsTabProps {
   connected: Set<string>
   onConnect: (plugin: Plugin) => void
   onDisconnect: (plugin: Plugin) => void
+  onConnectGoogle: () => void
+  onDisconnectGoogle: (pluginId: string) => void
   customPlugins: CustomPluginDef[]
   onCreateCustomPlugin: () => void
   onDeleteCustomPlugin: (id: string) => void
@@ -461,6 +658,9 @@ function PluginCard({
   onDisconnect: (p: Plugin) => void
 }) {
   const isPlanned = plugin.status === 'planned'
+  const isOAuth = plugin.connectionType === 'oauth' && !!PLUGIN_TO_PROVIDER[plugin.id]
+  const connectLabel = isOAuth ? `Connect with ${plugin.name}` : 'Connect'
+
   return (
     <div
       className={`bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all ${connected ? 'border-green-700/60 shadow-sm shadow-green-900/20' : 'border-border hover:border-border'} ${isPlanned ? 'opacity-50' : ''}`}
@@ -470,8 +670,8 @@ function PluginCard({
           <div className="flex items-center gap-2 mb-1">
             <span className="font-medium text-foreground text-sm truncate">{plugin.name}</span>
             {connected && (
-              <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-green-900/40 text-green-400 border border-green-800">
-                ✓
+              <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-green-900/40 text-green-400 border border-green-800 flex items-center gap-1">
+                <CheckCircle2 size={10} /> Connected
               </span>
             )}
           </div>
@@ -509,7 +709,7 @@ function PluginCard({
               onClick={() => onConnect(plugin)}
               className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-foreground transition-colors font-medium"
             >
-              Connect
+              {connectLabel}
             </button>
           )}
         </div>
@@ -595,6 +795,8 @@ function PluginsTab({
   connected,
   onConnect,
   onDisconnect,
+  onConnectGoogle,
+  onDisconnectGoogle,
   customPlugins,
   onCreateCustomPlugin,
   onDeleteCustomPlugin,
@@ -606,7 +808,9 @@ function PluginsTab({
   const [activeCategory, setActiveCategory] = useState<PluginCategory | 'all'>('all')
   const categoryMap = getPluginsByCategory()
   const categories = Array.from(categoryMap.keys()).filter((c) => c !== 'ai')
+  // Exclude individual Google plugin cards — they're consolidated into GoogleWorkspaceCard
   const filtered = OTHER_PLUGINS.filter((p) => {
+    if (GOOGLE_PLUGIN_IDS.has(p.id)) return false
     const matchSearch =
       !search ||
       p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -688,6 +892,24 @@ function PluginsTab({
           </div>
         </div>
         <div className="px-6 py-5 space-y-8">
+          {/* Google Workspace — consolidated card, always shown unless search hides it */}
+          {(!search || 'google gmail calendar drive docs sheets'.includes(search.toLowerCase())) &&
+            (activeCategory === 'all' ||
+              activeCategory === 'workspace' ||
+              activeCategory === 'calendar') && (
+              <section>
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Building2 size={14} /> Google Workspace
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  <GoogleWorkspaceCard
+                    connected={connected}
+                    onConnectGoogle={onConnectGoogle}
+                    onDisconnectGoogle={onDisconnectGoogle}
+                  />
+                </div>
+              </section>
+            )}
           {customPlugins.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -710,7 +932,7 @@ function PluginsTab({
             </section>
           )}
           {filtered.length === 0 && (
-            <p className="text-muted-foreground text-sm">No plugins match your search.</p>
+            <p className="text-muted-foreground text-sm">No other plugins match your search.</p>
           )}
           {Array.from(grouped.entries()).map(([cat, plugins]) => (
             <section key={cat}>
@@ -1722,11 +1944,14 @@ export default function ConnectorsPage() {
   const [connected, setConnected] = useState<Set<string>>(new Set())
   const [connectedCustom, setConnectedCustom] = useState<Set<string>>(new Set())
   const [activePlugin, setActivePlugin] = useState<Plugin | null>(null)
+  const [oauthSetupPlugin, setOauthSetupPlugin] = useState<Plugin | null>(null)
+  const [oauthRedirectUri, setOauthRedirectUri] = useState('')
   const [customPlugins, setCustomPlugins] = useState<CustomPluginDef[]>([])
   const [showCreateCustomPlugin, setShowCreateCustomPlugin] = useState(false)
   const [installedMcps, setInstalledMcps] = useState<InstalledMcp[]>([])
   const [userSkills, setUserSkills] = useState<UserSkillDef[]>([])
   const [loading, setLoading] = useState(true)
+  const oauthListenerRef = useRef<((e: MessageEvent) => void) | null>(null)
 
   const loadAll = useCallback(async () => {
     try {
@@ -1773,6 +1998,98 @@ export default function ConnectorsPage() {
       n.delete(plugin.id)
       return n
     })
+  }
+
+  async function handleDisconnectPluginById(pluginId: string) {
+    await fetch(`/api/plugins/${pluginId}`, { method: 'DELETE' })
+    setConnected((prev) => {
+      const n = new Set(prev)
+      n.delete(pluginId)
+      return n
+    })
+  }
+
+  /** Called when user clicks "Connect with X" for an OAuth plugin */
+  async function handleConnectOAuth(plugin: Plugin) {
+    const providerKey = PLUGIN_TO_PROVIDER[plugin.id]
+    if (!providerKey) {
+      setActivePlugin(plugin)
+      return
+    }
+
+    // Fetch start route to get redirectUri and whether client_id is needed
+    const res = await fetch(`/api/oauth/start/${plugin.id}`)
+    const data = (await res.json()) as {
+      authUrl?: string
+      redirectUri?: string
+      needsClientId?: boolean
+      error?: string
+    }
+
+    if (data.needsClientId || !data.authUrl) {
+      // Show setup modal so user can enter client_id/secret first
+      setOauthRedirectUri(data.redirectUri ?? `${window.location.origin}/api/oauth/callback`)
+      setOauthSetupPlugin(plugin)
+      return
+    }
+
+    openOAuthPopup(plugin.id, data.authUrl)
+  }
+
+  /** Save client_id/secret then start OAuth */
+  async function handleOAuthSetupAndStart(clientId: string, clientSecret: string) {
+    if (!oauthSetupPlugin) return
+    // Save credentials first
+    await fetch(`/api/plugins/${oauthSetupPlugin.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: { client_id: clientId, client_secret: clientSecret } }),
+    })
+    // Now start OAuth
+    const res = await fetch(`/api/oauth/start/${oauthSetupPlugin.id}`)
+    const data = (await res.json()) as { authUrl?: string; error?: string }
+    if (!data.authUrl) throw new Error(data.error ?? 'Could not get auth URL')
+    const plugin = oauthSetupPlugin
+    setOauthSetupPlugin(null)
+    openOAuthPopup(plugin.id, data.authUrl)
+  }
+
+  function openOAuthPopup(pluginId: string, authUrl: string) {
+    const popup = window.open(authUrl, 'oauth_popup', 'width=600,height=700,left=100,top=100')
+    // Remove previous listener
+    if (oauthListenerRef.current) {
+      window.removeEventListener('message', oauthListenerRef.current)
+    }
+    const listener = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return
+      if (e.data?.type === 'oauth_success') {
+        popup?.close()
+        window.removeEventListener('message', listener)
+        oauthListenerRef.current = null
+        // Mark all connected google plugins if this is a google plugin
+        if (GOOGLE_PLUGIN_IDS.has(pluginId)) {
+          setConnected((prev) => new Set([...prev, ...GOOGLE_PLUGIN_IDS]))
+        } else {
+          setConnected((prev) => new Set([...prev, pluginId]))
+        }
+      } else if (e.data?.type === 'oauth_error') {
+        popup?.close()
+        window.removeEventListener('message', listener)
+        oauthListenerRef.current = null
+      }
+    }
+    oauthListenerRef.current = listener
+    window.addEventListener('message', listener)
+  }
+
+  /** Route plugin connect: OAuth vs modal */
+  function handleConnectPlugin(plugin: Plugin) {
+    const isOAuth = plugin.connectionType === 'oauth' && !!PLUGIN_TO_PROVIDER[plugin.id]
+    if (isOAuth) {
+      void handleConnectOAuth(plugin)
+    } else {
+      setActivePlugin(plugin)
+    }
   }
 
   async function handleInstallMcp(
@@ -1986,8 +2303,14 @@ export default function ConnectorsPage() {
         {tab === 'plugins' && (
           <PluginsTab
             connected={connected}
-            onConnect={setActivePlugin}
+            onConnect={handleConnectPlugin}
             onDisconnect={(p) => void handleDisconnectPlugin(p)}
+            onConnectGoogle={() => {
+              // Use gmail as the representative Google plugin to start OAuth
+              const gmailPlugin = ALL_PLUGINS.find((p) => p.id === 'gmail')
+              if (gmailPlugin) handleConnectPlugin(gmailPlugin)
+            }}
+            onDisconnectGoogle={(id) => void handleDisconnectPluginById(id)}
             customPlugins={customPlugins}
             onCreateCustomPlugin={() => setShowCreateCustomPlugin(true)}
             onDeleteCustomPlugin={(id) => void handleDeleteCustomPlugin(id)}
@@ -2024,6 +2347,15 @@ export default function ConnectorsPage() {
             : {})}
           onClose={() => setActivePlugin(null)}
           onSave={handleSavePlugin}
+        />
+      )}
+
+      {oauthSetupPlugin && (
+        <OAuthSetupModal
+          plugin={oauthSetupPlugin}
+          redirectUri={oauthRedirectUri}
+          onClose={() => setOauthSetupPlugin(null)}
+          onStart={(clientId, clientSecret) => handleOAuthSetupAndStart(clientId, clientSecret)}
         />
       )}
 

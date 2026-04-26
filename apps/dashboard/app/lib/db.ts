@@ -128,6 +128,38 @@ function migrateSchema(db: Database.Database) {
     db.exec('ALTER TABLE you_profile ADD COLUMN avatar_data TEXT')
   }
 
+  // OAuth state nonces table (5-min TTL, validated on callback)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS oauth_states (
+      id TEXT PRIMARY KEY,
+      plugin_id TEXT NOT NULL,
+      provider_key TEXT NOT NULL,
+      code_verifier TEXT NOT NULL,
+      redirect_uri TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `)
+
+  // Extend plugin_credentials with OAuth token columns (additive, safe on old DBs)
+  const pluginCols = (
+    db.prepare('PRAGMA table_info(plugin_credentials)').all() as { name: string }[]
+  ).map((c) => c.name)
+  if (!pluginCols.includes('access_token')) {
+    db.exec('ALTER TABLE plugin_credentials ADD COLUMN access_token TEXT')
+  }
+  if (!pluginCols.includes('refresh_token')) {
+    db.exec('ALTER TABLE plugin_credentials ADD COLUMN refresh_token TEXT')
+  }
+  if (!pluginCols.includes('token_expires_at')) {
+    db.exec('ALTER TABLE plugin_credentials ADD COLUMN token_expires_at TEXT')
+  }
+  if (!pluginCols.includes('scopes')) {
+    db.exec('ALTER TABLE plugin_credentials ADD COLUMN scopes TEXT')
+  }
+  if (!pluginCols.includes('token_type')) {
+    db.exec("ALTER TABLE plugin_credentials ADD COLUMN token_type TEXT NOT NULL DEFAULT 'Bearer'")
+  }
+
   // New tables added after initial schema
   db.exec(`
     CREATE TABLE IF NOT EXISTS approvals (

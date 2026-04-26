@@ -30,6 +30,24 @@ const MOCK_STATS = {
     { toolId: 'shell_exec', totalCalls: 12, totalTokens: 3000, totalCostUsd: 0.06 },
     { toolId: 'fs_read', totalCalls: 5, totalTokens: 1000, totalCostUsd: 0.02 },
   ],
+  models: [
+    {
+      modelId: 'claude-sonnet-4-6',
+      provider: 'anthropic',
+      isLocalModel: false,
+      totalCalls: 4,
+      totalTokens: 60000,
+      totalCostUsd: 0.11,
+    },
+    {
+      modelId: 'llama3.2',
+      provider: 'ollama',
+      isLocalModel: true,
+      totalCalls: 2,
+      totalTokens: 15000,
+      totalCostUsd: 0,
+    },
+  ],
   dailyTrend: [
     { date: '2026-04-22', totalCostUsd: 0.05, totalTokens: 30000 },
     { date: '2026-04-23', totalCostUsd: 0.07345, totalTokens: 45000 },
@@ -110,6 +128,17 @@ describe('F-208: Cost dashboard page', () => {
     })
   })
 
+  it('renders model usage and local no-cost label', async () => {
+    setupFetch()
+    render(<CostPage />)
+    await waitFor(() => {
+      const table = screen.getByTestId('model-usage-table')
+      expect(table.textContent).toContain('claude-sonnet-4-6')
+      expect(table.textContent).toContain('llama3.2')
+      expect(table.textContent).toContain('local (no cost)')
+    })
+  })
+
   it('shows empty state when no tools tracked', async () => {
     setupFetch({ ...MOCK_STATS, tools: [], sessions: [] })
     render(<CostPage />)
@@ -128,10 +157,20 @@ describe('F-208: Cost dashboard page', () => {
     })
   })
 
+  it('shows empty state when no model usage exists', async () => {
+    setupFetch({ ...MOCK_STATS, models: [] })
+    render(<CostPage />)
+    await waitFor(() => {
+      const table = screen.getByTestId('model-usage-table')
+      expect(table.textContent).toContain('No model usage data yet')
+    })
+  })
+
   it('renders without crashing when API returns empty stats', async () => {
     setupFetch({
       sessions: [],
       tools: [],
+      models: [],
       dailyTrend: [],
       totalCostUsd: 0,
       totalTokens: 0,

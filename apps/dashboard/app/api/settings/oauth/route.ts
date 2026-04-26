@@ -20,7 +20,7 @@ function readOAuthApps(): OAuthApps {
   }
 }
 
-export function writeOAuthApps(apps: OAuthApps): void {
+function writeOAuthApps(apps: OAuthApps): void {
   const db = getDb()
   const row = db.prepare('SELECT data FROM settings WHERE id = 1').get() as
     | { data: string }

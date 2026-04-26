@@ -844,24 +844,32 @@ function PluginsTab({
               <Plug size={14} />
               <span>All plugins</span>
               <span className="ml-auto text-xs text-muted-foreground/60">
-                {OTHER_PLUGINS.length}
+                {/* Non-Google individual plugins + 1 for consolidated Google Workspace card */}
+                {OTHER_PLUGINS.filter((p) => !GOOGLE_PLUGIN_IDS.has(p.id)).length + 1}
               </span>
             </button>
           </li>
-          {categories.map((cat) => (
-            <li key={cat}>
-              <button
-                onClick={() => setActiveCategory(cat)}
-                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === cat ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
-              >
-                <span>{CATEGORY_ICONS[cat]}</span>
-                <span className="truncate">{CATEGORY_LABELS[cat]}</span>
-                <span className="ml-auto text-xs text-muted-foreground/60">
-                  {categoryMap.get(cat)?.length ?? 0}
-                </span>
-              </button>
-            </li>
-          ))}
+          {categories.map((cat) => {
+            // Count non-Google plugins in this category for sidebar badge
+            const catPlugins = (categoryMap.get(cat) ?? []).filter(
+              (p) => !GOOGLE_PLUGIN_IDS.has(p.id),
+            )
+            const sidebarLabel = cat === 'workspace' ? 'Workspace' : CATEGORY_LABELS[cat]
+            return (
+              <li key={cat}>
+                <button
+                  onClick={() => setActiveCategory(cat)}
+                  className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 transition-colors ${activeCategory === cat ? 'bg-muted text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
+                >
+                  <span>{CATEGORY_ICONS[cat]}</span>
+                  <span className="truncate">{sidebarLabel}</span>
+                  <span className="ml-auto text-xs text-muted-foreground/60">
+                    {catPlugins.length}
+                  </span>
+                </button>
+              </li>
+            )
+          })}
         </ul>
       </aside>
       <div className="flex-1 overflow-auto">
@@ -938,7 +946,8 @@ function PluginsTab({
             <section key={cat}>
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <span>{CATEGORY_ICONS[cat]}</span>
-                {CATEGORY_LABELS[cat]}{' '}
+                {/* "workspace" label is "Google Workspace" in CATEGORY_LABELS but Google is shown separately above */}
+                {cat === 'workspace' ? 'Workspace' : CATEGORY_LABELS[cat]}{' '}
                 <span className="text-muted-foreground/40 font-normal normal-case tracking-normal">
                   ({plugins.length})
                 </span>

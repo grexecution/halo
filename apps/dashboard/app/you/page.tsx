@@ -496,7 +496,9 @@ function TimelineTab() {
 function MemoryTab() {
   const [memories, setMemories] = useState<MemoryItem[]>([])
   const [total, setTotal] = useState(0)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [search, setSearch] = useState('')
   const [query, setQuery] = useState('')
   const [source, setSource] = useState('')
@@ -504,7 +506,7 @@ function MemoryTab() {
 
   const load = useCallback(() => {
     setLoading(true)
-    const params = new URLSearchParams({ limit: '50', offset: '0' })
+    const params = new URLSearchParams({ limit: '50' })
     if (query) params.set('q', query)
     if (source) params.set('source', source)
     fetch(`/api/memories?${params}`)
@@ -514,9 +516,11 @@ function MemoryTab() {
           results?: MemoryItem[]
           total?: number
           stats?: { bySource: Record<string, number> }
+          nextCursor?: string | null
         }) => {
           setMemories(d.results ?? [])
           setTotal(d.total ?? 0)
+          setNextCursor(d.nextCursor ?? null)
         },
       )
       .catch(() => {})
@@ -531,6 +535,22 @@ function MemoryTab() {
     setSearch(val)
     if (searchRef.current) clearTimeout(searchRef.current)
     searchRef.current = setTimeout(() => setQuery(val), 300)
+  }
+
+  async function loadMore() {
+    if (!nextCursor || loadingMore) return
+    setLoadingMore(true)
+    const params = new URLSearchParams({ limit: '50', cursor: nextCursor })
+    if (query) params.set('q', query)
+    if (source) params.set('source', source)
+    fetch(`/api/memories?${params}`)
+      .then((r) => r.json())
+      .then((d: { results?: MemoryItem[]; nextCursor?: string | null }) => {
+        setMemories((ms) => [...ms, ...(d.results ?? [])])
+        setNextCursor(d.nextCursor ?? null)
+      })
+      .catch(() => {})
+      .finally(() => setLoadingMore(false))
   }
 
   async function deleteMemory(id: string) {
@@ -647,6 +667,15 @@ function MemoryTab() {
               </div>
             </div>
           ))}
+          {nextCursor && (
+            <button
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+              className="w-full py-2.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded-xl transition-colors disabled:opacity-50"
+            >
+              {loadingMore ? 'Loading…' : 'Load more'}
+            </button>
+          )}
         </div>
       )}
     </div>

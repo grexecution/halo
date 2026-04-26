@@ -1,6 +1,6 @@
 # Architecture & Feature Audit
 
-_Last updated: 2026-04-25 (session 6). Auto-maintained by agents — update this file whenever feature status changes._
+_Last updated: 2026-04-26 (session 7). Auto-maintained by agents — update this file whenever feature status changes._
 
 ---
 
@@ -23,11 +23,11 @@ pnpm -w run test:features    # full feature runner (slow — spawns vitest per f
 
 ---
 
-## Test Suite Ground Truth (2026-04-25, session 6)
+## Test Suite Ground Truth (2026-04-26, session 7)
 
 | Command              | Result                                      |
 | -------------------- | ------------------------------------------- |
-| `pnpm test`          | ✅ **482/482 passing** across 84 spec files |
+| `pnpm test`          | ✅ **526/526 passing** across 85 spec files |
 | `pnpm typecheck`     | ✅ **0 errors** across all packages         |
 | `pnpm test:features` | ✅ All Phase 8–11 features passing          |
 
@@ -35,11 +35,11 @@ pnpm -w run test:features    # full feature runner (slow — spawns vitest per f
 
 ## Feature Status Overview
 
-**107 total features** (88 original + 13 Phase 8 + 6 Phase 9–11), all marked `Status: done` in `docs/FEATURES.md`.
+**108 total features** (89 original + 13 Phase 8 + 6 Phase 9–11), all marked `Status: done` in `docs/FEATURES.md`.
 
 | Result                       | Count | Notes                                             |
 | ---------------------------- | ----- | ------------------------------------------------- |
-| ✅ PASS                      | 107   | All test files exist and pass                     |
+| ✅ PASS                      | 108   | All test files exist and pass                     |
 | ❌ REGRESSION (missing test) | 0     | Previously 16 — all resolved in session 2         |
 | ⏭️ manual                    | 1     | F-113: 24h continuous project (manual only)       |
 | 🔴 stub impl                 | ~3    | Browser/voice/vision services still dry-run stubs |
@@ -314,7 +314,7 @@ All 16 previously-missing test files have been created. The CI feature-enforceme
 ### packages/connectors ✅
 
 - **Implementation:** Real — MCP registry, OAuth PKCE flow, rate limiter with exponential backoff, 50+ plugin metadata
-- **Tests:** 18 passing across 7 files
+- **Tests:** 20 passing across 8 files
 
 ### packages/messaging ✅
 

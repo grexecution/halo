@@ -723,6 +723,44 @@ app.post('/api/update/apply', async (_, reply) => {
 })
 
 // ----------------------------------------------------------------
+// Memory — Browse (cursor-based pagination) + Delete
+// ----------------------------------------------------------------
+
+/**
+ * GET /api/memory/browse
+ * Query: q=..., source=..., cursor=ISO-timestamp, limit=N
+ */
+app.get<{
+  Querystring: { q?: string; source?: string; cursor?: string; limit?: string }
+}>('/api/memory/browse', async (req, reply) => {
+  const pipeline = getMemoryPipeline()
+  if (!pipeline) {
+    return reply.code(503).send({ error: 'Memory pipeline not available' })
+  }
+  const { q, source, cursor, limit: limitStr } = req.query
+  const limit = limitStr ? Math.min(Number(limitStr), 200) : 50
+  return pipeline.browseMemories({
+    ...(q != null ? { q } : {}),
+    ...(source != null ? { source } : {}),
+    ...(cursor != null ? { cursor } : {}),
+    limit,
+  })
+})
+
+/**
+ * DELETE /api/memory/:id
+ */
+app.delete<{ Params: { id: string } }>('/api/memory/:id', async (req, reply) => {
+  const pipeline = getMemoryPipeline()
+  if (!pipeline) {
+    return reply.code(503).send({ error: 'Memory pipeline not available' })
+  }
+  const deleted = await pipeline.deleteMemory(req.params.id)
+  if (!deleted) return reply.code(404).send({ error: 'Memory not found' })
+  return { ok: true }
+})
+
+// ----------------------------------------------------------------
 // Memory — Import
 // ----------------------------------------------------------------
 

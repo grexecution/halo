@@ -36,6 +36,7 @@ function makeMemoriesResponse(memories = MOCK_MEMORIES, total = memories.length)
       results: memories,
       total,
       stats: { bySource: { chat: 1, calendar: 1, email: 1 } },
+      nextCursor: null,
     }),
   } as unknown as Response
 }

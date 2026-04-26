@@ -466,6 +466,13 @@ _Every feature has an ID (`F-NNN`), a one-line spec, acceptance criteria, and a 
 **Acceptance:** recorded login flow replays successfully.
 **Test:** `services/browser-service/test/recorder.spec.ts`
 
+### F-107 — Linear connector
+
+**Status:** done · **Phase:** 3
+**Spec:** Linear connector is available in the plugin catalog with OAuth setup fields.
+**Acceptance:** Linear appears as a `project_management` connector using OAuth client credentials.
+**Test:** `packages/connectors/test/linear.spec.ts`
+
 ---
 
 ## Category: Autonomy

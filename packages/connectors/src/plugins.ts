@@ -317,8 +317,11 @@ export const ALL_PLUGINS: Plugin[] = [
     name: 'Linear',
     description: 'Create, update, and query Linear issues and projects.',
     category: 'project_management',
-    connectionType: 'api_key',
-    fields: [{ key: 'api_key', label: 'API Key', type: 'password', required: true }],
+    connectionType: 'oauth',
+    fields: [
+      { key: 'client_id', label: 'OAuth Client ID', type: 'text', required: true },
+      { key: 'client_secret', label: 'OAuth Client Secret', type: 'password', required: true },
+    ],
     setupUrl: 'https://linear.app/settings/api',
     status: 'community',
   },

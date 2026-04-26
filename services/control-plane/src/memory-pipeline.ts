@@ -469,6 +469,107 @@ export class MemoryPipeline {
     return lines.join('\n')
   }
 
+  // ── Browse (cursor-based pagination) ────────────────────────────────────────
+
+  /**
+   * Browse memories with cursor-based pagination — avoids OFFSET Gather Merge.
+   * cursor = ISO timestamp of the last seen created_at (exclusive upper bound).
+   * Returns { rows, total, bySource, nextCursor } where nextCursor is null when exhausted.
+   */
+  async browseMemories(opts: {
+    q?: string
+    source?: string
+    cursor?: string // created_at of last item (DESC order)
+    limit?: number
+  }): Promise<{
+    results: MemoryEntry[]
+    total: number
+    bySource: Record<string, number>
+    nextCursor: string | null
+  }> {
+    const limit = Math.min(opts.limit ?? 50, 200)
+    const conditions: string[] = []
+    const params: unknown[] = []
+    let p = 1
+
+    if (opts.q) {
+      conditions.push(`tsv @@ plainto_tsquery('english', $${p++})`)
+      params.push(opts.q)
+    }
+    if (opts.source) {
+      conditions.push(`source = $${p++}`)
+      params.push(opts.source)
+    }
+    if (opts.cursor) {
+      conditions.push(`created_at < $${p++}`)
+      params.push(opts.cursor)
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
+
+    // Run count + bySource + rows in parallel
+    const [countRes, srcRes, rowRes] = await Promise.all([
+      this.pool.query<{ n: string }>(
+        `SELECT COUNT(*) AS n FROM memories ${opts.q || opts.source ? `WHERE ${[...(opts.q ? [`tsv @@ plainto_tsquery('english', $1)`] : []), ...(opts.source ? [`source = $${opts.q ? 2 : 1}`] : [])].join(' AND ')}` : ''}`,
+        [...(opts.q ? [opts.q] : []), ...(opts.source ? [opts.source] : [])],
+      ),
+      this.pool.query<{ source: string; n: string }>(
+        'SELECT source, COUNT(*) AS n FROM memories GROUP BY source ORDER BY n DESC',
+      ),
+      this.pool.query<{
+        id: string
+        content: string
+        source: string
+        source_id: string | null
+        type: string
+        tags: string[]
+        metadata: Record<string, unknown>
+        created_at: string
+        updated_at: string
+      }>(
+        `SELECT id, content, source, source_id, type, tags, metadata, created_at, updated_at
+         FROM memories ${where}
+         ORDER BY created_at DESC
+         LIMIT $${p}`,
+        [...params, limit + 1],
+      ),
+    ])
+
+    const allRows = rowRes.rows
+    const hasMore = allRows.length > limit
+    const rows = hasMore ? allRows.slice(0, limit) : allRows
+    const nextCursor = hasMore ? (rows[rows.length - 1]?.created_at ?? null) : null
+
+    const total = parseInt(countRes.rows[0]?.n ?? '0', 10)
+    const bySource = Object.fromEntries(srcRes.rows.map((r) => [r.source, parseInt(r.n, 10)]))
+
+    return {
+      results: rows.map((r) => ({
+        id: r.id,
+        content: r.content,
+        source: r.source,
+        ...(r.source_id != null ? { sourceId: r.source_id } : {}),
+        type: r.type,
+        tags: r.tags ?? [],
+        metadata: (r.metadata as Record<string, unknown>) ?? {},
+        createdAt:
+          typeof r.created_at === 'string' ? r.created_at : new Date(r.created_at).toISOString(),
+        updatedAt:
+          typeof r.updated_at === 'string' ? r.updated_at : new Date(r.updated_at).toISOString(),
+      })),
+      total,
+      bySource,
+      nextCursor,
+    }
+  }
+
+  // ── Delete single memory ────────────────────────────────────────────────────
+
+  async deleteMemory(id: string): Promise<boolean> {
+    const { rowCount } = await this.pool.query('DELETE FROM memories WHERE id = $1', [id])
+    return (rowCount ?? 0) > 0
+  }
+
   // ── Memory count helpers ────────────────────────────────────────────────────
 
   async countTotal(): Promise<number> {
@@ -539,7 +640,7 @@ export class MemoryPipeline {
                SELECT id FROM embedding_jobs
                WHERE status = 'pending' AND attempts < 3
                ORDER BY priority, id
-               LIMIT 10
+               LIMIT 50
                FOR UPDATE SKIP LOCKED
              )
              RETURNING id, memory_id`,

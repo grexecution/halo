@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
 import {
   Globe,
   Wifi,
@@ -2003,14 +2002,13 @@ function OAuthAppsTab() {
   const highlightRef = useRef<string | null>(null)
 
   // Read ?setup= from URL to auto-expand a specific provider
-  const searchParams = useSearchParams()
   useEffect(() => {
-    const setup = searchParams.get('setup')
+    const setup = new URLSearchParams(window.location.search).get('setup')
     if (setup) {
       setExpanded((prev) => new Set([...prev, setup]))
       highlightRef.current = setup
     }
-  }, [searchParams])
+  }, [])
 
   useEffect(() => {
     void fetch('/api/settings/oauth')
@@ -2196,8 +2194,12 @@ function OAuthAppsTab() {
 // ---- Main Page ----
 
 export default function SettingsPage() {
-  const searchParams = useSearchParams()
-  const initialTab = searchParams.get('tab') ?? 'models'
+  const [initialTab] = useState(
+    () =>
+      (typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('tab')
+        : null) ?? 'models',
+  )
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [savedTab, setSavedTab] = useState<string | null>(null)
 

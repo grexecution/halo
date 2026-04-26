@@ -1103,6 +1103,110 @@ function TunnelSection() {
   )
 }
 
+function ChangePasswordSection() {
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [show, setShow] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+
+  async function handleChange() {
+    setError('')
+    if (newPw.length < 8) {
+      setError('New password must be at least 8 characters.')
+      return
+    }
+    if (newPw !== confirmPw) {
+      setError('Passwords do not match.')
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'change-password',
+          currentPassword: currentPw,
+          newPassword: newPw,
+        }),
+      })
+      const data = (await res.json()) as { ok?: boolean; error?: string }
+      if (!res.ok || !data.ok) {
+        setError(data.error ?? 'Failed to change password.')
+        return
+      }
+      setSuccess(true)
+      setCurrentPw('')
+      setNewPw('')
+      setConfirmPw('')
+      setTimeout(() => setSuccess(false), 3000)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3 pt-3 border-t border-border" data-testid="change-password-section">
+      <div>
+        <p className="text-sm font-medium text-foreground">Change password</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Update your login password</p>
+      </div>
+      <div className="space-y-2">
+        <div className="relative">
+          <Input
+            type={show ? 'text' : 'password'}
+            value={currentPw}
+            onChange={(e) => setCurrentPw(e.target.value)}
+            placeholder="Current password"
+            className="pr-9"
+            data-testid="current-password-input"
+          />
+          <button
+            type="button"
+            onClick={() => setShow((v) => !v)}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground/80"
+          >
+            {show ? <EyeOff size={13} /> : <Eye size={13} />}
+          </button>
+        </div>
+        <Input
+          type={show ? 'text' : 'password'}
+          value={newPw}
+          onChange={(e) => setNewPw(e.target.value)}
+          placeholder="New password (min 8 characters)"
+          data-testid="new-password-input"
+        />
+        <Input
+          type={show ? 'text' : 'password'}
+          value={confirmPw}
+          onChange={(e) => setConfirmPw(e.target.value)}
+          placeholder="Confirm new password"
+          data-testid="confirm-password-input"
+        />
+      </div>
+      {error && <p className="text-xs text-red-400">{error}</p>}
+      {success && (
+        <div className="flex items-center gap-2 text-xs text-green-400">
+          <Check size={13} />
+          Password updated successfully
+        </div>
+      )}
+      <Button
+        variant="default"
+        size="sm"
+        onClick={() => void handleChange()}
+        disabled={saving || !currentPw || !newPw || !confirmPw}
+        data-testid="change-password-button"
+      >
+        {saving ? 'Saving…' : success ? 'Saved!' : 'Update password'}
+      </Button>
+    </div>
+  )
+}
+
 function AuthSection() {
   const [auth, setAuth] = useState<AuthStatus | null>(null)
   const [newUsername, setNewUsername] = useState('')
@@ -1250,10 +1354,12 @@ function AuthSection() {
         <div className="flex items-center gap-2 p-3 bg-green-900/20 border border-green-800/40 rounded-lg">
           <Shield size={13} className="text-green-400" />
           <p className="text-xs text-green-300">
-            Authentication active — logged in as <span className="font-mono">{auth.username}</span>
+            Logged in as <span className="font-mono font-semibold">{auth.username}</span>
           </p>
         </div>
       )}
+
+      {auth.enabled && <ChangePasswordSection />}
 
       {auth.enabled && (
         <div className="space-y-3 pt-3 border-t border-border">

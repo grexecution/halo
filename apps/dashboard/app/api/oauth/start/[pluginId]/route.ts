@@ -91,28 +91,46 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ plug
     authParams.set('code_challenge_method', 'S256')
   }
 
-  // We need the client_id from the plugin's stored fields
+  // ── Resolve client_id / client_secret ────────────────────────────────────
+  // Priority: env vars (set once by admin) → stored plugin credentials → needsClientId
+  const envPrefix = providerKey.toUpperCase().replace(/-/g, '_') // e.g. GOOGLE_WORKSPACE
+  const envClientId =
+    process.env[`${envPrefix}_CLIENT_ID`] ??
+    // Common shorthand aliases
+    (GOOGLE_PLUGIN_IDS.has(pluginId) ? (process.env['GOOGLE_CLIENT_ID'] ?? '') : '') ??
+    (providerKey === 'slack' ? (process.env['SLACK_CLIENT_ID'] ?? '') : '') ??
+    (providerKey === 'linear' ? (process.env['LINEAR_CLIENT_ID'] ?? '') : '') ??
+    (providerKey === 'github' ? (process.env['GITHUB_CLIENT_ID'] ?? '') : '') ??
+    (providerKey === 'dropbox' ? (process.env['DROPBOX_CLIENT_ID'] ?? '') : '') ??
+    (providerKey === 'microsoft' ? (process.env['MICROSOFT_CLIENT_ID'] ?? '') : '') ??
+    ''
+
+  // Also check stored plugin credentials (DB)
   const stored = db
     .prepare('SELECT fields FROM plugin_credentials WHERE plugin_id = ?')
     .get(pluginId) as { fields: string } | undefined
 
-  // For Google plugins, also check the canonical google-workspace entry
   const googleEntry = GOOGLE_PLUGIN_IDS.has(pluginId)
     ? (db
         .prepare('SELECT fields FROM plugin_credentials WHERE plugin_id = ?')
         .get('google-workspace') as { fields: string } | undefined)
     : undefined
 
-  const fields = JSON.parse(stored?.fields ?? googleEntry?.fields ?? '{}') as Record<string, string>
-  const clientId = fields['client_id'] ?? ''
+  const storedFields = JSON.parse(stored?.fields ?? googleEntry?.fields ?? '{}') as Record<
+    string,
+    string
+  >
+
+  const clientId = envClientId || storedFields['client_id'] || ''
 
   if (!clientId) {
     return NextResponse.json(
       {
         error: 'client_id not configured',
-        message: `Please enter your OAuth client_id for ${pluginId} first, then connect.`,
         needsClientId: true,
         redirectUri,
+        // Tell the UI which env var to set for zero-UX setup
+        envVar: GOOGLE_PLUGIN_IDS.has(pluginId) ? 'GOOGLE_CLIENT_ID' : `${envPrefix}_CLIENT_ID`,
       },
       { status: 422 },
     )

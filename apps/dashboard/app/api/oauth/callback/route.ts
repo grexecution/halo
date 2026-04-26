@@ -67,25 +67,35 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/oauth-success?error=unknown_provider', req.url))
   }
 
-  // Get client credentials from stored plugin fields
-  // For Google plugins, look up client_id/secret from the plugin that initiated the flow
+  // ── Resolve client credentials ────────────────────────────────────────────
+  // Priority: env vars (admin configured) → stored DB fields
+  const providerKey = stateRow.provider_key
+  const envPrefix = providerKey.toUpperCase().replace(/-/g, '_')
+  const envClientId =
+    (GOOGLE_PLUGIN_IDS.has(stateRow.plugin_id) ? process.env['GOOGLE_CLIENT_ID'] : undefined) ??
+    process.env[`${envPrefix}_CLIENT_ID`] ??
+    ''
+  const envClientSecret =
+    (GOOGLE_PLUGIN_IDS.has(stateRow.plugin_id) ? process.env['GOOGLE_CLIENT_SECRET'] : undefined) ??
+    process.env[`${envPrefix}_CLIENT_SECRET`] ??
+    ''
+
   const storedRow = db
     .prepare('SELECT fields FROM plugin_credentials WHERE plugin_id = ?')
     .get(stateRow.plugin_id) as { fields: string } | undefined
 
-  // Also check google-workspace entry as fallback
   const googleRow = GOOGLE_PLUGIN_IDS.has(stateRow.plugin_id)
     ? (db
         .prepare('SELECT fields FROM plugin_credentials WHERE plugin_id = ?')
         .get('google-workspace') as { fields: string } | undefined)
     : undefined
 
-  const fields = JSON.parse(storedRow?.fields ?? googleRow?.fields ?? '{}') as Record<
+  const storedFields = JSON.parse(storedRow?.fields ?? googleRow?.fields ?? '{}') as Record<
     string,
     string
   >
-  const clientId = fields['client_id'] ?? ''
-  const clientSecret = fields['client_secret'] ?? ''
+  const clientId = envClientId || storedFields['client_id'] || ''
+  const clientSecret = envClientSecret || storedFields['client_secret'] || ''
 
   if (!clientId) {
     return NextResponse.redirect(new URL('/oauth-success?error=no_client_id', req.url))
@@ -177,7 +187,7 @@ export async function GET(req: NextRequest) {
        connected_at = excluded.connected_at`,
   ).run(
     targetPluginId,
-    JSON.stringify(fields), // preserve existing client_id/secret
+    JSON.stringify(storedFields), // preserve existing client_id/secret
     tokenData.access_token,
     tokenData.refresh_token ?? null,
     tokenExpiresAt,
@@ -202,7 +212,7 @@ export async function GET(req: NextRequest) {
            connected_at = excluded.connected_at`,
       ).run(
         gPluginId,
-        JSON.stringify(fields),
+        JSON.stringify(storedFields),
         tokenData.access_token,
         tokenData.refresh_token ?? null,
         tokenExpiresAt,

@@ -254,20 +254,23 @@ function GenericModal({
   )
 }
 
-// ── OAuth setup modal (enter client_id/secret before starting OAuth) ───────────
+// ── OAuth setup modal (one-time admin config) ──────────────────────────────────
 
 interface OAuthSetupModalProps {
   plugin: Plugin
   redirectUri: string
+  envVar: string
   onClose: () => void
   onStart: (clientId: string, clientSecret: string) => Promise<void>
 }
 
-function OAuthSetupModal({ plugin, redirectUri, onClose, onStart }: OAuthSetupModalProps) {
+function OAuthSetupModal({ plugin, redirectUri, envVar, onClose, onStart }: OAuthSetupModalProps) {
   const [clientId, setClientId] = useState('')
   const [clientSecret, setClientSecret] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const providerName = PLUGIN_TO_PROVIDER[plugin.id] === 'google-workspace' ? 'Google' : plugin.name
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -288,65 +291,79 @@ function OAuthSetupModal({ plugin, redirectUri, onClose, onStart }: OAuthSetupMo
   return (
     <Dialog
       open
-      title={`Connect ${plugin.name}`}
-      description="Enter your OAuth app credentials, then click Connect."
+      title={`Set up ${providerName} OAuth`}
+      description={`One-time setup — register this app with ${providerName}, then users just click "Sign in" with no extra steps.`}
       onClose={onClose}
       className="max-w-lg"
     >
-      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
-        <div className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
-          <p className="font-medium text-foreground">
-            Redirect URI — paste this into your OAuth app:
+      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-5">
+        {/* Step 1 */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            1 · Add this redirect URI to your OAuth app
           </p>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 font-mono text-primary break-all">{redirectUri}</code>
+          <div className="rounded-lg border border-border bg-muted/40 p-3 flex items-center gap-2">
+            <code className="flex-1 font-mono text-xs text-primary break-all">{redirectUri}</code>
             <button
               type="button"
               onClick={() => void navigator.clipboard.writeText(redirectUri)}
-              className="shrink-0 px-2 py-1 rounded border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              className="shrink-0 px-2 py-1 rounded border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-xs"
             >
               Copy
             </button>
           </div>
+          {plugin.setupUrl && (
+            <a
+              href={plugin.setupUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+            >
+              <ExternalLink size={11} /> Open {providerName} developer console
+            </a>
+          )}
         </div>
-        <div>
-          <label className="block text-sm text-foreground mb-1">
-            Client ID <span className="text-red-400">*</span>
-          </label>
-          <Input
-            type="text"
-            placeholder="e.g. 123456789-abc.apps.googleusercontent.com"
-            value={clientId}
-            onChange={(e) => setClientId(e.target.value)}
-          />
+
+        {/* Step 2 */}
+        <div className="space-y-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            2 · Paste your credentials
+          </p>
+          <div>
+            <label className="block text-sm text-foreground mb-1">
+              Client ID <span className="text-red-400">*</span>
+            </label>
+            <Input
+              type="text"
+              placeholder="e.g. 123456789-abc.apps.googleusercontent.com"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-foreground mb-1">Client Secret</label>
+            <Input
+              type="password"
+              placeholder="Client secret"
+              value={clientSecret}
+              onChange={(e) => setClientSecret(e.target.value)}
+            />
+          </div>
         </div>
-        <div>
-          <label className="block text-sm text-foreground mb-1">Client Secret</label>
-          <Input
-            type="password"
-            placeholder="OAuth client secret"
-            value={clientSecret}
-            onChange={(e) => setClientSecret(e.target.value)}
-          />
-        </div>
-        {plugin.setupUrl && (
-          <a
-            href={plugin.setupUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-          >
-            <ExternalLink size={11} /> Get credentials
-          </a>
-        )}
+
+        <p className="text-xs text-muted-foreground/60">
+          Tip: set <code className="font-mono">{envVar}</code> in your{' '}
+          <code className="font-mono">.env</code> to skip this dialog permanently.
+        </p>
+
         {error && <p className="text-red-400 text-sm">{error}</p>}
-        <div className="flex gap-3 pt-2">
+        <div className="flex gap-3 pt-1">
           <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" disabled={saving} className="flex-1">
             {saving && <Loader2 size={14} className="animate-spin" />}
-            {saving ? 'Opening…' : 'Connect →'}
+            {saving ? 'Opening…' : `Sign in with ${providerName} →`}
           </Button>
         </div>
       </form>
@@ -1955,6 +1972,7 @@ export default function ConnectorsPage() {
   const [activePlugin, setActivePlugin] = useState<Plugin | null>(null)
   const [oauthSetupPlugin, setOauthSetupPlugin] = useState<Plugin | null>(null)
   const [oauthRedirectUri, setOauthRedirectUri] = useState('')
+  const [oauthEnvVar, setOauthEnvVar] = useState('')
   const [customPlugins, setCustomPlugins] = useState<CustomPluginDef[]>([])
   const [showCreateCustomPlugin, setShowCreateCustomPlugin] = useState(false)
   const [installedMcps, setInstalledMcps] = useState<InstalledMcp[]>([])
@@ -2032,12 +2050,14 @@ export default function ConnectorsPage() {
       authUrl?: string
       redirectUri?: string
       needsClientId?: boolean
+      envVar?: string
       error?: string
     }
 
     if (data.needsClientId || !data.authUrl) {
       // Show setup modal so user can enter client_id/secret first
       setOauthRedirectUri(data.redirectUri ?? `${window.location.origin}/api/oauth/callback`)
+      setOauthEnvVar(data.envVar ?? '')
       setOauthSetupPlugin(plugin)
       return
     }
@@ -2363,6 +2383,7 @@ export default function ConnectorsPage() {
         <OAuthSetupModal
           plugin={oauthSetupPlugin}
           redirectUri={oauthRedirectUri}
+          envVar={oauthEnvVar}
           onClose={() => setOauthSetupPlugin(null)}
           onStart={(clientId, clientSecret) => handleOAuthSetupAndStart(clientId, clientSecret)}
         />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import {
   User,
   Clock,
@@ -111,6 +111,121 @@ function sourceStyle(source: string): string {
 
 // ─── Tab: Profile ─────────────────────────────────────────────────────────────
 
+function AvatarUpload() {
+  const [avatarData, setAvatarData] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    fetch('/api/you/avatar')
+      .then((r) => r.json())
+      .then((d: { avatarData?: string | null }) => setAvatarData(d.avatarData ?? null))
+      .catch(() => {})
+  }, [])
+
+  function handleFile(file: File) {
+    if (!file.type.startsWith('image/')) return
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      const dataUrl = e.target?.result as string
+      setUploading(true)
+      await fetch('/api/you/avatar', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatarData: dataUrl }),
+      }).catch(() => {})
+      setAvatarData(dataUrl)
+      setUploading(false)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) handleFile(file)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    const file = e.dataTransfer.files[0]
+    if (file) handleFile(file)
+  }
+
+  async function removeAvatar() {
+    setUploading(true)
+    await fetch('/api/you/avatar', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ avatarData: null }),
+    }).catch(() => {})
+    setAvatarData(null)
+    setUploading(false)
+  }
+
+  return (
+    <div className="flex items-center gap-5">
+      <div
+        className="relative w-20 h-20 rounded-full overflow-hidden bg-muted border-2 border-border flex items-center justify-center flex-shrink-0 cursor-pointer group"
+        onClick={() => fileRef.current?.click()}
+        onDrop={handleDrop}
+        onDragOver={(e) => e.preventDefault()}
+      >
+        {avatarData ? (
+          <div
+            className="w-full h-full bg-cover bg-center"
+            style={{ backgroundImage: `url(${avatarData})` }}
+            role="img"
+            aria-label="Profile picture"
+          />
+        ) : (
+          <User size={32} className="text-muted-foreground/50" />
+        )}
+        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+          <span className="text-white text-[10px] font-medium">Change</span>
+        </div>
+        {uploading && (
+          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          </div>
+        )}
+      </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        capture="user"
+        className="hidden"
+        onChange={handleChange}
+      />
+      <div className="space-y-1.5">
+        <p className="text-sm font-medium text-foreground">Profile picture</p>
+        <p className="text-xs text-muted-foreground">
+          Click or drag an image. On mobile, you can take a photo.
+        </p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="text-xs text-primary hover:text-primary/80 transition-colors"
+          >
+            Upload photo
+          </button>
+          {avatarData && (
+            <>
+              <span className="text-muted-foreground/40">·</span>
+              <button
+                onClick={() => void removeAvatar()}
+                className="text-xs text-muted-foreground hover:text-red-400 transition-colors"
+              >
+                Remove
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ProfileTab() {
   const [profile, setProfile] = useState<Profile>({
     about: '',
@@ -183,6 +298,11 @@ function ProfileTab() {
 
   return (
     <div className="space-y-5">
+      {/* Avatar */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <AvatarUpload />
+      </div>
+
       <div className="bg-card border border-border rounded-xl p-4">
         <p className="text-sm text-muted-foreground leading-relaxed">
           This is what Halo knows about you. It uses this to personalise every response, task, and

@@ -120,6 +120,14 @@ function migrateSchema(db: Database.Database) {
     );
   `)
 
+  // Add avatar_data column to you_profile if not present
+  const youProfileCols = (
+    db.prepare('PRAGMA table_info(you_profile)').all() as { name: string }[]
+  ).map((c) => c.name)
+  if (!youProfileCols.includes('avatar_data')) {
+    db.exec('ALTER TABLE you_profile ADD COLUMN avatar_data TEXT')
+  }
+
   // New tables added after initial schema
   db.exec(`
     CREATE TABLE IF NOT EXISTS approvals (

@@ -914,7 +914,67 @@ function MemoryTab({
   )
 }
 
-// ---- Tab: Expose ----
+// ---- Tab: Remote Access ----
+
+interface NetworkInfo {
+  ips: string[]
+  port: string
+  urls: string[]
+}
+
+function LocalConnectionSection() {
+  const [net, setNet] = useState<NetworkInfo | null>(null)
+
+  useEffect(() => {
+    fetch('/api/network')
+      .then((r) => r.json())
+      .then((d: NetworkInfo) => setNet(d))
+      .catch(() => {})
+  }, [])
+
+  return (
+    <div className="space-y-3" data-testid="local-connection-section">
+      <div className="flex items-center gap-3 p-4 bg-green-900/20 border border-green-800/40 rounded-xl">
+        <div className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground">Connected locally</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            You are accessing Halo from this machine or local network
+          </p>
+        </div>
+      </div>
+
+      {net && net.urls.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground font-medium">
+            Open Halo from other devices on your network:
+          </p>
+          {net.urls.map((url) => (
+            <div
+              key={url}
+              className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2"
+            >
+              <span className="text-xs font-mono text-foreground/80 flex-1 truncate">{url}</span>
+              <CopyButton text={url} />
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground/70 hover:text-muted-foreground"
+              >
+                <ExternalLink size={12} />
+              </a>
+            </div>
+          ))}
+          <p className="text-xs text-muted-foreground/60">
+            These addresses only work on your local Wi-Fi / network. For access from anywhere, set
+            up a tunnel below.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface TunnelStatus {
   installed: boolean
@@ -1422,9 +1482,23 @@ function ExposeTab() {
     <div className="space-y-8 py-2">
       <section className="space-y-3">
         <div className="flex items-center gap-2">
+          <Wifi size={15} className="text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
+            Local access
+          </h2>
+        </div>
+        <Card>
+          <CardContent className="pt-4">
+            <LocalConnectionSection />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
           <Globe size={15} className="text-muted-foreground" />
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
-            Access from anywhere
+            Remote access (from anywhere)
           </h2>
         </div>
         <Card>

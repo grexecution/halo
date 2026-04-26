@@ -1,4 +1,4 @@
-export type ConnectionType = 'api_key' | 'oauth' | 'mcp_server' | 'credentials' | 'webhook'
+export type ConnectionType = 'api_key' | 'oauth' | 'mcp_server' | 'credentials' | 'webhook' | 'cli'
 export type PluginCategory =
   | 'workspace'
   | 'project_management'
@@ -39,6 +39,20 @@ export interface PluginLlmMeta {
   modelField?: string
 }
 
+/** Metadata for plugins that connect via a CLI tool already installed on the server. */
+export interface PluginCliMeta {
+  /** The CLI binary name to check (e.g. 'gh', 'gog') */
+  bin: string
+  /** Human-readable install instructions */
+  installHint: string
+  /** Command to check if already authenticated (exit 0 = authed) */
+  authCheckCmd: string
+  /** Chat prompt to send to the agent to guide setup */
+  setupPrompt: string
+  /** Link to the CLI tool */
+  toolUrl: string
+}
+
 export interface Plugin {
   id: string
   name: string
@@ -54,81 +68,98 @@ export interface Plugin {
   supportsMultiple?: boolean
   /** If set, this plugin provides an LLM endpoint and should appear in model pickers. */
   llmMeta?: PluginLlmMeta
+  /** If connectionType === 'cli', this holds CLI tool metadata. */
+  cliMeta?: PluginCliMeta
 }
 
 export const ALL_PLUGINS: Plugin[] = [
-  // ── Google Workspace ─────────────────────────────────────────────────────
+  // ── Google Workspace — connected via gog CLI ─────────────────────────────
   {
     id: 'gmail',
     name: 'Gmail',
     description: 'Read, send, and manage emails. Label-based triggers for agent sessions.',
     category: 'workspace',
-    connectionType: 'oauth',
-    mcpPackage: '@googleworkspace/mcp',
-    fields: [
-      { key: 'client_id', label: 'OAuth Client ID', type: 'text', required: true },
-      { key: 'client_secret', label: 'OAuth Client Secret', type: 'password', required: true },
-    ],
-    setupUrl: 'https://console.cloud.google.com/apis/credentials',
+    connectionType: 'cli',
+    fields: [],
     status: 'official',
     supportsMultiple: true,
+    cliMeta: {
+      bin: 'gog',
+      toolUrl: 'https://github.com/steipete/gogcli',
+      installHint: 'brew install steipete/tap/gogcli',
+      authCheckCmd: 'gog auth list',
+      setupPrompt:
+        'Help me set up the gog CLI for Google Workspace (Gmail, Calendar, Drive). Install it with `brew install steipete/tap/gogcli`, then run `gog auth add` for my account with all services enabled.',
+    },
   },
   {
     id: 'google_calendar',
     name: 'Google Calendar',
     description: 'Read and create calendar events, check availability.',
     category: 'calendar',
-    connectionType: 'oauth',
-    mcpPackage: '@googleworkspace/mcp',
-    fields: [
-      { key: 'client_id', label: 'OAuth Client ID', type: 'text', required: true },
-      { key: 'client_secret', label: 'OAuth Client Secret', type: 'password', required: true },
-    ],
-    setupUrl: 'https://console.cloud.google.com/apis/credentials',
+    connectionType: 'cli',
+    fields: [],
     status: 'official',
     supportsMultiple: true,
+    cliMeta: {
+      bin: 'gog',
+      toolUrl: 'https://github.com/steipete/gogcli',
+      installHint: 'brew install steipete/tap/gogcli',
+      authCheckCmd: 'gog auth list',
+      setupPrompt:
+        'Help me set up the gog CLI for Google Workspace (Gmail, Calendar, Drive). Install it with `brew install steipete/tap/gogcli`, then run `gog auth add` for my account with all services enabled.',
+    },
   },
   {
     id: 'google_drive',
     name: 'Google Drive',
     description: 'List, read, create, and upload files in Drive.',
     category: 'storage',
-    connectionType: 'oauth',
-    mcpPackage: '@googleworkspace/mcp',
-    fields: [
-      { key: 'client_id', label: 'OAuth Client ID', type: 'text', required: true },
-      { key: 'client_secret', label: 'OAuth Client Secret', type: 'password', required: true },
-    ],
-    setupUrl: 'https://console.cloud.google.com/apis/credentials',
+    connectionType: 'cli',
+    fields: [],
     status: 'official',
+    cliMeta: {
+      bin: 'gog',
+      toolUrl: 'https://github.com/steipete/gogcli',
+      installHint: 'brew install steipete/tap/gogcli',
+      authCheckCmd: 'gog auth list',
+      setupPrompt:
+        'Help me set up the gog CLI for Google Workspace (Gmail, Calendar, Drive). Install it with `brew install steipete/tap/gogcli`, then run `gog auth add` for my account with all services enabled.',
+    },
   },
   {
     id: 'google_docs',
     name: 'Google Docs',
     description: 'Create, read, and edit Google Docs documents.',
     category: 'workspace',
-    connectionType: 'oauth',
-    mcpPackage: '@googleworkspace/mcp',
-    fields: [
-      { key: 'client_id', label: 'OAuth Client ID', type: 'text', required: true },
-      { key: 'client_secret', label: 'OAuth Client Secret', type: 'password', required: true },
-    ],
-    setupUrl: 'https://console.cloud.google.com/apis/credentials',
+    connectionType: 'cli',
+    fields: [],
     status: 'official',
+    cliMeta: {
+      bin: 'gog',
+      toolUrl: 'https://github.com/steipete/gogcli',
+      installHint: 'brew install steipete/tap/gogcli',
+      authCheckCmd: 'gog auth list',
+      setupPrompt:
+        'Help me set up the gog CLI for Google Workspace (Gmail, Calendar, Drive). Install it with `brew install steipete/tap/gogcli`, then run `gog auth add` for my account with all services enabled.',
+    },
   },
   {
     id: 'google_sheets',
     name: 'Google Sheets',
     description: 'Read and write spreadsheet data, run formulas.',
     category: 'workspace',
-    connectionType: 'oauth',
-    mcpPackage: '@googleworkspace/mcp',
-    fields: [
-      { key: 'client_id', label: 'OAuth Client ID', type: 'text', required: true },
-      { key: 'client_secret', label: 'OAuth Client Secret', type: 'password', required: true },
-    ],
-    setupUrl: 'https://console.cloud.google.com/apis/credentials',
+    connectionType: 'cli',
+    fields: [],
     status: 'official',
+    cliMeta: {
+      bin: 'gog',
+      toolUrl: 'https://github.com/steipete/gogcli',
+      installHint: 'brew install steipete/tap/gogcli',
+      authCheckCmd: 'gog auth list',
+      setupPrompt:
+        'Help me set up the gog CLI for Google Workspace (Gmail, Calendar, Drive). Install it with `brew install steipete/tap/gogcli`, then run `gog auth add` for my account with all services enabled.',
+    },
   },
 
   // ── Microsoft 365 ─────────────────────────────────────────────────────────
@@ -280,18 +311,19 @@ export const ALL_PLUGINS: Plugin[] = [
     name: 'GitHub',
     description: 'Manage issues, PRs, repos, code search, and deployments.',
     category: 'development',
-    connectionType: 'api_key',
+    connectionType: 'cli',
     mcpPackage: '@modelcontextprotocol/server-github',
-    fields: [
-      {
-        key: 'personal_access_token',
-        label: 'Personal Access Token',
-        type: 'password',
-        required: true,
-      },
-    ],
+    fields: [],
     setupUrl: 'https://github.com/settings/tokens',
     status: 'official',
+    cliMeta: {
+      bin: 'gh',
+      toolUrl: 'https://cli.github.com',
+      installHint: 'brew install gh',
+      authCheckCmd: 'gh auth status',
+      setupPrompt:
+        'Help me connect GitHub. Check if `gh` CLI is installed and authenticated. If not, install it with `brew install gh` then run `gh auth login`.',
+    },
   },
   {
     id: 'gitlab',

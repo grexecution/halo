@@ -64,7 +64,7 @@ describe('F-013: Connectors page', () => {
       expect(screen.getByText('Categories')).toBeDefined()
       expect(screen.getByText('All plugins')).toBeDefined()
       expect(screen.getAllByText('Google Workspace').length).toBeGreaterThan(0)
-      expect(screen.getByText('Sign in with Google')).toBeDefined()
+      expect(screen.getAllByText('Set up in chat').length).toBeGreaterThan(0)
     })
   })
 

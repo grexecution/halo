@@ -20,6 +20,7 @@ import {
 import {
   AssistantRuntimeProvider,
   useLocalRuntime,
+  useComposerRuntime,
   type ChatModelAdapter,
   type ChatModelRunResult,
   type ThreadMessageLike,
@@ -188,22 +189,17 @@ function makeAdapter(
                 throw new Error(evt.message ?? 'Agent error')
               }
             } catch (parseErr) {
-              // skip malformed events (but rethrow real errors)
-              if (parseErr instanceof Error && parseErr.message !== 'Agent error') {
-                // parse error from JSON.parse — skip
-              } else {
+              // rethrow intentional errors, skip JSON parse failures
+              if (parseErr instanceof Error && parseErr.message === 'Agent error') {
                 throw parseErr
               }
+              // else: JSON.parse failure — skip malformed line
             }
           }
         }
       } finally {
         reader.releaseLock()
       }
-
-      // Final yield with cleaned text
-      const finalText = unwrapLlamaJson(text)
-      if (finalText) yield { content: [{ type: 'text' as const, text: finalText }] }
     },
   }
 }
@@ -639,6 +635,11 @@ export default function ChatPage() {
   // history for loading past sessions into the runtime
   const [initialMessages, setInitialMessages] = useState<ThreadMessageLike[]>([])
   const [threadKey, setThreadKey] = useState(0) // bump to reset runtime
+  // pre-filled message from ?message= query param (e.g. from CLI setup-in-chat button)
+  const [draftMessage] = useState<string>(() => {
+    if (typeof window === 'undefined') return ''
+    return new URLSearchParams(window.location.search).get('message') ?? ''
+  })
 
   const sessionIdRef = useRef<string | null>(activeSessionId)
   const agentRef = useRef<string>(selectedAgent)
@@ -818,6 +819,7 @@ export default function ChatPage() {
           key={threadKey}
           adapter={adapter}
           initialMessages={initialMessages}
+          draftMessage={threadKey === 0 ? draftMessage : ''}
           agents={agents}
           selectedAgent={selectedAgent}
           onAgentSelect={setSelectedAgent}
@@ -840,12 +842,14 @@ export default function ChatPage() {
 function RuntimeWrapper({
   adapter,
   initialMessages,
+  draftMessage,
   agents,
   selectedAgent,
   onAgentSelect,
 }: {
   adapter: ChatModelAdapter
   initialMessages: ThreadMessageLike[]
+  draftMessage: string
   agents: Agent[]
   selectedAgent: string
   onAgentSelect: (handle: string) => void
@@ -856,6 +860,7 @@ function RuntimeWrapper({
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
+      {draftMessage && <ComposerDraftSetter text={draftMessage} />}
       <Thread
         agentPicker={
           <AgentPicker agents={agents} selectedAgent={selectedAgent} onSelect={onAgentSelect} />
@@ -863,4 +868,13 @@ function RuntimeWrapper({
       />
     </AssistantRuntimeProvider>
   )
+}
+
+/** Sets composer text once on mount — used to pre-fill from ?message= query param */
+function ComposerDraftSetter({ text }: { text: string }) {
+  const composerRuntime = useComposerRuntime()
+  useEffect(() => {
+    if (text) composerRuntime.setText(text)
+  }, [text, composerRuntime])
+  return null
 }

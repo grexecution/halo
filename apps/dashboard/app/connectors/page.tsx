@@ -31,6 +31,9 @@ import {
   X,
   Loader2,
   CheckCircle2,
+  Terminal,
+  AlertCircle,
+  MessageCircle,
 } from 'lucide-react'
 import { Select } from '@/app/components/ui/select'
 import { Dialog } from '@/app/components/ui/dialog'
@@ -253,7 +256,15 @@ function GenericModal({
   )
 }
 
-// ── OAuth setup modal (one-time admin config) ──────────────────────────────────
+// ── CLI status types ───────────────────────────────────────────────────────────
+
+interface CliStatus {
+  installed: boolean
+  authed: boolean
+  detail: string
+}
+
+type AllCliStatus = Record<string, CliStatus>
 
 // ── Google Workspace card ─────────────────────────────────────────────────────
 
@@ -267,39 +278,82 @@ const GOOGLE_FEATURE_LABELS: Record<string, string> = {
 
 function GoogleWorkspaceCard({
   connected,
-  onConnectGoogle,
+  cliStatus,
+  onSetupInChat,
   onDisconnectGoogle,
 }: {
   connected: Set<string>
-  onConnectGoogle: () => void
+  cliStatus: CliStatus | undefined
+  onSetupInChat: (prompt: string) => void
   onDisconnectGoogle: (pluginId: string) => void
 }) {
+  const installed = cliStatus?.installed ?? false
+  const authed = cliStatus?.authed ?? false
   const anyConnected = Array.from(GOOGLE_PLUGIN_IDS).some((id) => connected.has(id))
+
+  const setupPrompt =
+    'Help me set up the gog CLI (Google Workspace CLI) to connect Gmail, Calendar, Drive, Docs, and Sheets. Check if `gog` is installed (brew install steipete/tap/gogcli), then help me authenticate with my Google account.'
 
   return (
     <div
-      className={`bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all col-span-full sm:col-span-2 ${anyConnected ? 'border-green-700/60 shadow-sm shadow-green-900/20' : 'border-border'}`}
+      className={`bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all col-span-full sm:col-span-2 ${authed ? 'border-green-700/60 shadow-sm shadow-green-900/20' : 'border-border'}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="font-medium text-foreground text-sm">Google Workspace</span>
-            {anyConnected && (
+            {authed && (
               <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-green-900/40 text-green-400 border border-green-800 flex items-center gap-1">
-                <CheckCircle2 size={10} /> Connected
+                <CheckCircle2 size={10} /> Ready
+              </span>
+            )}
+            {installed && !authed && (
+              <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-yellow-900/40 text-yellow-300 border border-yellow-800 flex items-center gap-1">
+                <AlertCircle size={10} /> Not signed in
               </span>
             )}
           </div>
           <p className="text-muted-foreground text-xs leading-relaxed">
-            One Google login for Gmail, Calendar, Drive, Docs, and Sheets.
+            Gmail, Calendar, Drive, Docs, and Sheets — via the{' '}
+            <a
+              href="https://github.com/steipete/gogcli"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline"
+            >
+              gog CLI
+            </a>
+            . The agent does the setup for you.
           </p>
         </div>
-        <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full font-medium bg-primary/10 text-primary border border-blue-700">
-          official
+        <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full font-medium bg-muted text-muted-foreground border border-border flex items-center gap-1">
+          <Terminal size={9} /> CLI
         </span>
       </div>
 
-      {anyConnected && (
+      {/* Status row */}
+      <div className="flex items-center gap-3 text-xs">
+        <span
+          className={`flex items-center gap-1 ${installed ? 'text-green-400' : 'text-muted-foreground'}`}
+        >
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${installed ? 'bg-green-400' : 'bg-gray-600'}`}
+          />
+          {installed ? 'gog installed' : 'gog not found'}
+        </span>
+        {installed && (
+          <span
+            className={`flex items-center gap-1 ${authed ? 'text-green-400' : 'text-yellow-400'}`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${authed ? 'bg-green-400' : 'bg-yellow-400'}`}
+            />
+            {authed ? 'Authenticated' : 'Not signed in'}
+          </span>
+        )}
+      </div>
+
+      {authed && anyConnected && (
         <div className="flex flex-wrap gap-2">
           {Array.from(GOOGLE_PLUGIN_IDS).map((id) => {
             const isOn = connected.has(id)
@@ -318,12 +372,12 @@ function GoogleWorkspaceCard({
 
       <div className="flex gap-2 mt-auto">
         <a
-          href="https://console.cloud.google.com/apis/credentials"
+          href="https://github.com/steipete/gogcli"
           target="_blank"
           rel="noopener noreferrer"
           className="px-2.5 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-gray-600 transition-colors"
         >
-          Docs
+          Docs ↗
         </a>
         {anyConnected ? (
           <button
@@ -332,14 +386,15 @@ function GoogleWorkspaceCard({
             }}
             className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-red-800 text-red-400 hover:bg-red-900/30 transition-colors"
           >
-            Disconnect Google
+            Disconnect
           </button>
         ) : (
           <button
-            onClick={onConnectGoogle}
+            onClick={() => onSetupInChat(setupPrompt)}
             className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-foreground transition-colors font-medium flex items-center justify-center gap-1.5"
           >
-            Sign in with Google
+            <MessageCircle size={11} />
+            Set up in chat
           </button>
         )}
       </div>
@@ -524,6 +579,8 @@ interface PluginsTabProps {
   onDisconnect: (plugin: Plugin) => void
   onConnectGoogle: () => void
   onDisconnectGoogle: (pluginId: string) => void
+  onSetupInChat: (prompt: string) => void
+  cliStatus: AllCliStatus
   customPlugins: CustomPluginDef[]
   onCreateCustomPlugin: () => void
   onDeleteCustomPlugin: (id: string) => void
@@ -550,29 +607,41 @@ interface CustomPluginDef {
 function PluginCard({
   plugin,
   connected,
+  cliStatus,
   onConnect,
   onDisconnect,
+  onSetupInChat,
 }: {
   plugin: Plugin
   connected: boolean
+  cliStatus: CliStatus | undefined
   onConnect: (p: Plugin) => void
   onDisconnect: (p: Plugin) => void
+  onSetupInChat: ((prompt: string) => void) | undefined
 }) {
   const isPlanned = plugin.status === 'planned'
+  const isCli = plugin.connectionType === 'cli'
   const isOAuth = plugin.connectionType === 'oauth' && !!PLUGIN_TO_PROVIDER[plugin.id]
   const connectLabel = isOAuth ? `Connect with ${plugin.name}` : 'Connect'
+  const cliInstalled = cliStatus?.installed ?? false
+  const cliAuthed = cliStatus?.authed ?? false
 
   return (
     <div
-      className={`bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all ${connected ? 'border-green-700/60 shadow-sm shadow-green-900/20' : 'border-border hover:border-border'} ${isPlanned ? 'opacity-50' : ''}`}
+      className={`bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all ${connected || cliAuthed ? 'border-green-700/60 shadow-sm shadow-green-900/20' : 'border-border hover:border-border'} ${isPlanned ? 'opacity-50' : ''}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="font-medium text-foreground text-sm truncate">{plugin.name}</span>
-            {connected && (
+            {(connected || cliAuthed) && (
               <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-green-900/40 text-green-400 border border-green-800 flex items-center gap-1">
-                <CheckCircle2 size={10} /> Connected
+                <CheckCircle2 size={10} /> {isCli ? 'Ready' : 'Connected'}
+              </span>
+            )}
+            {isCli && cliInstalled && !cliAuthed && (
+              <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-yellow-900/40 text-yellow-300 border border-yellow-800 flex items-center gap-1">
+                <AlertCircle size={10} /> Not signed in
               </span>
             )}
           </div>
@@ -580,13 +649,41 @@ function PluginCard({
             {plugin.description}
           </p>
         </div>
-        <span
-          className={`shrink-0 text-xs px-1.5 py-0.5 rounded-full font-medium ${STATUS_BADGE[plugin.status]}`}
-        >
-          {plugin.status}
-        </span>
+        {isCli ? (
+          <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full font-medium bg-muted text-muted-foreground border border-border flex items-center gap-1">
+            <Terminal size={9} /> CLI
+          </span>
+        ) : (
+          <span
+            className={`shrink-0 text-xs px-1.5 py-0.5 rounded-full font-medium ${STATUS_BADGE[plugin.status]}`}
+          >
+            {plugin.status}
+          </span>
+        )}
       </div>
-      {plugin.docsUrl && (
+      {isCli && (
+        <div className="flex items-center gap-3 text-xs">
+          <span
+            className={`flex items-center gap-1 ${cliInstalled ? 'text-green-400' : 'text-muted-foreground'}`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${cliInstalled ? 'bg-green-400' : 'bg-gray-600'}`}
+            />
+            {cliInstalled ? `${plugin.cliMeta?.bin} installed` : `${plugin.cliMeta?.bin} not found`}
+          </span>
+          {cliInstalled && (
+            <span
+              className={`flex items-center gap-1 ${cliAuthed ? 'text-green-400' : 'text-yellow-400'}`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${cliAuthed ? 'bg-green-400' : 'bg-yellow-400'}`}
+              />
+              {cliAuthed ? 'Authenticated' : 'Not signed in'}
+            </span>
+          )}
+        </div>
+      )}
+      {plugin.docsUrl && !isCli && (
         <a
           href={plugin.docsUrl}
           target="_blank"
@@ -598,7 +695,29 @@ function PluginCard({
       )}
       {!isPlanned && (
         <div className="flex gap-2">
-          {connected ? (
+          {isCli ? (
+            <>
+              {plugin.cliMeta?.toolUrl && (
+                <a
+                  href={plugin.cliMeta.toolUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1.5 text-xs rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-gray-600 transition-colors"
+                >
+                  Tool ↗
+                </a>
+              )}
+              <button
+                onClick={() =>
+                  onSetupInChat && plugin.cliMeta && onSetupInChat(plugin.cliMeta.setupPrompt)
+                }
+                className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 text-foreground transition-colors font-medium flex items-center justify-center gap-1.5"
+              >
+                <MessageCircle size={11} />
+                Set up in chat
+              </button>
+            </>
+          ) : connected ? (
             <button
               onClick={() => onDisconnect(plugin)}
               className="flex-1 px-3 py-1.5 text-xs rounded-lg border border-red-800 text-red-400 hover:bg-red-900/30 transition-colors"
@@ -696,8 +815,10 @@ function PluginsTab({
   connected,
   onConnect,
   onDisconnect,
-  onConnectGoogle,
+  onConnectGoogle: _onConnectGoogle,
   onDisconnectGoogle,
+  onSetupInChat,
+  cliStatus,
   customPlugins,
   onCreateCustomPlugin,
   onDeleteCustomPlugin,
@@ -813,7 +934,8 @@ function PluginsTab({
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   <GoogleWorkspaceCard
                     connected={connected}
-                    onConnectGoogle={onConnectGoogle}
+                    cliStatus={cliStatus['gog']}
+                    onSetupInChat={onSetupInChat}
                     onDisconnectGoogle={onDisconnectGoogle}
                   />
                 </div>
@@ -859,8 +981,10 @@ function PluginsTab({
                     key={plugin.id}
                     plugin={plugin}
                     connected={connected.has(plugin.id)}
+                    cliStatus={plugin.cliMeta ? cliStatus[plugin.cliMeta.bin] : undefined}
                     onConnect={onConnect}
                     onDisconnect={onDisconnect}
+                    onSetupInChat={onSetupInChat}
                   />
                 ))}
               </div>
@@ -1859,24 +1983,28 @@ export default function ConnectorsPage() {
   const [installedMcps, setInstalledMcps] = useState<InstalledMcp[]>([])
   const [userSkills, setUserSkills] = useState<UserSkillDef[]>([])
   const [loading, setLoading] = useState(true)
+  const [cliStatus, setCliStatus] = useState<AllCliStatus>({})
   const oauthListenerRef = useRef<((e: MessageEvent) => void) | null>(null)
 
   const loadAll = useCallback(async () => {
     try {
-      const [pluginsRes, mcpsRes, skillsRes, customPluginsRes] = await Promise.all([
+      const [pluginsRes, mcpsRes, skillsRes, customPluginsRes, cliRes] = await Promise.all([
         fetch('/api/plugins'),
         fetch('/api/mcps'),
         fetch('/api/skills'),
         fetch('/api/custom-plugins'),
+        fetch('/api/connectors/cli-status'),
       ])
       const pluginsData = (await pluginsRes.json()) as { connected: string[] }
       const mcpsData = (await mcpsRes.json()) as { mcps: InstalledMcp[] }
       const skillsData = (await skillsRes.json()) as { skills: UserSkillDef[] }
       const customPluginsData = (await customPluginsRes.json()) as { plugins: CustomPluginDef[] }
+      const cliData = (await cliRes.json()) as AllCliStatus
       setConnected(new Set(pluginsData.connected ?? []))
       setInstalledMcps(mcpsData.mcps ?? [])
       setUserSkills(skillsData.skills ?? [])
       setCustomPlugins(customPluginsData.plugins ?? [])
+      setCliStatus(cliData)
     } catch {
       /* ignore */
     } finally {
@@ -1970,8 +2098,17 @@ export default function ConnectorsPage() {
     window.addEventListener('message', listener)
   }
 
-  /** Route plugin connect: OAuth vs modal */
+  /** Navigate to chat with pre-filled setup message for CLI plugins */
+  function handleSetupInChat(prompt: string) {
+    window.location.href = `/chat?message=${encodeURIComponent(prompt)}`
+  }
+
+  /** Route plugin connect: CLI vs OAuth vs modal */
   function handleConnectPlugin(plugin: Plugin) {
+    if (plugin.connectionType === 'cli') {
+      if (plugin.cliMeta) handleSetupInChat(plugin.cliMeta.setupPrompt)
+      return
+    }
     const isOAuth = plugin.connectionType === 'oauth' && !!PLUGIN_TO_PROVIDER[plugin.id]
     if (isOAuth) {
       void handleConnectOAuth(plugin)
@@ -2193,12 +2330,12 @@ export default function ConnectorsPage() {
             connected={connected}
             onConnect={handleConnectPlugin}
             onDisconnect={(p) => void handleDisconnectPlugin(p)}
-            onConnectGoogle={() => {
-              // Use gmail as the representative Google plugin to start OAuth
-              const gmailPlugin = ALL_PLUGINS.find((p) => p.id === 'gmail')
-              if (gmailPlugin) handleConnectPlugin(gmailPlugin)
-            }}
+            onConnectGoogle={() =>
+              handleSetupInChat('Help me set up the gog CLI for Google Workspace access.')
+            }
             onDisconnectGoogle={(id) => void handleDisconnectPluginById(id)}
+            onSetupInChat={handleSetupInChat}
+            cliStatus={cliStatus}
             customPlugins={customPlugins}
             onCreateCustomPlugin={() => setShowCreateCustomPlugin(true)}
             onDeleteCustomPlugin={(id) => void handleDeleteCustomPlugin(id)}

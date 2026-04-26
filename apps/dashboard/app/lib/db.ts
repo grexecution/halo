@@ -100,6 +100,26 @@ function migrateSchema(db: Database.Database) {
     db.exec('ALTER TABLE auth ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0')
   }
 
+  // You page — profile + notes
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS you_profile (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      about TEXT NOT NULL DEFAULT '',
+      preferences TEXT NOT NULL DEFAULT '',
+      goals TEXT NOT NULL DEFAULT '',
+      work_context TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS you_notes (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL DEFAULT 'Untitled',
+      content TEXT NOT NULL DEFAULT '',
+      pinned INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `)
+
   // New tables added after initial schema
   db.exec(`
     CREATE TABLE IF NOT EXISTS approvals (

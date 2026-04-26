@@ -7,29 +7,27 @@ import { useTheme } from 'next-themes'
 import {
   MessageSquare,
   Bot,
-  Brain,
+  User,
   Zap,
   ShieldCheck,
   Activity,
   Plug2,
   BookOpen,
-  Layers,
-  Terminal,
   BarChart3,
   SlidersHorizontal,
   CheckSquare,
   CalendarDays,
-  FileText,
   Sun,
   Moon,
   Sparkles,
+  FileText,
 } from 'lucide-react'
 import { cn } from './ui/cn'
 
 const WORKSPACE_NAV = [
   { href: '/chat', label: 'Chat', icon: MessageSquare },
   { href: '/agents', label: 'Agents', icon: Bot },
-  { href: '/memory', label: 'Memory', icon: Brain },
+  { href: '/you', label: 'You', icon: User },
 ]
 
 const AUTOMATE_NAV = [
@@ -37,17 +35,15 @@ const AUTOMATE_NAV = [
   { href: '/tasks', label: 'Tasks', icon: CheckSquare },
   { href: '/calendar', label: 'Calendar', icon: CalendarDays },
   { href: '/approvals', label: 'Approvals', icon: ShieldCheck, badge: true },
-  { href: '/runs', label: 'Activity', icon: Activity },
+  { href: '/activity', label: 'Activity', icon: Activity },
 ]
 
 const CONNECT_NAV = [
   { href: '/connectors', label: 'Connectors', icon: Plug2 },
   { href: '/knowledge', label: 'Knowledge', icon: BookOpen },
-  { href: '/workspaces', label: 'Workspaces', icon: Layers },
 ]
 
 const SYSTEM_NAV = [
-  { href: '/logs', label: 'Logs', icon: Terminal },
   { href: '/cost', label: 'Usage & Cost', icon: BarChart3 },
   { href: '/settings', label: 'Settings', icon: SlidersHorizontal },
 ]

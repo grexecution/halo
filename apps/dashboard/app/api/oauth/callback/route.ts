@@ -11,7 +11,11 @@ export const dynamic = 'force-dynamic'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { getDb } from '../../../lib/db'
-import { OAUTH_PROVIDER_CONFIGS, GOOGLE_PLUGIN_IDS } from '@open-greg/connectors/oauth-configs'
+import {
+  OAUTH_PROVIDER_CONFIGS,
+  GOOGLE_PLUGIN_IDS,
+  PROVIDER_ENV_PREFIX,
+} from '@open-greg/connectors/oauth-configs'
 
 interface TokenResponse {
   access_token: string
@@ -19,10 +23,36 @@ interface TokenResponse {
   expires_in?: number
   token_type?: string
   scope?: string
-  // Slack-specific
   authed_user?: { access_token?: string }
-  // GitHub returns token in different format
   error?: string
+}
+
+/** Read admin-saved OAuth apps from settings DB */
+function readOAuthApp(providerKey: string): { id: string; secret: string } | undefined {
+  const db = getDb()
+  const row = db.prepare('SELECT data FROM settings WHERE id = 1').get() as
+    | { data: string }
+    | undefined
+  if (!row) return undefined
+  try {
+    const parsed = JSON.parse(row.data) as Record<string, unknown>
+    const apps = parsed['oauth_apps'] as Record<string, { id: string; secret: string }> | undefined
+    return apps?.[providerKey]
+  } catch {
+    return undefined
+  }
+}
+
+function resolveCredentials(providerKey: string): { clientId: string; clientSecret: string } {
+  // 1. Admin DB settings
+  const app = readOAuthApp(providerKey)
+  if (app?.id) return { clientId: app.id, clientSecret: app.secret }
+
+  // 2. Env vars
+  const envKey = PROVIDER_ENV_PREFIX[providerKey] ?? providerKey.toUpperCase().replace(/-/g, '_')
+  const clientId = process.env[`${envKey}_CLIENT_ID`] ?? ''
+  const clientSecret = process.env[`${envKey}_CLIENT_SECRET`] ?? ''
+  return { clientId, clientSecret }
 }
 
 export async function GET(req: NextRequest) {
@@ -43,7 +73,6 @@ export async function GET(req: NextRequest) {
 
   const db = getDb()
 
-  // Look up and immediately delete the state (one-time use)
   const stateRow = db
     .prepare(
       'SELECT plugin_id, provider_key, code_verifier, redirect_uri FROM oauth_states WHERE id = ?',
@@ -67,41 +96,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL('/oauth-success?error=unknown_provider', req.url))
   }
 
-  // ── Resolve client credentials ────────────────────────────────────────────
-  // Priority: env vars (admin configured) → stored DB fields
-  const providerKey = stateRow.provider_key
-  const envPrefix = providerKey.toUpperCase().replace(/-/g, '_')
-  const envClientId =
-    (GOOGLE_PLUGIN_IDS.has(stateRow.plugin_id) ? process.env['GOOGLE_CLIENT_ID'] : undefined) ??
-    process.env[`${envPrefix}_CLIENT_ID`] ??
-    ''
-  const envClientSecret =
-    (GOOGLE_PLUGIN_IDS.has(stateRow.plugin_id) ? process.env['GOOGLE_CLIENT_SECRET'] : undefined) ??
-    process.env[`${envPrefix}_CLIENT_SECRET`] ??
-    ''
-
-  const storedRow = db
-    .prepare('SELECT fields FROM plugin_credentials WHERE plugin_id = ?')
-    .get(stateRow.plugin_id) as { fields: string } | undefined
-
-  const googleRow = GOOGLE_PLUGIN_IDS.has(stateRow.plugin_id)
-    ? (db
-        .prepare('SELECT fields FROM plugin_credentials WHERE plugin_id = ?')
-        .get('google-workspace') as { fields: string } | undefined)
-    : undefined
-
-  const storedFields = JSON.parse(storedRow?.fields ?? googleRow?.fields ?? '{}') as Record<
-    string,
-    string
-  >
-  const clientId = envClientId || storedFields['client_id'] || ''
-  const clientSecret = envClientSecret || storedFields['client_secret'] || ''
+  const { clientId, clientSecret } = resolveCredentials(stateRow.provider_key)
 
   if (!clientId) {
     return NextResponse.redirect(new URL('/oauth-success?error=no_client_id', req.url))
   }
 
-  // Exchange authorization code for tokens
   const tokenParams: Record<string, string> = {
     code,
     client_id: clientId,
@@ -124,7 +124,6 @@ export async function GET(req: NextRequest) {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Accept: 'application/json',
-        // GitHub requires this header
         'X-GitHub-Api-Version': '2022-11-28',
       },
       body: new URLSearchParams(tokenParams).toString(),
@@ -161,20 +160,18 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  // Calculate expiry
   const tokenExpiresAt = tokenData.expires_in
     ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
     : null
 
-  // For Google: store tokens under 'google-workspace' as the canonical entry
-  // AND mark each Google plugin as connected
+  // For Google: store under canonical 'google-workspace' key
   const targetPluginId = GOOGLE_PLUGIN_IDS.has(stateRow.plugin_id)
     ? 'google-workspace'
     : stateRow.plugin_id
 
   const connectedAt = new Date().toISOString()
 
-  db.prepare(
+  const upsertCredential = db.prepare(
     `INSERT INTO plugin_credentials
        (plugin_id, fields, access_token, refresh_token, token_expires_at, scopes, token_type, connected_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -185,41 +182,23 @@ export async function GET(req: NextRequest) {
        scopes = excluded.scopes,
        token_type = excluded.token_type,
        connected_at = excluded.connected_at`,
-  ).run(
-    targetPluginId,
-    JSON.stringify(storedFields), // preserve existing client_id/secret
+  )
+
+  const baseArgs = [
     tokenData.access_token,
     tokenData.refresh_token ?? null,
     tokenExpiresAt,
     tokenData.scope ?? null,
     tokenData.token_type ?? 'Bearer',
     connectedAt,
-  )
+  ] as const
 
-  // For Google: also mark all individual Google plugins as connected (same tokens)
+  upsertCredential.run(targetPluginId, '{}', ...baseArgs)
+
+  // For Google: also mark all individual Google plugin IDs as connected
   if (GOOGLE_PLUGIN_IDS.has(stateRow.plugin_id)) {
     for (const gPluginId of GOOGLE_PLUGIN_IDS) {
-      db.prepare(
-        `INSERT INTO plugin_credentials
-           (plugin_id, fields, access_token, refresh_token, token_expires_at, scopes, token_type, connected_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(plugin_id) DO UPDATE SET
-           access_token = excluded.access_token,
-           refresh_token = COALESCE(excluded.refresh_token, refresh_token),
-           token_expires_at = excluded.token_expires_at,
-           scopes = excluded.scopes,
-           token_type = excluded.token_type,
-           connected_at = excluded.connected_at`,
-      ).run(
-        gPluginId,
-        JSON.stringify(storedFields),
-        tokenData.access_token,
-        tokenData.refresh_token ?? null,
-        tokenExpiresAt,
-        tokenData.scope ?? null,
-        tokenData.token_type ?? 'Bearer',
-        connectedAt,
-      )
+      upsertCredential.run(gPluginId, '{}', ...baseArgs)
     }
   }
 

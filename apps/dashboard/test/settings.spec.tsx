@@ -5,6 +5,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import SettingsPage from '../app/settings/page.js'
 
+vi.mock('next/navigation', () => ({
+  useSearchParams: () => ({ get: () => null }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => '/settings',
+}))
+
 const MOCK_SETTINGS = {
   llm: { primary: 'gpt-4o', models: [] },
   vision: { provider: 'local', model: 'paddleocr' },

@@ -126,6 +126,8 @@ export default function CostPage() {
   const [stats, setStats] = useState<CostStatsReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastFetch, setLastFetch] = useState<string | null>(null)
+  const [modelSearch, setModelSearch] = useState('')
+  const [modelScope, setModelScope] = useState<'all' | 'cloud' | 'local'>('all')
 
   const fetchStats = useCallback(async () => {
     try {
@@ -149,6 +151,19 @@ export default function CostPage() {
   }, [fetchStats])
 
   const maxCost = stats?.dailyTrend.reduce((m, d) => Math.max(m, d.totalCostUsd), 0) ?? 0
+  const filteredModels =
+    stats?.models.filter((m) => {
+      const q = modelSearch.trim().toLowerCase()
+      const matchesSearch =
+        q.length === 0 ||
+        m.modelId.toLowerCase().includes(q) ||
+        m.provider.toLowerCase().includes(q)
+      const matchesScope =
+        modelScope === 'all' ||
+        (modelScope === 'local' && m.isLocalModel) ||
+        (modelScope === 'cloud' && !m.isLocalModel)
+      return matchesSearch && matchesScope
+    }) ?? []
 
   return (
     <main className="p-6 max-w-5xl mx-auto space-y-6">
@@ -245,12 +260,60 @@ export default function CostPage() {
       {/* Usage by model */}
       <section>
         <h2 className="text-lg font-semibold text-white mb-3">Usage by model</h2>
+        <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <input
+            data-testid="model-filter-search"
+            type="text"
+            value={modelSearch}
+            onChange={(e) => setModelSearch(e.target.value)}
+            placeholder="Filter models by name or provider…"
+            className="w-full md:max-w-sm rounded-md border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-indigo-500 focus:outline-none"
+          />
+          <div
+            data-testid="model-filter-scope"
+            className="inline-flex rounded-md border border-gray-700 bg-gray-950 p-1"
+          >
+            <button
+              type="button"
+              onClick={() => setModelScope('all')}
+              className={`rounded px-3 py-1.5 text-sm transition-colors ${
+                modelScope === 'all' ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:text-white'
+              }`}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => setModelScope('cloud')}
+              className={`rounded px-3 py-1.5 text-sm transition-colors ${
+                modelScope === 'cloud'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:text-white'
+              }`}
+            >
+              Cloud
+            </button>
+            <button
+              type="button"
+              onClick={() => setModelScope('local')}
+              className={`rounded px-3 py-1.5 text-sm transition-colors ${
+                modelScope === 'local'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:text-white'
+              }`}
+            >
+              Local
+            </button>
+          </div>
+        </div>
         <div
           data-testid="model-usage-table"
           className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden"
         >
           {!stats || (stats.models ?? []).length === 0 ? (
             <p className="p-4 text-gray-600 text-sm">No model usage data yet.</p>
+          ) : filteredModels.length === 0 ? (
+            <p className="p-4 text-gray-600 text-sm">No models match the active filters.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -263,7 +326,7 @@ export default function CostPage() {
                 </tr>
               </thead>
               <tbody>
-                {(stats.models ?? []).map((m) => (
+                {filteredModels.map((m) => (
                   <tr
                     key={`${m.provider}:${m.modelId}`}
                     className="border-b border-gray-800/50 hover:bg-gray-800/40"

@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   Globe,
   Wifi,
@@ -18,6 +19,7 @@ import {
   Activity,
   Plus,
   X,
+  CheckCircle2,
 } from 'lucide-react'
 import {
   Button,
@@ -1887,9 +1889,315 @@ function UpdateTab() {
   )
 }
 
+// ---- Tab: OAuth Apps ----
+
+/** All OAuth providers admin can configure. Matches PLUGIN_TO_PROVIDER providers. */
+const OAUTH_PROVIDERS = [
+  {
+    key: 'google-workspace',
+    name: 'Google',
+    logo: '🔵',
+    desc: 'Gmail, Calendar, Drive, Docs, Sheets',
+    docsUrl: 'https://console.cloud.google.com/apis/credentials',
+    envHint: 'GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET',
+  },
+  {
+    key: 'microsoft',
+    name: 'Microsoft',
+    logo: '🪟',
+    desc: 'Outlook, Teams, OneDrive',
+    docsUrl: 'https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade',
+    envHint: 'MICROSOFT_CLIENT_ID / MICROSOFT_CLIENT_SECRET',
+  },
+  {
+    key: 'slack',
+    name: 'Slack',
+    logo: '💬',
+    desc: 'Send and read messages, channels',
+    docsUrl: 'https://api.slack.com/apps',
+    envHint: 'SLACK_CLIENT_ID / SLACK_CLIENT_SECRET',
+  },
+  {
+    key: 'github',
+    name: 'GitHub',
+    logo: '🐙',
+    desc: 'Repos, issues, pull requests',
+    docsUrl: 'https://github.com/settings/developers',
+    envHint: 'GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET',
+  },
+  {
+    key: 'linear',
+    name: 'Linear',
+    logo: '📐',
+    desc: 'Issues, projects, cycles',
+    docsUrl: 'https://linear.app/settings/api',
+    envHint: 'LINEAR_CLIENT_ID / LINEAR_CLIENT_SECRET',
+  },
+  {
+    key: 'dropbox',
+    name: 'Dropbox',
+    logo: '📦',
+    desc: 'Files and folders',
+    docsUrl: 'https://www.dropbox.com/developers/apps',
+    envHint: 'DROPBOX_CLIENT_ID / DROPBOX_CLIENT_SECRET',
+  },
+  {
+    key: 'hubspot',
+    name: 'HubSpot',
+    logo: '🧡',
+    desc: 'CRM contacts, deals, pipelines',
+    docsUrl: 'https://developers.hubspot.com/get-started',
+    envHint: 'HUBSPOT_CLIENT_ID / HUBSPOT_CLIENT_SECRET',
+  },
+  {
+    key: 'salesforce',
+    name: 'Salesforce',
+    logo: '☁️',
+    desc: 'Leads, accounts, opportunities',
+    docsUrl: 'https://developer.salesforce.com/apps',
+    envHint: 'SALESFORCE_CLIENT_ID / SALESFORCE_CLIENT_SECRET',
+  },
+  {
+    key: 'asana',
+    name: 'Asana',
+    logo: '🌀',
+    desc: 'Tasks and projects',
+    docsUrl: 'https://app.asana.com/0/my-apps',
+    envHint: 'ASANA_CLIENT_ID / ASANA_CLIENT_SECRET',
+  },
+  {
+    key: 'quickbooks',
+    name: 'QuickBooks',
+    logo: '💰',
+    desc: 'Accounting and invoices',
+    docsUrl: 'https://developer.intuit.com/app/developer/myapps',
+    envHint: 'QUICKBOOKS_CLIENT_ID / QUICKBOOKS_CLIENT_SECRET',
+  },
+  {
+    key: 'xero',
+    name: 'Xero',
+    logo: '📊',
+    desc: 'Accounting and invoices',
+    docsUrl: 'https://developer.xero.com/app/manage',
+    envHint: 'XERO_CLIENT_ID / XERO_CLIENT_SECRET',
+  },
+  {
+    key: 'box',
+    name: 'Box',
+    logo: '📁',
+    desc: 'Files and cloud storage',
+    docsUrl: 'https://developer.box.com/',
+    envHint: 'BOX_CLIENT_ID / BOX_CLIENT_SECRET',
+  },
+] as const
+
+type OAuthApps = Record<string, { id: string; secret: string }>
+
+function OAuthAppsTab() {
+  const [apps, setApps] = useState<OAuthApps>({})
+  const [drafts, setDrafts] = useState<OAuthApps>({})
+  const [saved, setSaved] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  // Track which providers are expanded
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const highlightRef = useRef<string | null>(null)
+
+  // Read ?setup= from URL to auto-expand a specific provider
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const setup = searchParams.get('setup')
+    if (setup) {
+      setExpanded((prev) => new Set([...prev, setup]))
+      highlightRef.current = setup
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    void fetch('/api/settings/oauth')
+      .then((r) => r.json())
+      .then((data) => {
+        setApps(data as OAuthApps)
+        setDrafts(data as OAuthApps)
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  function setField(provider: string, field: 'id' | 'secret', value: string) {
+    setDrafts((prev) => ({
+      ...prev,
+      [provider]: { id: '', secret: '', ...prev[provider], [field]: value },
+    }))
+  }
+
+  async function saveProvider(providerKey: string) {
+    const merged = { ...apps, [providerKey]: drafts[providerKey] ?? { id: '', secret: '' } }
+    // Remove empty entries
+    for (const k of Object.keys(merged)) {
+      if (!merged[k]?.id) delete merged[k]
+    }
+    await fetch('/api/settings/oauth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(merged),
+    })
+    setApps(merged)
+    setSaved(providerKey)
+    setTimeout(() => setSaved(null), 2000)
+  }
+
+  function isConfigured(key: string) {
+    return !!apps[key]?.id
+  }
+
+  if (loading) return <TableSkeleton rows={4} />
+
+  const redirectUri =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/api/oauth/callback`
+      : '/api/oauth/callback'
+
+  return (
+    <div className="space-y-4 pt-4">
+      <div className="bg-muted/50 border border-border rounded-lg p-4 text-xs text-muted-foreground space-y-1">
+        <p className="font-medium text-foreground">How this works (Windmill-style)</p>
+        <p>
+          Register your own OAuth app with each provider (free). Paste the credentials here once.
+          Then every &quot;Connect&quot; button on the Connectors page opens the provider&apos;s
+          consent screen directly — no more setup prompts for users.
+        </p>
+        <p>
+          Redirect URI to add in every OAuth app:{' '}
+          <code className="font-mono bg-muted px-1 rounded">{redirectUri}</code>
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        {OAUTH_PROVIDERS.map((p) => {
+          const configured = isConfigured(p.key)
+          const isOpen = expanded.has(p.key)
+          const isHighlighted = highlightRef.current === p.key
+          const draft = drafts[p.key] ?? { id: '', secret: '' }
+
+          return (
+            <div
+              key={p.key}
+              className={cn(
+                'border rounded-lg overflow-hidden transition-colors',
+                isHighlighted ? 'border-primary' : 'border-border',
+              )}
+            >
+              {/* Header row */}
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/40 transition-colors text-left"
+                onClick={() =>
+                  setExpanded((prev) => {
+                    const next = new Set(prev)
+                    if (next.has(p.key)) next.delete(p.key)
+                    else next.add(p.key)
+                    return next
+                  })
+                }
+              >
+                <span className="text-lg">{p.logo}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-foreground">{p.name}</div>
+                  <div className="text-xs text-muted-foreground truncate">{p.desc}</div>
+                </div>
+                {configured ? (
+                  <div className="flex items-center gap-1 text-xs text-green-600">
+                    <CheckCircle2 size={13} />
+                    <span>Configured</span>
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground">Not set up</div>
+                )}
+                <ChevronRight
+                  size={14}
+                  className={cn(
+                    'text-muted-foreground transition-transform',
+                    isOpen && 'rotate-90',
+                  )}
+                />
+              </button>
+
+              {/* Expanded form */}
+              {isOpen && (
+                <div className="border-t border-border bg-muted/20 px-4 py-4 space-y-4">
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>
+                      1.{' '}
+                      <a
+                        href={p.docsUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary underline inline-flex items-center gap-0.5"
+                      >
+                        Create an OAuth app <ExternalLink size={11} />
+                      </a>{' '}
+                      and set the redirect URI to:
+                    </p>
+                    <code className="block bg-muted px-2 py-1 rounded font-mono text-xs select-all">
+                      {redirectUri}
+                    </code>
+                    <p>2. Paste the credentials below:</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Client ID</Label>
+                      <Input
+                        placeholder="Client ID"
+                        value={draft.id}
+                        onChange={(e) => setField(p.key, 'id', e.target.value)}
+                        className="text-xs h-8"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Client Secret</Label>
+                      <Input
+                        type="password"
+                        placeholder="Client Secret"
+                        value={draft.secret}
+                        onChange={(e) => setField(p.key, 'secret', e.target.value)}
+                        className="text-xs h-8"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      Or set env vars:{' '}
+                      <code className="font-mono bg-muted px-1 rounded">{p.envHint}</code>
+                    </p>
+                    <Button
+                      size="sm"
+                      onClick={() => void saveProvider(p.key)}
+                      className="h-7 text-xs gap-1"
+                    >
+                      {saved === p.key ? (
+                        <>
+                          <CheckCircle2 size={12} /> Saved
+                        </>
+                      ) : (
+                        'Save'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ---- Main Page ----
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams()
+  const initialTab = searchParams.get('tab') ?? 'models'
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS)
   const [savedTab, setSavedTab] = useState<string | null>(null)
 
@@ -1933,11 +2241,12 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        <Tabs defaultValue="models">
+        <Tabs defaultValue={initialTab}>
           <TabsList>
             <TabsTrigger value="models">Models</TabsTrigger>
             <TabsTrigger value="messaging">Messaging</TabsTrigger>
             <TabsTrigger value="memory">Memory</TabsTrigger>
+            <TabsTrigger value="oauth">OAuth Apps</TabsTrigger>
             <TabsTrigger value="vision-voice">Voice & Vision</TabsTrigger>
             <TabsTrigger value="permissions">Permissions</TabsTrigger>
             <TabsTrigger value="telemetry">Privacy</TabsTrigger>
@@ -1962,6 +2271,10 @@ export default function SettingsPage() {
               onSave={() => handleSave('memory')}
               saved={savedTab === 'memory'}
             />
+          </TabsContent>
+
+          <TabsContent value="oauth">
+            <OAuthAppsTab />
           </TabsContent>
 
           <TabsContent value="vision-voice">

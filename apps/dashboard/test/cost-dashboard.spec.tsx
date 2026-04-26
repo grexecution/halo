@@ -2,7 +2,7 @@
  * F-208: Token cost dashboard
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import CostPage from '../app/cost/page.js'
 
 const MOCK_STATS = {
@@ -139,6 +139,39 @@ describe('F-208: Cost dashboard page', () => {
     })
   })
 
+  it('filters models by scope (local/cloud)', async () => {
+    setupFetch()
+    render(<CostPage />)
+    await waitFor(() => screen.getByTestId('model-usage-table'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Local' }))
+    await waitFor(() => {
+      const table = screen.getByTestId('model-usage-table')
+      expect(table.textContent).toContain('llama3.2')
+      expect(table.textContent).not.toContain('claude-sonnet-4-6')
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cloud' }))
+    await waitFor(() => {
+      const table = screen.getByTestId('model-usage-table')
+      expect(table.textContent).toContain('claude-sonnet-4-6')
+      expect(table.textContent).not.toContain('llama3.2')
+    })
+  })
+
+  it('filters models by search query', async () => {
+    setupFetch()
+    render(<CostPage />)
+    await waitFor(() => screen.getByTestId('model-filter-search'))
+
+    fireEvent.change(screen.getByTestId('model-filter-search'), { target: { value: 'anthropic' } })
+    await waitFor(() => {
+      const table = screen.getByTestId('model-usage-table')
+      expect(table.textContent).toContain('claude-sonnet-4-6')
+      expect(table.textContent).not.toContain('llama3.2')
+    })
+  })
+
   it('shows empty state when no tools tracked', async () => {
     setupFetch({ ...MOCK_STATS, tools: [], sessions: [] })
     render(<CostPage />)
@@ -163,6 +196,19 @@ describe('F-208: Cost dashboard page', () => {
     await waitFor(() => {
       const table = screen.getByTestId('model-usage-table')
       expect(table.textContent).toContain('No model usage data yet')
+    })
+  })
+
+  it('shows filtered-empty state when filters remove all model rows', async () => {
+    setupFetch()
+    render(<CostPage />)
+    await waitFor(() => screen.getByTestId('model-filter-search'))
+    fireEvent.change(screen.getByTestId('model-filter-search'), {
+      target: { value: 'not-a-model' },
+    })
+    await waitFor(() => {
+      const table = screen.getByTestId('model-usage-table')
+      expect(table.textContent).toContain('No models match the active filters.')
     })
   })
 

@@ -194,6 +194,26 @@ export const GOOGLE_PLUGIN_IDS = new Set([
   'google_sheets',
 ])
 
+/**
+ * Maps provider key → env var prefix for client_id/client_secret.
+ * E.g. 'google-workspace' → 'GOOGLE' means we look for GOOGLE_CLIENT_ID.
+ * Providers not listed here use toUpperCase().replace(/-/g, '_').
+ */
+export const PROVIDER_ENV_PREFIX: Record<string, string> = {
+  'google-workspace': 'GOOGLE',
+  microsoft: 'MICROSOFT',
+  linear: 'LINEAR',
+  slack: 'SLACK',
+  dropbox: 'DROPBOX',
+  github: 'GITHUB',
+  asana: 'ASANA',
+  salesforce: 'SALESFORCE',
+  hubspot: 'HUBSPOT',
+  quickbooks: 'QUICKBOOKS',
+  xero: 'XERO',
+  box: 'BOX',
+}
+
 export function getProviderConfig(pluginId: string): OAuthProviderConfig | null {
   const providerKey = PLUGIN_TO_PROVIDER[pluginId]
   if (!providerKey) return null

@@ -31,7 +31,6 @@ import {
   X,
   Loader2,
   CheckCircle2,
-  ExternalLink,
 } from 'lucide-react'
 import { Select } from '@/app/components/ui/select'
 import { Dialog } from '@/app/components/ui/dialog'
@@ -255,121 +254,6 @@ function GenericModal({
 }
 
 // ── OAuth setup modal (one-time admin config) ──────────────────────────────────
-
-interface OAuthSetupModalProps {
-  plugin: Plugin
-  redirectUri: string
-  envVar: string
-  onClose: () => void
-  onStart: (clientId: string, clientSecret: string) => Promise<void>
-}
-
-function OAuthSetupModal({ plugin, redirectUri, envVar, onClose, onStart }: OAuthSetupModalProps) {
-  const [clientId, setClientId] = useState('')
-  const [clientSecret, setClientSecret] = useState('')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  const providerName = PLUGIN_TO_PROVIDER[plugin.id] === 'google-workspace' ? 'Google' : plugin.name
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!clientId.trim()) {
-      setError('Client ID is required')
-      return
-    }
-    setSaving(true)
-    setError('')
-    try {
-      await onStart(clientId.trim(), clientSecret.trim())
-    } catch (err) {
-      setError(String(err))
-      setSaving(false)
-    }
-  }
-
-  return (
-    <Dialog
-      open
-      title={`Set up ${providerName} OAuth`}
-      description={`One-time setup — register this app with ${providerName}, then users just click "Sign in" with no extra steps.`}
-      onClose={onClose}
-      className="max-w-lg"
-    >
-      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-5">
-        {/* Step 1 */}
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            1 · Add this redirect URI to your OAuth app
-          </p>
-          <div className="rounded-lg border border-border bg-muted/40 p-3 flex items-center gap-2">
-            <code className="flex-1 font-mono text-xs text-primary break-all">{redirectUri}</code>
-            <button
-              type="button"
-              onClick={() => void navigator.clipboard.writeText(redirectUri)}
-              className="shrink-0 px-2 py-1 rounded border border-border hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-xs"
-            >
-              Copy
-            </button>
-          </div>
-          {plugin.setupUrl && (
-            <a
-              href={plugin.setupUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-            >
-              <ExternalLink size={11} /> Open {providerName} developer console
-            </a>
-          )}
-        </div>
-
-        {/* Step 2 */}
-        <div className="space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            2 · Paste your credentials
-          </p>
-          <div>
-            <label className="block text-sm text-foreground mb-1">
-              Client ID <span className="text-red-400">*</span>
-            </label>
-            <Input
-              type="text"
-              placeholder="e.g. 123456789-abc.apps.googleusercontent.com"
-              value={clientId}
-              onChange={(e) => setClientId(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-foreground mb-1">Client Secret</label>
-            <Input
-              type="password"
-              placeholder="Client secret"
-              value={clientSecret}
-              onChange={(e) => setClientSecret(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <p className="text-xs text-muted-foreground/60">
-          Tip: set <code className="font-mono">{envVar}</code> in your{' '}
-          <code className="font-mono">.env</code> to skip this dialog permanently.
-        </p>
-
-        {error && <p className="text-red-400 text-sm">{error}</p>}
-        <div className="flex gap-3 pt-1">
-          <Button type="button" variant="outline" className="flex-1" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={saving} className="flex-1">
-            {saving && <Loader2 size={14} className="animate-spin" />}
-            {saving ? 'Opening…' : `Sign in with ${providerName} →`}
-          </Button>
-        </div>
-      </form>
-    </Dialog>
-  )
-}
 
 // ── Google Workspace card ─────────────────────────────────────────────────────
 
@@ -1970,9 +1854,6 @@ export default function ConnectorsPage() {
   const [connected, setConnected] = useState<Set<string>>(new Set())
   const [connectedCustom, setConnectedCustom] = useState<Set<string>>(new Set())
   const [activePlugin, setActivePlugin] = useState<Plugin | null>(null)
-  const [oauthSetupPlugin, setOauthSetupPlugin] = useState<Plugin | null>(null)
-  const [oauthRedirectUri, setOauthRedirectUri] = useState('')
-  const [oauthEnvVar, setOauthEnvVar] = useState('')
   const [customPlugins, setCustomPlugins] = useState<CustomPluginDef[]>([])
   const [showCreateCustomPlugin, setShowCreateCustomPlugin] = useState(false)
   const [installedMcps, setInstalledMcps] = useState<InstalledMcp[]>([])
@@ -2044,42 +1925,20 @@ export default function ConnectorsPage() {
       return
     }
 
-    // Fetch start route to get redirectUri and whether client_id is needed
     const res = await fetch(`/api/oauth/start/${plugin.id}`)
     const data = (await res.json()) as {
       authUrl?: string
-      redirectUri?: string
-      needsClientId?: boolean
-      envVar?: string
+      needsSetup?: boolean
+      provider?: string
       error?: string
     }
 
-    if (data.needsClientId || !data.authUrl) {
-      // Show setup modal so user can enter client_id/secret first
-      setOauthRedirectUri(data.redirectUri ?? `${window.location.origin}/api/oauth/callback`)
-      setOauthEnvVar(data.envVar ?? '')
-      setOauthSetupPlugin(plugin)
+    if (data.needsSetup || !data.authUrl) {
+      // Redirect admin to Settings → OAuth Apps to configure once
+      window.location.href = `/settings?tab=oauth&setup=${encodeURIComponent(data.provider ?? providerKey)}`
       return
     }
 
-    openOAuthPopup(plugin.id, data.authUrl)
-  }
-
-  /** Save client_id/secret then start OAuth */
-  async function handleOAuthSetupAndStart(clientId: string, clientSecret: string) {
-    if (!oauthSetupPlugin) return
-    // Save credentials first
-    await fetch(`/api/plugins/${oauthSetupPlugin.id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields: { client_id: clientId, client_secret: clientSecret } }),
-    })
-    // Now start OAuth
-    const res = await fetch(`/api/oauth/start/${oauthSetupPlugin.id}`)
-    const data = (await res.json()) as { authUrl?: string; error?: string }
-    if (!data.authUrl) throw new Error(data.error ?? 'Could not get auth URL')
-    const plugin = oauthSetupPlugin
-    setOauthSetupPlugin(null)
     openOAuthPopup(plugin.id, data.authUrl)
   }
 
@@ -2376,16 +2235,6 @@ export default function ConnectorsPage() {
             : {})}
           onClose={() => setActivePlugin(null)}
           onSave={handleSavePlugin}
-        />
-      )}
-
-      {oauthSetupPlugin && (
-        <OAuthSetupModal
-          plugin={oauthSetupPlugin}
-          redirectUri={oauthRedirectUri}
-          envVar={oauthEnvVar}
-          onClose={() => setOauthSetupPlugin(null)}
-          onStart={(clientId, clientSecret) => handleOAuthSetupAndStart(clientId, clientSecret)}
         />
       )}
 
